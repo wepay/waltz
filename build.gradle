@@ -1,0 +1,394 @@
+allprojects {
+    apply plugin: 'idea'
+
+    group = "com.wepay.waltz"
+    def major_version = 0
+    def minor_version = 3
+
+    def get_version_name =  {
+        if (System.getenv("BUILD_NUMBER") == null) {
+            return "$major_version.$minor_version-SNAPSHOT"
+        } else {
+            return "$major_version.$minor_version." + System.getenv("BUILD_NUMBER");
+        }
+    }
+
+    version = get_version_name();
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        maven { url 'http://packages.confluent.io/maven/' }
+    }
+}
+
+project.ext {
+    apacheHttpClientVersion = "4.5.6"
+    commonsCliVersion = '1.4'
+    h2Version = '1.3.175'
+    hamcrestVersion = '1.3'
+    junitVersion = '4.11'
+    mariadbDriverVersion = '2.4.2'
+    nettyVersion = '4.1.15.Final'
+    slf4jVersion = '1.7.25'
+    mockitoVersion = '1.9.5'
+    assertjVersion = '3.8.0'
+    zkToolsVersion = '0.3.25'
+    yamlVersion = '1.20'
+    riffVersion = '2.3.0-31-305d8acf96'
+    jacksonVersion = '2.9.6'
+    jettyVersion = '9.4.12.v20180830'
+
+    mainClass = 'Main'
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+        maven {
+            url 'https://artifactory.devops.wepay-inc.com/artifactory/libs-release'
+        }
+    }
+
+    dependencies {
+        classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:3.1.1'
+    }
+}
+
+buildscript {
+  repositories {
+    maven {
+      url "https://plugins.gradle.org/m2/"
+    }
+  }
+  dependencies {
+    classpath "com.github.jengelman.gradle.plugins:shadow:2.0.1"
+    classpath 'se.transmode.gradle:gradle-docker:1.2'
+    classpath 'com.wepay:salt:0.1.32'
+  }
+}
+
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'checkstyle'
+    apply plugin: 'findbugs'
+    apply plugin: 'com.jfrog.artifactory'
+    apply plugin: 'maven-publish'
+    apply plugin: "com.github.johnrengelman.shadow"
+
+    configurations.all {
+        resolutionStrategy {
+            force "org.hamcrest:hamcrest-all:$hamcrestVersion"
+        }
+    }
+
+    jar {
+        manifest {
+            attributes(
+                    "Implementation-Title": "Waltz",
+                    "Implementation-Version": version)
+        }
+    }
+
+
+    artifactory {
+        contextUrl = 'https://artifactory.devops.wepay-inc.com/artifactory/'
+        publish {
+            repoKey = 'libs-release'
+        }
+        resolve {
+            repoKey = 'libs-release'
+        }
+    }
+
+    compileJava {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+    }
+
+    compileTestJava {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+    }
+
+    checkstyle {
+        toolVersion = "8.10"
+    }
+
+    checkstyleMain {
+        reports {
+            xml {
+                destination new File(rootDir, '/build/reports/checkstyle/main.xml')
+            }
+        }
+        configFile = new File(rootDir, 'config/checkstyle/checkstyle.xml')
+
+        doLast {
+            ant.xslt(in: "$rootDir/build/reports/checkstyle/main.xml",
+                    style: "../config/checkstyle/checkstyle-noframes.xsl",
+                    out: "$rootDir/build/reports/checkstyle/main.html"
+            )
+        }
+    }
+
+    checkstyleTest {
+        reports {
+            xml {
+                destination new File(rootDir, '/build/reports/checkstyle/test.xml')
+            }
+        }
+        configFile = new File(rootDir, "config/checkstyle/checkstyle_test.xml")
+
+        doLast {
+            ant.xslt(in: "$rootDir/build/reports/checkstyle/test.xml",
+                    style: "$rootDir/config/checkstyle/checkstyle-noframes.xsl",
+                    out: "$rootDir/build/reports/checkstyle/test.html"
+            )
+        }
+    }
+
+    // findbugs html only report
+    findbugsMain {
+        reports {
+            xml.enabled = false
+            html.enabled = true
+        }
+    }
+
+    findbugsTest {
+        reports {
+            xml.enabled = false
+            html.enabled = true
+        }
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                artifactId project.name
+                from components.java
+            }
+        }
+    }
+
+    artifactoryPublish {
+            publications(publishing.publications.mavenJava)
+    }
+
+    task execute(type:JavaExec) {
+        main = mainClass
+        classpath = sourceSets.main.runtimeClasspath
+        if (project.hasProperty("commandArgs")) {
+            args commandArgs.split()
+        }
+        standardInput = System.in
+    }
+}
+
+project(':waltz-tools') {
+    dependencies {
+        compile (
+                project(':waltz-client'),
+                project(':waltz-server'),
+                project(':waltz-storage'),
+
+                "org.apache.httpcomponents:fluent-hc:$apacheHttpClientVersion"
+        )
+
+        testCompile (
+                // TODO remove cyclic dependency
+                // Not super thrilled about this, as it creates a circular dependency between
+                // watlz-util and waltz-test. waltz-tools needs ZK server runner for tests, and
+                // waltz-test needs to be able to create clusters to run smoke test and demo.
+                project(':waltz-test'),
+
+                "junit:junit:$junitVersion",
+                "org.mockito:mockito-all:$mockitoVersion"
+        )
+    }
+
+    task copyLibs(type:Copy) {
+        into file("$projectDir/build/libs")
+        from sourceSets.main.runtimeClasspath
+    }
+}
+
+project(':waltz-server') {
+    apply plugin: 'com.jfrog.artifactory'
+    apply plugin: 'application'
+    apply plugin: 'docker'
+
+    dependencies {
+        compile (
+                project(':waltz-common'),
+                project(':waltz-storage'),
+
+                "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
+                "com.wepay.riff:riff-config:$riffVersion",
+                "com.wepay.riff:riff-metrics:$riffVersion",
+                "com.wepay.zktools:zktools:$zkToolsVersion",
+                "io.netty:netty-all:$nettyVersion",
+                "org.slf4j:slf4j-api:$slf4jVersion",
+                "org.eclipse.jetty:jetty-server:$jettyVersion",
+                "org.eclipse.jetty:jetty-servlet:$jettyVersion",
+        )
+
+        testCompile (
+                project(':waltz-client'),
+                project(':waltz-test'),
+                
+                "junit:junit:$junitVersion",
+                "org.mockito:mockito-all:$mockitoVersion"
+        )
+    }
+
+    distDocker {
+        mainClassName = 'com.wepay.waltz.server.WaltzServer'
+        workingDir "${rootProject.name}-${project.version}"
+    }
+}
+
+project(':waltz-storage') {
+    apply plugin: 'com.jfrog.artifactory'
+    apply plugin: 'application'
+    apply plugin: 'docker'
+
+    dependencies {
+        compile (
+                project(':waltz-common'),
+
+                "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
+                "com.wepay.riff:riff-config:$riffVersion",
+                "com.wepay.riff:riff-metrics:$riffVersion",
+                "com.wepay.zktools:zktools:$zkToolsVersion",
+                "io.netty:netty-all:$nettyVersion",
+                "org.slf4j:slf4j-api:$slf4jVersion",
+                "org.yaml:snakeyaml:$yamlVersion",
+                "org.eclipse.jetty:jetty-server:$jettyVersion",
+                "org.eclipse.jetty:jetty-servlet:$jettyVersion",
+        )
+
+        testCompile (
+                project(':waltz-test'),
+
+                "junit:junit:$junitVersion",
+                "org.mockito:mockito-all:$mockitoVersion"
+        )
+    }
+
+    distDocker {
+        mainClassName = 'com.wepay.waltz.storage.WaltzStorage'
+        workingDir "${rootProject.name}-${project.version}"
+        runCommand 'mkdir /waltz_storage'
+    }
+}
+
+project(':waltz-uber') {
+	dependencies {
+		compile(
+			project(':waltz-server'),
+			project(':waltz-tools')
+		)
+
+		testCompile (
+			project(':waltz-server')
+		)
+
+        runtime (
+                "org.slf4j:slf4j-log4j12:$slf4jVersion"
+        )
+	}
+	shadowJar{
+		baseName = project.name
+		classifier = null
+		version = version
+	}
+}
+project(':waltz-uber').build.dependsOn project(':waltz-uber').shadowJar
+project(':waltz-uber').artifactoryPublish.dependsOn project(':waltz-uber').shadowJar
+
+project(':waltz-client') {
+    dependencies {
+        compile (
+                project(':waltz-common'),
+
+                "com.wepay.riff:riff-config:$riffVersion",
+                "com.wepay.zktools:zktools:$zkToolsVersion",
+                "io.netty:netty-all:$nettyVersion",
+                "org.slf4j:slf4j-api:$slf4jVersion"
+        )
+
+        testCompile (
+                project(':waltz-test'),
+
+                "com.h2database:h2:$h2Version",
+                "junit:junit:$junitVersion"
+        )
+    }
+}
+
+project(':waltz-common') {
+    dependencies {
+        compile (
+                "com.wepay.riff:riff-config:$riffVersion",
+                "com.wepay.riff:riff-networking:$riffVersion",
+                "com.wepay.zktools:zktools:$zkToolsVersion",
+                "commons-cli:commons-cli:$commonsCliVersion",
+                "io.netty:netty-all:$nettyVersion",
+                "org.slf4j:slf4j-api:$slf4jVersion",
+                "org.yaml:snakeyaml:$yamlVersion"
+        )
+
+        testCompile (
+                project(':waltz-test'),
+
+                "junit:junit:$junitVersion",
+                "org.assertj:assertj-core:$assertjVersion",
+                "org.mockito:mockito-all:$mockitoVersion"
+        )
+    }
+}
+
+project(':waltz-test') {
+    dependencies {
+        compile (
+                project(':waltz-server'),
+                project(':waltz-client'),
+                project(':waltz-storage'),
+                project(':waltz-tools'),
+
+                "com.wepay.zktools:zktools:$zkToolsVersion",
+                "io.netty:netty-all:$nettyVersion"
+        )
+
+        testCompile (
+                "junit:junit:$junitVersion"
+        )
+    }
+
+    task copyLibs(type:Copy) {
+        into file("$projectDir/build/libs")
+        from sourceSets.main.runtimeClasspath
+    }
+}
+
+project(':waltz-demo') {
+    dependencies {
+        compile (
+                project(':waltz-server'),
+                project(':waltz-client'),
+                project(':waltz-test'),
+                project(':waltz-tools'),
+
+                "org.mariadb.jdbc:mariadb-java-client:$mariadbDriverVersion"
+        )
+
+        testCompile (
+                "com.h2database:h2:$h2Version",
+                "junit:junit:$junitVersion"
+        )
+    }
+}

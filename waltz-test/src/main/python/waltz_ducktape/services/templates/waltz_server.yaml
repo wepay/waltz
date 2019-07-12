@@ -1,0 +1,18 @@
+server:
+    port: {{ port }}
+    jetty.port: {{ jetty_port }}
+    ssl:
+        keyStore:
+            location: /etc/waltz-server/keystore.jks
+            password: devops
+            type: JKS
+        trustStore:
+            location: /etc/waltz-server/truststore.jks
+            password: devops
+            type: JKS
+
+zookeeper:
+    connectString: {{ zk_connect }}
+    sessionTimeout: 30000
+
+cluster.root: {{ cluster_root }}

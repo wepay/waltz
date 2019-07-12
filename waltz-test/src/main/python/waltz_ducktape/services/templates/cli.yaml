@@ -1,0 +1,10 @@
+zookeeper:
+    connectString: {{ zk_connect }}
+    sessionTimeout: 30000
+
+cluster.root: {{ cluster_root }}
+
+ssl.keyStore.location: {{ ssl_keystore_loc }}
+ssl.keyStore.password: {{ ssl_keystore_pwd}}
+ssl.trustStore.location: {{ ssl_truststore_loc }}
+ssl.trustStore.password: {{ ssl_truststore_pwd }}
