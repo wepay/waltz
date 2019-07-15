@@ -21,3 +21,6 @@ dependency-reduced-pom.xml
 results
 .ducktape/metadata
 .vagrant
+
+# Website
+node_modules
