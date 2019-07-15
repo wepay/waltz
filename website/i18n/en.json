@@ -3,35 +3,26 @@
   "localized-strings": {
     "next": "Next",
     "previous": "Previous",
-    "tagline": "A website for testing",
+    "tagline": "An open source quorum-based distributed write-ahead log",
     "docs": {
-      "doc1": {
-        "title": "Latin-ish",
-        "sidebar_label": "Example Page"
+      "application-programming-model": {
+        "title": "Application Programming Model"
       },
-      "doc2": {
-        "title": "document number 2"
+      "client-server-communication": {
+        "title": "Client-Server Communication"
       },
-      "doc3": {
-        "title": "This is document number 3"
+      "introduction": {
+        "title": "Introduction"
       },
-      "doc4": {
-        "title": "Other Document"
-      },
-      "doc5": {
-        "title": "Fifth Document"
+      "terminology": {
+        "title": "Terminology and Components"
       }
     },
     "links": {
-      "Docs": "Docs",
-      "API": "API",
-      "Help": "Help",
-      "Blog": "Blog"
+      "Docs": "Docs"
     },
     "categories": {
-      "Docusaurus": "Docusaurus",
-      "First Category": "First Category",
-      "Second Category": "Second Category"
+      "Design": "Design"
     }
   },
   "pages-strings": {
