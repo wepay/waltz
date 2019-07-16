@@ -1,0 +1,9 @@
+{
+  "docs": {
+    "Design": [
+      "introduction",
+      "terminology",
+      "application-programming-model",
+      "client-server-communication"]
+  }
+}
