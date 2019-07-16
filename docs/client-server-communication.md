@@ -12,7 +12,7 @@ The request ID is a unique ID attached to a request message and corresponding re
 | Field | Data Type | Description |
 |-------|-----------|-------------|
 | Client ID | int | The unique ID of the client. The uniqueness is guaranteed by ZK.|
-| Generation | int | The generation numbe of the partition. |
+| Generation | int | The generation number of the partition. |
 | Partition ID | int | The partition ID |
 | Sequence number | int | The sequence number. |
 
