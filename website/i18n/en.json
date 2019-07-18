@@ -8,14 +8,35 @@
       "application-programming-model": {
         "title": "Application Programming Model"
       },
+      "back-pressure": {
+        "title": "Back Pressure"
+      },
       "client-server-communication": {
         "title": "Client-Server Communication"
+      },
+      "concurrency-control-optimistic-locking": {
+        "title": "Concurrency Control (Optimistic Locking)"
       },
       "introduction": {
         "title": "Introduction"
       },
+      "on-disk-data-structures": {
+        "title": "On-Disk Data Structures"
+      },
+      "server-storage-communication": {
+        "title": "Server-Storage Communication"
+      },
       "terminology": {
         "title": "Terminology and Components"
+      },
+      "waltz-client": {
+        "title": "Waltz Client"
+      },
+      "waltz-server": {
+        "title": "Waltz Server"
+      },
+      "waltz-storage": {
+        "title": "Waltz Storage"
       }
     },
     "links": {
