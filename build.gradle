@@ -58,16 +58,17 @@ buildscript {
 }
 
 buildscript {
-  repositories {
-    maven {
-      url "https://plugins.gradle.org/m2/"
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
     }
-  }
-  dependencies {
-    classpath "com.github.jengelman.gradle.plugins:shadow:2.0.1"
-    classpath 'se.transmode.gradle:gradle-docker:1.2'
-    classpath 'com.wepay:salt:0.1.32'
-  }
+
+    dependencies {
+        classpath "com.github.jengelman.gradle.plugins:shadow:2.0.1"
+        classpath 'se.transmode.gradle:gradle-docker:1.2'
+        classpath 'com.wepay:salt:0.1.32'
+    }
 }
 
 
@@ -88,8 +89,8 @@ subprojects {
     jar {
         manifest {
             attributes(
-                    "Implementation-Title": "Waltz",
-                    "Implementation-Version": version)
+                "Implementation-Title": "Waltz",
+                "Implementation-Version": version)
         }
     }
 
@@ -128,8 +129,8 @@ subprojects {
 
         doLast {
             ant.xslt(in: "$rootDir/build/reports/checkstyle/main.xml",
-                    style: "../config/checkstyle/checkstyle-noframes.xsl",
-                    out: "$rootDir/build/reports/checkstyle/main.html"
+                style: "../config/checkstyle/checkstyle-noframes.xsl",
+                out: "$rootDir/build/reports/checkstyle/main.html"
             )
         }
     }
@@ -144,8 +145,8 @@ subprojects {
 
         doLast {
             ant.xslt(in: "$rootDir/build/reports/checkstyle/test.xml",
-                    style: "$rootDir/config/checkstyle/checkstyle-noframes.xsl",
-                    out: "$rootDir/build/reports/checkstyle/test.html"
+                style: "$rootDir/config/checkstyle/checkstyle-noframes.xsl",
+                out: "$rootDir/build/reports/checkstyle/test.html"
             )
         }
     }
@@ -191,22 +192,22 @@ subprojects {
 project(':waltz-tools') {
     dependencies {
         compile (
-                project(':waltz-client'),
-                project(':waltz-server'),
-                project(':waltz-storage'),
+            project(':waltz-client'),
+            project(':waltz-server'),
+            project(':waltz-storage'),
 
-                "org.apache.httpcomponents:fluent-hc:$apacheHttpClientVersion"
+            "org.apache.httpcomponents:fluent-hc:$apacheHttpClientVersion"
         )
 
         testCompile (
-                // TODO remove cyclic dependency
-                // Not super thrilled about this, as it creates a circular dependency between
-                // watlz-util and waltz-test. waltz-tools needs ZK server runner for tests, and
-                // waltz-test needs to be able to create clusters to run smoke test and demo.
-                project(':waltz-test'),
+            // TODO remove cyclic dependency
+            // Not super thrilled about this, as it creates a circular dependency between
+            // watlz-util and waltz-test. waltz-tools needs ZK server runner for tests, and
+            // waltz-test needs to be able to create clusters to run smoke test and demo.
+            project(':waltz-test'),
 
-                "junit:junit:$junitVersion",
-                "org.mockito:mockito-all:$mockitoVersion"
+            "junit:junit:$junitVersion",
+            "org.mockito:mockito-all:$mockitoVersion"
         )
     }
 
@@ -223,25 +224,25 @@ project(':waltz-server') {
 
     dependencies {
         compile (
-                project(':waltz-common'),
-                project(':waltz-storage'),
+            project(':waltz-common'),
+            project(':waltz-storage'),
 
-                "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
-                "com.wepay.riff:riff-config:$riffVersion",
-                "com.wepay.riff:riff-metrics:$riffVersion",
-                "com.wepay.zktools:zktools:$zkToolsVersion",
-                "io.netty:netty-all:$nettyVersion",
-                "org.slf4j:slf4j-api:$slf4jVersion",
-                "org.eclipse.jetty:jetty-server:$jettyVersion",
-                "org.eclipse.jetty:jetty-servlet:$jettyVersion",
+            "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
+            "com.wepay.riff:riff-config:$riffVersion",
+            "com.wepay.riff:riff-metrics:$riffVersion",
+            "com.wepay.zktools:zktools:$zkToolsVersion",
+            "io.netty:netty-all:$nettyVersion",
+            "org.slf4j:slf4j-api:$slf4jVersion",
+            "org.eclipse.jetty:jetty-server:$jettyVersion",
+            "org.eclipse.jetty:jetty-servlet:$jettyVersion",
         )
 
         testCompile (
-                project(':waltz-client'),
-                project(':waltz-test'),
+            project(':waltz-client'),
+            project(':waltz-test'),
                 
-                "junit:junit:$junitVersion",
-                "org.mockito:mockito-all:$mockitoVersion"
+            "junit:junit:$junitVersion",
+            "org.mockito:mockito-all:$mockitoVersion"
         )
     }
 
@@ -258,24 +259,24 @@ project(':waltz-storage') {
 
     dependencies {
         compile (
-                project(':waltz-common'),
+            project(':waltz-common'),
 
-                "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
-                "com.wepay.riff:riff-config:$riffVersion",
-                "com.wepay.riff:riff-metrics:$riffVersion",
-                "com.wepay.zktools:zktools:$zkToolsVersion",
-                "io.netty:netty-all:$nettyVersion",
-                "org.slf4j:slf4j-api:$slf4jVersion",
-                "org.yaml:snakeyaml:$yamlVersion",
-                "org.eclipse.jetty:jetty-server:$jettyVersion",
-                "org.eclipse.jetty:jetty-servlet:$jettyVersion",
+            "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
+            "com.wepay.riff:riff-config:$riffVersion",
+            "com.wepay.riff:riff-metrics:$riffVersion",
+            "com.wepay.zktools:zktools:$zkToolsVersion",
+            "io.netty:netty-all:$nettyVersion",
+            "org.slf4j:slf4j-api:$slf4jVersion",
+            "org.yaml:snakeyaml:$yamlVersion",
+            "org.eclipse.jetty:jetty-server:$jettyVersion",
+            "org.eclipse.jetty:jetty-servlet:$jettyVersion",
         )
 
         testCompile (
-                project(':waltz-test'),
+            project(':waltz-test'),
 
-                "junit:junit:$junitVersion",
-                "org.mockito:mockito-all:$mockitoVersion"
+            "junit:junit:$junitVersion",
+            "org.mockito:mockito-all:$mockitoVersion"
         )
     }
 
@@ -287,45 +288,47 @@ project(':waltz-storage') {
 }
 
 project(':waltz-uber') {
-	dependencies {
-		compile(
-			project(':waltz-server'),
-			project(':waltz-tools')
-		)
+    dependencies {
+        compile(
+            project(':waltz-server'),
+            project(':waltz-tools')
+        )
 
-		testCompile (
-			project(':waltz-server')
-		)
+        testCompile (
+            project(':waltz-server')
+        )
 
         runtime (
-                "org.slf4j:slf4j-log4j12:$slf4jVersion"
+            "org.slf4j:slf4j-log4j12:$slf4jVersion"
         )
-	}
-	shadowJar{
-		baseName = project.name
-		classifier = null
-		version = version
-	}
+    }
+
+    shadowJar {
+        baseName = project.name
+        classifier = null
+        version = version
+    }
 }
+
 project(':waltz-uber').build.dependsOn project(':waltz-uber').shadowJar
 project(':waltz-uber').artifactoryPublish.dependsOn project(':waltz-uber').shadowJar
 
 project(':waltz-client') {
     dependencies {
         compile (
-                project(':waltz-common'),
+            project(':waltz-common'),
 
-                "com.wepay.riff:riff-config:$riffVersion",
-                "com.wepay.zktools:zktools:$zkToolsVersion",
-                "io.netty:netty-all:$nettyVersion",
-                "org.slf4j:slf4j-api:$slf4jVersion"
+            "com.wepay.riff:riff-config:$riffVersion",
+            "com.wepay.zktools:zktools:$zkToolsVersion",
+            "io.netty:netty-all:$nettyVersion",
+            "org.slf4j:slf4j-api:$slf4jVersion"
         )
 
         testCompile (
-                project(':waltz-test'),
+            project(':waltz-test'),
 
-                "com.h2database:h2:$h2Version",
-                "junit:junit:$junitVersion"
+            "com.h2database:h2:$h2Version",
+            "junit:junit:$junitVersion"
         )
     }
 }
@@ -333,21 +336,21 @@ project(':waltz-client') {
 project(':waltz-common') {
     dependencies {
         compile (
-                "com.wepay.riff:riff-config:$riffVersion",
-                "com.wepay.riff:riff-networking:$riffVersion",
-                "com.wepay.zktools:zktools:$zkToolsVersion",
-                "commons-cli:commons-cli:$commonsCliVersion",
-                "io.netty:netty-all:$nettyVersion",
-                "org.slf4j:slf4j-api:$slf4jVersion",
-                "org.yaml:snakeyaml:$yamlVersion"
+            "com.wepay.riff:riff-config:$riffVersion",
+            "com.wepay.riff:riff-networking:$riffVersion",
+            "com.wepay.zktools:zktools:$zkToolsVersion",
+            "commons-cli:commons-cli:$commonsCliVersion",
+            "io.netty:netty-all:$nettyVersion",
+            "org.slf4j:slf4j-api:$slf4jVersion",
+            "org.yaml:snakeyaml:$yamlVersion"
         )
 
         testCompile (
-                project(':waltz-test'),
+            project(':waltz-test'),
 
-                "junit:junit:$junitVersion",
-                "org.assertj:assertj-core:$assertjVersion",
-                "org.mockito:mockito-all:$mockitoVersion"
+            "junit:junit:$junitVersion",
+            "org.assertj:assertj-core:$assertjVersion",
+            "org.mockito:mockito-all:$mockitoVersion"
         )
     }
 }
@@ -355,17 +358,17 @@ project(':waltz-common') {
 project(':waltz-test') {
     dependencies {
         compile (
-                project(':waltz-server'),
-                project(':waltz-client'),
-                project(':waltz-storage'),
-                project(':waltz-tools'),
+            project(':waltz-server'),
+            project(':waltz-client'),
+            project(':waltz-storage'),
+            project(':waltz-tools'),
 
-                "com.wepay.zktools:zktools:$zkToolsVersion",
-                "io.netty:netty-all:$nettyVersion"
+            "com.wepay.zktools:zktools:$zkToolsVersion",
+            "io.netty:netty-all:$nettyVersion"
         )
 
         testCompile (
-                "junit:junit:$junitVersion"
+            "junit:junit:$junitVersion"
         )
     }
 
@@ -378,17 +381,27 @@ project(':waltz-test') {
 project(':waltz-demo') {
     dependencies {
         compile (
-                project(':waltz-server'),
-                project(':waltz-client'),
-                project(':waltz-test'),
-                project(':waltz-tools'),
+            project(':waltz-server'),
+            project(':waltz-client'),
+            project(':waltz-test'),
+            project(':waltz-tools'),
 
-                "org.mariadb.jdbc:mariadb-java-client:$mariadbDriverVersion"
+            "org.mariadb.jdbc:mariadb-java-client:$mariadbDriverVersion"
         )
 
         testCompile (
-                "com.h2database:h2:$h2Version",
-                "junit:junit:$junitVersion"
+            "com.h2database:h2:$h2Version",
+            "junit:junit:$junitVersion"
         )
     }
+
+    shadowJar {
+        baseName = project.name
+        classifier = null
+        version = version
+    }
+
 }
+
+project(':waltz-demo').build.dependsOn project(':waltz-demo').shadowJar
+project(':waltz-demo').artifactoryPublish.dependsOn project(':waltz-demo').shadowJar

@@ -3,7 +3,7 @@
 DIR=$(dirname $0)
 cmd=$1
 
-imageSource=waltz-server:dockerDist
+imageSource=waltz-server:distDocker
 imageName=com.wepay.waltz/waltz-server
 containerName=waltz-server
 networkName=waltz-network

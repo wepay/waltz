@@ -43,5 +43,7 @@ EOF
 
     echo "...database created"
 
+    mkdir -p build/config
+
     sed -e "s/<<host>>/$(hostname)/" config/local-docker/demo-app.yml > build/config/demo-app.yml
 fi
