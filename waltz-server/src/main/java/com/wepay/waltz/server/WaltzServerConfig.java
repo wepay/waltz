@@ -3,6 +3,7 @@ package com.wepay.waltz.server;
 import com.wepay.riff.config.ConfigException;
 import com.wepay.riff.config.validator.UniqueValidator;
 import com.wepay.riff.config.validator.Validator;
+import com.wepay.riff.metrics.graphite.GraphiteReporterConfig;
 import com.wepay.riff.network.SSLConfig;
 import com.wepay.riff.config.AbstractConfig;
 
@@ -23,6 +24,7 @@ public class WaltzServerConfig extends AbstractConfig {
     public static final String SERVER_REGION = "server.region";
 
     public static final String SERVER_SSL_CONFIG_PREFIX = "server.ssl.";
+    public static final String GRAPHITE_REPORTER_CONFIG_PREFIX = "server.graphite.";
 
     // Partition
     public static final String OPTIMISTIC_LOCK_TABLE_SIZE = "server.optimisticLockTableSize";
@@ -76,6 +78,7 @@ public class WaltzServerConfig extends AbstractConfig {
             put(SERVER_REGION, stringParser);
 
             // See SSLConfig for SSL config parameters
+            // See GraphiteReporterConfig for Graphite config parameters
 
             // Partition
             put(OPTIMISTIC_LOCK_TABLE_SIZE, intParser.withDefault(DEFAULT_OPTIMISTIC_LOCK_TABLE_SIZE));
@@ -98,6 +101,10 @@ public class WaltzServerConfig extends AbstractConfig {
 
     public SSLConfig getSSLConfig() {
         return new SSLConfig(configPrefix + SERVER_SSL_CONFIG_PREFIX, configValues);
+    }
+
+    public GraphiteReporterConfig getGraphiteReporterConfig() {
+        return new GraphiteReporterConfig(configPrefix + GRAPHITE_REPORTER_CONFIG_PREFIX, configValues);
     }
 
     private static class CacheAllocationValidator implements Validator {

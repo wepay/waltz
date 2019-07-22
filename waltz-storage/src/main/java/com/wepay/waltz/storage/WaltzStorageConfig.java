@@ -1,6 +1,7 @@
 package com.wepay.waltz.storage;
 
 import com.wepay.riff.config.validator.UniqueValidator;
+import com.wepay.riff.metrics.graphite.GraphiteReporterConfig;
 import com.wepay.riff.network.SSLConfig;
 import com.wepay.riff.config.AbstractConfig;
 
@@ -18,6 +19,7 @@ public class WaltzStorageConfig extends AbstractConfig {
     public static final long DEFAULT_SEGMENT_SIZE_THRESHOLD = 1000000000L;
 
     public static final String STORAGE_SSL_CONFIG_PREFIX = "storage.ssl.";
+    public static final String GRAPHITE_REPORTER_CONFIG_PREFIX = "storage.graphite.";
 
     // Jetty
     public static final String STORAGE_JETTY_PORT = "storage.jetty.port";
@@ -42,6 +44,7 @@ public class WaltzStorageConfig extends AbstractConfig {
             put(SEGMENT_SIZE_THRESHOLD, longParser.withDefault(DEFAULT_SEGMENT_SIZE_THRESHOLD));
 
             // See SSLConfig for SSL config parameters
+            // See GraphiteReporterConfig for Graphite config parameters
 
             // Jetty
             put(STORAGE_JETTY_PORT, intParser.withValidator(portValidator));
@@ -57,4 +60,7 @@ public class WaltzStorageConfig extends AbstractConfig {
         return new SSLConfig(configPrefix + STORAGE_SSL_CONFIG_PREFIX, configValues);
     }
 
+    public GraphiteReporterConfig getGraphiteReporterConfig() {
+        return new GraphiteReporterConfig(configPrefix + GRAPHITE_REPORTER_CONFIG_PREFIX, configValues);
+    }
 }

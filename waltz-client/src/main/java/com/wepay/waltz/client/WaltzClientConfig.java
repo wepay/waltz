@@ -62,5 +62,4 @@ public class WaltzClientConfig extends AbstractConfig {
     public SSLConfig getSSLConfig() {
         return new SSLConfig(configPrefix + CLIENT_SSL_CONFIG_PREFIX, configValues);
     }
-
 }

@@ -1,5 +1,11 @@
 package com.wepay.waltz.common.util;
 
+import com.wepay.riff.metrics.core.MetricRegistry;
+import com.wepay.riff.metrics.graphite.Graphite;
+import com.wepay.riff.metrics.graphite.GraphiteReporter;
+import com.wepay.riff.metrics.graphite.GraphiteReporterConfig;
+import com.wepay.riff.metrics.graphite.GraphiteSender;
+import com.wepay.riff.metrics.graphite.GraphiteUDP;
 import com.wepay.riff.network.ClientSSL;
 import com.wepay.riff.network.SSLConfig;
 import com.wepay.riff.util.Logging;
@@ -18,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -152,6 +159,37 @@ public final class Utils {
         } else {
             return ClientSSL.createInsecureContext();
         }
+    }
+
+    /**
+     * Returns a GraphiteReporter that has not yet been started. If no GraphiteReporter configuration exists (i.e. the
+     * hostname is not set), then empty is returned.
+     *
+     * @param metricRegistry The metrics registry to attach the reporter to.
+     * @param graphiteReporterConfig The GraphiteReporterConfig to use when configuring the builder and reporter.
+     * @return Empty if Graphite's hostname is not set, else a GraphiteReporter that hasn't been started yet.
+     */
+    public static Optional<GraphiteReporter> getGraphiteReporter(MetricRegistry metricRegistry, GraphiteReporterConfig graphiteReporterConfig) {
+        boolean isGraphiteEnabled = graphiteReporterConfig.getOpt(GraphiteReporterConfig.HOSTNAME).isPresent();
+
+        if (isGraphiteEnabled) {
+            String hostname = (String) graphiteReporterConfig.get(GraphiteReporterConfig.HOSTNAME);
+            int port = (int) graphiteReporterConfig.get(GraphiteReporterConfig.PORT);
+            String prefix = (String) graphiteReporterConfig.get(GraphiteReporterConfig.PREFIX);
+            boolean useUdp = (boolean) graphiteReporterConfig.get(GraphiteReporterConfig.USE_UDP);
+
+            logger.info("Graphite reporter enabled with: host={}, port={}, prefix={}, udp={}", hostname, port, prefix, useUdp);
+
+            GraphiteSender sender = useUdp ? new GraphiteUDP(hostname, port) : new Graphite(hostname, port);
+            GraphiteReporter reporter = GraphiteReporter
+                    .forRegistry(metricRegistry)
+                    .prefixedWith(prefix)
+                    .build(sender);
+
+            return Optional.of(reporter);
+        }
+
+        return Optional.empty();
     }
 
     public static Map<String, String> getBuildInfoMap(Class<?> clazz) {

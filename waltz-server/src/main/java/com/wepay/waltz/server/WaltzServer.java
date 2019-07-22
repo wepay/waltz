@@ -4,6 +4,8 @@ import com.wepay.riff.metrics.core.Gauge;
 import com.wepay.riff.metrics.core.Meter;
 import com.wepay.riff.metrics.core.MetricGroup;
 import com.wepay.riff.metrics.core.MetricRegistry;
+import com.wepay.riff.metrics.graphite.GraphiteReporter;
+import com.wepay.riff.metrics.graphite.GraphiteReporterConfig;
 import com.wepay.riff.metrics.health.HealthCheckRegistry;
 import com.wepay.riff.metrics.jmx.JmxReporter;
 import com.wepay.riff.metrics.servlets.BuildInfoServlet;
@@ -62,6 +64,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 public class WaltzServer {
 
@@ -358,6 +361,11 @@ public class WaltzServer {
             SslContext sslCtx = ServerSSL.createContext(config.getSSLConfig());
 
             JmxReporter.forRegistry(MetricRegistry.getInstance()).build().start();
+
+            GraphiteReporterConfig graphiteReporterConfig = config.getGraphiteReporterConfig();
+            Optional<GraphiteReporter> maybeGraphiteReporter = Utils.getGraphiteReporter(MetricRegistry.getInstance(), graphiteReporterConfig);
+            maybeGraphiteReporter.ifPresent(graphiteReporter ->
+                graphiteReporter.start((Integer) graphiteReporterConfig.get(GraphiteReporterConfig.REPORT_INTERVAL_SECONDS), TimeUnit.SECONDS));
 
             // Start server
             WaltzServer server = new WaltzServer(port, sslCtx, store, clusterManager, config);
