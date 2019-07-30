@@ -51,11 +51,11 @@ public class Partition {
     private volatile PartitionState state = PartitionState.INACTIVE;
     private volatile boolean mounted = false;
 
-    public Partition(int partitionId, int clientId) {
+    public Partition(int partitionId, int clientId, int maxConcurrentTransactions) {
         this.partitionId = partitionId;
         this.clientId = clientId;
         this.generation = -1;
-        this.transactionMonitor = new TransactionMonitor();
+        this.transactionMonitor = new TransactionMonitor(maxConcurrentTransactions);
         this.lockFailureQueue = new PriorityQueue<>(LockFailure.COMPARATOR);
         this.networkClient = null;
         this.clientHighWaterMark = new AtomicLong(-1);

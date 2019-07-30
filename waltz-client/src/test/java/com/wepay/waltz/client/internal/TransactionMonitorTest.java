@@ -1,5 +1,6 @@
 package com.wepay.waltz.client.internal;
 
+import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.exception.ClientClosedException;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.exception.PartitionInactiveException;
@@ -31,7 +32,7 @@ public class TransactionMonitorTest {
 
     @Before
     public void setup() {
-        monitor = new TransactionMonitor();
+        monitor = new TransactionMonitor(WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS);
     }
 
     @After

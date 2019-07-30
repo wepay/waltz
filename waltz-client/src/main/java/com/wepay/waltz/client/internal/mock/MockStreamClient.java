@@ -28,10 +28,17 @@ class MockStreamClient implements StreamClient {
 
     private final AtomicBoolean forceNextAppendFail = new AtomicBoolean(false);
 
-    MockStreamClient(int clientId, String clusterName, boolean autoMount, Map<Integer, MockServerPartition> partitions, RpcClient rpcClient, WaltzClientCallbacks callbacks) {
+    MockStreamClient(int clientId,
+                     String clusterName,
+                     boolean autoMount,
+                     int maxConcurrentTransactions,
+                     Map<Integer, MockServerPartition> partitions,
+                     RpcClient rpcClient,
+                     WaltzClientCallbacks callbacks
+    ) {
         this.clientId = clientId;
         this.clusterName = clusterName;
-        this.clientPartitions = MockClientPartition.createForStreamClient(clientId, partitions, callbacks, rpcClient);
+        this.clientPartitions = MockClientPartition.createForStreamClient(clientId, maxConcurrentTransactions, partitions, callbacks, rpcClient);
         this.callbacks = callbacks;
         this.autoMount = autoMount;
         if (autoMount) {

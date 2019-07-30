@@ -39,6 +39,7 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
 
     private final boolean autoMount;
     private final SslContext sslCtx;
+    private final int maxConcurrentTransactions;
     protected final WaltzClientCallbacks callbacks;
     private final MessageProcessingThreadPool messageProcessingThreadPool;
     private final HashMap<Endpoint, WaltzNetworkClient> networkClients = new HashMap<>();
@@ -52,11 +53,13 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
     protected InternalBaseClient(
         boolean autoMount,
         SslContext sslCtx,
+        int maxConcurrentTransactions,
         WaltzClientCallbacks callbacks,
         MessageProcessingThreadPool messageProcessingThreadPool
     ) {
         this.autoMount = autoMount;
         this.sslCtx = sslCtx;
+        this.maxConcurrentTransactions = maxConcurrentTransactions;
         this.callbacks = callbacks;
         this.messageProcessingThreadPool = messageProcessingThreadPool;
         this.endpoints = Collections.emptyMap();
@@ -190,7 +193,7 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         this.numPartitions = numPartitions;
 
         for (int partitionId = 0; partitionId < numPartitions; partitionId++) {
-            Partition partition = new Partition(partitionId, clientId);
+            Partition partition = new Partition(partitionId, clientId, maxConcurrentTransactions);
             partitions.put(partitionId, partition);
         }
 

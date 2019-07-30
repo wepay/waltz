@@ -76,6 +76,10 @@ public class WaltzClientConfigTest {
         value = config.get(WaltzClientConfig.NUM_CONSUMER_THREADS);
         assertTrue(value instanceof Integer);
         assertEquals(WaltzClientConfig.DEFAULT_NUM_CONSUMER_THREADS, value);
+
+        value = config.get(WaltzClientConfig.MAX_CONCURRENT_TRANSACTIONS);
+        assertTrue(value instanceof Integer);
+        assertEquals(WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, value);
     }
 
     @Test

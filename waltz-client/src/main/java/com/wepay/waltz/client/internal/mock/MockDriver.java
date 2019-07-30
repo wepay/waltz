@@ -52,8 +52,10 @@ public class MockDriver implements WaltzClientDriver {
      */
     public void initialize(WaltzClientCallbacks callbacks, WaltzClientConfig config) throws Exception {
         boolean autoMount = (boolean) config.get(WaltzClientConfig.AUTO_MOUNT);
-        rpcClient = new MockRpcClient(clientId, serverPartitions);
-        streamClient = new MockStreamClient(clientId, CLUSTER_NAME, autoMount, serverPartitions, rpcClient, callbacks);
+        int maxConcurrentTransactions = (int) config.get(WaltzClientConfig.MAX_CONCURRENT_TRANSACTIONS);
+
+        rpcClient = new MockRpcClient(clientId, maxConcurrentTransactions, serverPartitions);
+        streamClient = new MockStreamClient(clientId, CLUSTER_NAME, autoMount, maxConcurrentTransactions, serverPartitions, rpcClient, callbacks);
     }
 
     @Override

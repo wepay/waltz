@@ -10,8 +10,8 @@ class MockRpcClient implements RpcClient {
 
     private final Map<Integer, MockClientPartition> partitions;
 
-    MockRpcClient(int clientId, Map<Integer, MockServerPartition> partitions) {
-        this.partitions = MockClientPartition.createForRpcClient(clientId, partitions);
+    MockRpcClient(int clientId, int maxConcurrentTransactions, Map<Integer, MockServerPartition> partitions) {
+        this.partitions = MockClientPartition.createForRpcClient(clientId, maxConcurrentTransactions, partitions);
 
         for (MockClientPartition partition : this.partitions.values()) {
             partition.activate();

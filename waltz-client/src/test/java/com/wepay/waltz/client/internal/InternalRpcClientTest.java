@@ -1,5 +1,6 @@
 package com.wepay.waltz.client.internal;
 
+import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.test.mock.MockContext;
 import com.wepay.zktools.util.Uninterruptibly;
 import org.junit.Test;
@@ -19,8 +20,8 @@ public class InternalRpcClientTest extends InternalClientTestBase {
         final int numTransactions = 10;
         List<String> expected = new ArrayList<>();
 
-        InternalRpcClient internalRpcClient = getInternalRpcClient();
-        InternalStreamClient internalStreamClient = getInternalStreamClient(true, internalRpcClient);
+        InternalRpcClient internalRpcClient = getInternalRpcClient(WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS);
+        InternalStreamClient internalStreamClient = getInternalStreamClient(true, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, internalRpcClient);
 
         assertEquals(allPartitions, internalRpcClient.getActivePartitions());
 

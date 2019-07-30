@@ -10,7 +10,6 @@ import com.wepay.waltz.client.internal.RpcClient;
 import com.wepay.waltz.client.internal.StreamClient;
 import com.wepay.waltz.client.internal.TransactionBuilderImpl;
 import com.wepay.waltz.client.internal.TransactionFuture;
-import com.wepay.waltz.client.internal.TransactionMonitor;
 import com.wepay.waltz.client.internal.TransactionResultHandler;
 import com.wepay.waltz.common.message.AppendRequest;
 import com.wepay.waltz.common.message.ReqId;
@@ -284,7 +283,7 @@ public class MockDriverTest {
 
     @Test
     public void testSuspendFeed() throws Exception {
-        final int numTransactions = TransactionMonitor.MAX_CONCURRENT_TRANSACTIONS;
+        final int numTransactions = WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS;
 
         Map<Integer, MockServerPartition> serverPartitions = Collections.singletonMap(0, new MockServerPartition(0));
 

@@ -2,6 +2,7 @@ package com.wepay.waltz.server;
 
 import com.wepay.waltz.client.Transaction;
 import com.wepay.waltz.client.WaltzClient;
+import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.common.message.Record;
 import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.test.mock.MockClusterManager;
@@ -56,7 +57,14 @@ public class ServerClientNetworkFaultTest extends WaltzTestBase {
         };
         callbacks.setClientHighWaterMark(0, -1L);
 
-        WaltzTestClientDriver testDriver = new WaltzTestClientDriver(true, null, callbacks, clusterManager);
+        WaltzTestClientDriver testDriver = new WaltzTestClientDriver(
+            true,
+            null,
+            WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS,
+            callbacks,
+            clusterManager
+        );
+
         ProxyClientDriver driver = new ProxyClientDriver(testDriver, proxyPort, realPort);
         WaltzClient client = new WaltzClient(driver, 1, 5000);
         ExecutorService executorService = Executors.newSingleThreadExecutor();

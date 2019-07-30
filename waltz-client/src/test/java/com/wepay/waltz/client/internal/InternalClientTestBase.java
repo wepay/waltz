@@ -90,8 +90,8 @@ public class InternalClientTestBase {
         return callbacks;
     }
 
-    protected InternalRpcClient getInternalRpcClient() {
-        InternalRpcClient internalRpcClient = new InternalRpcClient(clientSslCtx, getCallbacks());
+    protected InternalRpcClient getInternalRpcClient(int maxConcurrentTransactions) {
+        InternalRpcClient internalRpcClient = new InternalRpcClient(clientSslCtx, maxConcurrentTransactions, getCallbacks());
         clients.add(internalRpcClient);
 
         internalRpcClient.setNumPartitions(partitionInfoList.size());
@@ -101,8 +101,8 @@ public class InternalClientTestBase {
         return internalRpcClient;
     }
 
-    protected InternalStreamClient getInternalStreamClient(boolean autoMount, InternalRpcClient rpcClient) {
-        InternalStreamClient internalStreamClient = new InternalStreamClient(autoMount, clientSslCtx, getCallbacks(), rpcClient, null);
+    protected InternalStreamClient getInternalStreamClient(boolean autoMount, int maxConcurrentTransactions, InternalRpcClient rpcClient) {
+        InternalStreamClient internalStreamClient = new InternalStreamClient(autoMount, clientSslCtx, maxConcurrentTransactions, getCallbacks(), rpcClient, null);
         clients.add(internalStreamClient);
 
         internalStreamClient.setClientId(clientId.incrementAndGet());

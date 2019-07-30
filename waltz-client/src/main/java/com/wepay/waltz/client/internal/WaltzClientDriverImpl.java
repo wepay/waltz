@@ -34,12 +34,21 @@ public class WaltzClientDriverImpl implements WaltzClientDriver {
             sslCtx = ClientSSL.createInsecureContext();
         }
 
+        int maxConcurrentTransactions = (int) config.get(WaltzClientConfig.MAX_CONCURRENT_TRANSACTIONS);
+
         this.messageProcessingThreadPool = new MessageProcessingThreadPool(
             (int) config.get(WaltzClientConfig.NUM_CONSUMER_THREADS)
         ).open();
 
-        this.rpcClient = new InternalRpcClient(sslCtx, callbacks);
-        this.streamClient = new InternalStreamClient(autoMount, sslCtx, callbacks, this.rpcClient, this.messageProcessingThreadPool);
+        this.rpcClient = new InternalRpcClient(sslCtx, maxConcurrentTransactions, callbacks);
+        this.streamClient = new InternalStreamClient(
+            autoMount,
+            sslCtx,
+            maxConcurrentTransactions,
+            callbacks,
+            this.rpcClient,
+            this.messageProcessingThreadPool
+        );
 
         this.zooKeeperClient = new ZooKeeperClientImpl(
             (String) config.get(WaltzClientConfig.ZOOKEEPER_CONNECT_STRING),

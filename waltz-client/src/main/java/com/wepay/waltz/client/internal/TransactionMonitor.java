@@ -14,18 +14,21 @@ public class TransactionMonitor {
 
     private static final Logger logger = Logging.getLogger(TransactionMonitor.class);
 
-    public static final int MAX_CONCURRENT_TRANSACTIONS = 5;
-
     private enum State {
         STARTED, STOPPED, CLOSED
     }
 
     private final LinkedHashMap<ReqId, TransactionFuture> registered = new LinkedHashMap<>();
+    private final int maxConcurrentTransactions;
 
     private State state = State.STOPPED;
     private ReqId lastReqId = null;
     private long lastTimestamp = -1;
     private int numRegistered = 0;
+
+    public TransactionMonitor(int maxConcurrentTransactions) {
+        this.maxConcurrentTransactions = maxConcurrentTransactions;
+    }
 
     public void close() {
         synchronized (this) {
@@ -88,13 +91,13 @@ public class TransactionMonitor {
     }
 
     public int maxCapacity() {
-        return MAX_CONCURRENT_TRANSACTIONS;
+        return maxConcurrentTransactions;
     }
 
     public TransactionFuture register(ReqId reqId, long registrationTimeout) {
         synchronized (this) {
             final long due = System.currentTimeMillis() + registrationTimeout;
-            while (state == State.STARTED && (numRegistered >= MAX_CONCURRENT_TRANSACTIONS)) {
+            while (state == State.STARTED && (numRegistered >= maxConcurrentTransactions)) {
                 long remaining = due - System.currentTimeMillis();
                 if (remaining > 0) {
                     try {
@@ -116,7 +119,7 @@ public class TransactionMonitor {
                     lastTimestamp = System.currentTimeMillis();
                     registered.put(reqId, future);
                     numRegistered++;
-                    if (numRegistered >= MAX_CONCURRENT_TRANSACTIONS) {
+                    if (numRegistered >= maxConcurrentTransactions) {
                         logger.debug("transaction monitor reached capacity");
                     }
                 } else {

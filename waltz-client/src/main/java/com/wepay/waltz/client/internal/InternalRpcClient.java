@@ -8,9 +8,9 @@ import java.util.concurrent.Future;
 
 public class InternalRpcClient extends InternalBaseClient implements RpcClient {
 
-    public InternalRpcClient(SslContext sslCtx, WaltzClientCallbacks callbacks) {
+    public InternalRpcClient(SslContext sslCtx, int maxConcurrentTransactions, WaltzClientCallbacks callbacks) {
         // InternalRpcClient always mounts all partition
-        super(true, sslCtx, callbacks, null);
+        super(true, sslCtx, maxConcurrentTransactions, callbacks, null);
     }
 
     @Override

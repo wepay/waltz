@@ -30,6 +30,7 @@ public class WaltzTestClientDriver implements WaltzClientDriver {
     public WaltzTestClientDriver(
         boolean autoMount,
         SslContext sslCtx,
+        int maxConcurrentTransactions,
         WaltzClientCallbacks callbacks,
         MockClusterManager clusterManager
     ) throws Exception {
@@ -38,8 +39,8 @@ public class WaltzTestClientDriver implements WaltzClientDriver {
         }
 
         this.messageProcessingThreadPool = new MessageProcessingThreadPool(10).open();
-        this.rpcClient = new InternalRpcClient(sslCtx, callbacks);
-        this.streamClient = new InternalStreamClient(autoMount, sslCtx, callbacks, this.rpcClient, this.messageProcessingThreadPool);
+        this.rpcClient = new InternalRpcClient(sslCtx, maxConcurrentTransactions, callbacks);
+        this.streamClient = new InternalStreamClient(autoMount, sslCtx, maxConcurrentTransactions, callbacks, this.rpcClient, this.messageProcessingThreadPool);
         this.managedClient = createManagedClient(this.rpcClient, this.streamClient);
         this.clusterManager = clusterManager;
         this.clusterManager.manage(this.managedClient);

@@ -21,11 +21,12 @@ public class InternalStreamClient extends InternalBaseClient implements StreamCl
     public InternalStreamClient(
         boolean autoMount,
         SslContext sslCtx,
+        int maxConcurrentTransactions,
         WaltzClientCallbacks callbacks,
         InternalRpcClient rpcClient,
         MessageProcessingThreadPool threadPool
     ) {
-        super(autoMount, sslCtx, callbacks, threadPool);
+        super(autoMount, sslCtx, maxConcurrentTransactions, callbacks, threadPool);
         this.rpcClient = rpcClient;
     }
 

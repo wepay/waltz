@@ -1,5 +1,6 @@
 package com.wepay.waltz.client.internal;
 
+import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.exception.InvalidOperationException;
 import com.wepay.waltz.exception.PartitionInactiveException;
@@ -26,8 +27,8 @@ public class InternalStreamClientTest extends InternalClientTestBase {
         final int numTransactions = 10;
         List<String> expected = new ArrayList<>();
 
-        InternalRpcClient internalRpcClient = getInternalRpcClient();
-        InternalStreamClient internalStreamClient = getInternalStreamClient(true, internalRpcClient);
+        InternalRpcClient internalRpcClient = getInternalRpcClient(WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS);
+        InternalStreamClient internalStreamClient = getInternalStreamClient(true, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, internalRpcClient);
 
         for (int i = 0; i < numTransactions; i++) {
             String data = "transaction" + i;
@@ -65,8 +66,8 @@ public class InternalStreamClientTest extends InternalClientTestBase {
 
     @Test
     public void testSetActivePartitions() throws Exception {
-        InternalRpcClient internalRpcClient = getInternalRpcClient();
-        InternalStreamClient internalStreamClient = getInternalStreamClient(false, internalRpcClient);
+        InternalRpcClient internalRpcClient = getInternalRpcClient(WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS);
+        InternalStreamClient internalStreamClient = getInternalStreamClient(false, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, internalRpcClient);
 
         assertEquals(Collections.emptySet(), internalStreamClient.getActivePartitions());
         checkInactive(internalStreamClient, 0);
@@ -132,8 +133,8 @@ public class InternalStreamClientTest extends InternalClientTestBase {
         final int numTransactions = 2000;
         List<TransactionFuture> futures = new ArrayList<>();
 
-        InternalRpcClient internalRpcClient = getInternalRpcClient();
-        InternalStreamClient internalStreamClient = getInternalStreamClient(false, internalRpcClient);
+        InternalRpcClient internalRpcClient = getInternalRpcClient(WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS);
+        InternalStreamClient internalStreamClient = getInternalStreamClient(false, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, internalRpcClient);
         internalStreamClient.setActivePartitions(Utils.set(0));
 
         CountDownLatch latch = new CountDownLatch(1);

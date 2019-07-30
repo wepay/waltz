@@ -30,6 +30,9 @@ public class WaltzClientConfig extends AbstractConfig {
 
     public static final String CLIENT_SSL_CONFIG_PREFIX = "client.ssl.";
 
+    public static final String MAX_CONCURRENT_TRANSACTIONS = "client.maxConcurrentTransactions";
+    public static final int DEFAULT_MAX_CONCURRENT_TRANSACTIONS = 5;
+
     // Mock (for test only)
     public static final String MOCK_DRIVER = "client.mockDriver";
 
@@ -47,6 +50,7 @@ public class WaltzClientConfig extends AbstractConfig {
         parsers.put(NUM_TRANSACTION_RETRY_THREADS, intParser.withDefault(DEFAULT_NUM_TRANSACTION_RETRY_THREADS));
         parsers.put(NUM_CONSUMER_THREADS, intParser.withDefault(DEFAULT_NUM_CONSUMER_THREADS));
         parsers.put(LONG_WAIT_THRESHOLD, longParser.withDefault(DEFAULT_LONG_WAIT_THRESHOLD));
+        parsers.put(MAX_CONCURRENT_TRANSACTIONS, intParser.withDefault(DEFAULT_MAX_CONCURRENT_TRANSACTIONS));
 
         // See SSLConfig for SSL config parameters
     }

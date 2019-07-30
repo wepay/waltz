@@ -33,24 +33,29 @@ final class MockClientPartition {
 
     private boolean active;
 
-    private MockClientPartition(int clientId, MockServerPartition serverPartition, WaltzClientCallbacks callbacks, RpcClient rpcClient) {
+    private MockClientPartition(int clientId,
+                                int maxConcurrentTransactions,
+                                MockServerPartition serverPartition,
+                                WaltzClientCallbacks callbacks,
+                                RpcClient rpcClient
+    ) {
         this.clientId = clientId;
         this.serverPartition = serverPartition;
         this.callbacks = callbacks;
         this.messageReader = serverPartition.getMessageReader();
-        this.transactionMonitor = new TransactionMonitor();
+        this.transactionMonitor = new TransactionMonitor(maxConcurrentTransactions);
         this.clientHighWaterMark = new AtomicLong(-1L);
         this.task = new StreamTask(messageReader, rpcClient);
         this.task.suspendFeed();
         this.task.start();
     }
 
-    private MockClientPartition(int clientId, MockServerPartition serverPartition) {
+    private MockClientPartition(int clientId, int maxConcurrentTransactions, MockServerPartition serverPartition) {
         this.clientId = clientId;
         this.serverPartition = serverPartition;
         this.callbacks = null;
         this.messageReader = null;
-        this.transactionMonitor = new TransactionMonitor();
+        this.transactionMonitor = new TransactionMonitor(maxConcurrentTransactions);
         this.clientHighWaterMark = null;
         this.task = null;
     }
@@ -282,6 +287,7 @@ final class MockClientPartition {
 
     static Map<Integer, MockClientPartition> createForStreamClient(
         int clientId,
+        int maxConcurrentTransactions,
         Map<Integer, MockServerPartition> serverPartitions,
         WaltzClientCallbacks callbacks,
         RpcClient rpcClient
@@ -289,7 +295,7 @@ final class MockClientPartition {
         HashMap<Integer, MockClientPartition> partitions = new HashMap<>(serverPartitions.size());
 
         for (Map.Entry<Integer, MockServerPartition> entry : serverPartitions.entrySet()) {
-            partitions.put(entry.getKey(), new MockClientPartition(clientId, entry.getValue(), callbacks, rpcClient));
+            partitions.put(entry.getKey(), new MockClientPartition(clientId, maxConcurrentTransactions, entry.getValue(), callbacks, rpcClient));
         }
 
         return partitions;
@@ -297,12 +303,13 @@ final class MockClientPartition {
 
     static Map<Integer, MockClientPartition> createForRpcClient(
         int clientId,
+        int maxConcurrentTransactions,
         Map<Integer, MockServerPartition> serverPartitions
     ) {
         HashMap<Integer, MockClientPartition> partitions = new HashMap<>(serverPartitions.size());
 
         for (Map.Entry<Integer, MockServerPartition> entry : serverPartitions.entrySet()) {
-            partitions.put(entry.getKey(), new MockClientPartition(clientId, entry.getValue()));
+            partitions.put(entry.getKey(), new MockClientPartition(clientId, maxConcurrentTransactions, entry.getValue()));
         }
 
         return partitions;
