@@ -318,7 +318,13 @@ public class StoreSessionImpl implements StoreSession {
                     }
                 }
 
-                Voting voting = new Voting(quorum, numReplicas);
+                // Dynamically adjust number of voters. Only replica that successfully connected will be treated as voter.
+                int numVoters = 0;
+                for (ReplicaSession replicaSession : replicaSessions) {
+                    numVoters = replicaSession.isConnected() ? numVoters + 1 : numVoters;
+                }
+                Voting voting = new Voting(quorum, numVoters);
+
                 for (ReplicaSession replicaSession : replicaSessions) {
                     replicaSession.append(nextTransactionId, batch, voting);
                 }

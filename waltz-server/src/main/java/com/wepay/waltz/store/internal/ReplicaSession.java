@@ -103,6 +103,10 @@ public class ReplicaSession extends LatencyWeightedRoute {
         }
     }
 
+    public boolean isConnected() {
+        return connectionFuture.isDone();
+    }
+
     @Override
     public boolean isClosed() {
         return !task.isRunning();
@@ -241,6 +245,11 @@ public class ReplicaSession extends LatencyWeightedRoute {
             // Open a replica connection
             ReplicaConnection connection = openConnection();
 
+            // Now make the connection available to replica reader and writer
+            if (!connectionFuture.complete(connection)) {
+                connection.close();
+            }
+
             // Start recovery
             long nextTransactionId = recoveryMgr.start(replicaId, connection) + 1;
 
@@ -248,11 +257,6 @@ public class ReplicaSession extends LatencyWeightedRoute {
 
             // End recovery
             recoveryMgr.end(replicaId);
-
-            // Now make the connection available to replica reader and writer
-            if (!connectionFuture.complete(connection)) {
-                connection.close();
-            }
 
             synchronized (this) {
                 // Recovery completed
