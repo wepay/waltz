@@ -11,6 +11,10 @@
       "back-pressure",
       "waltz-client",
       "waltz-server",
-      "waltz-storage"]
+      "waltz-storage"
+    ],
+    "Administration": [
+      "waltz-setup"
+    ]
   }
 }

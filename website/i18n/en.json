@@ -35,6 +35,9 @@
       "waltz-server": {
         "title": "Waltz Server"
       },
+      "waltz-setup": {
+        "title": "Waltz Setup"
+      },
       "waltz-storage": {
         "title": "Waltz Storage"
       }
@@ -43,7 +46,8 @@
       "Docs": "Docs"
     },
     "categories": {
-      "Design": "Design"
+      "Design": "Design",
+      "Administration": "Administration"
     }
   },
   "pages-strings": {
