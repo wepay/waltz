@@ -3,6 +3,7 @@ package com.wepay.waltz.tools.zk;
 import com.wepay.waltz.common.util.Cli;
 import com.wepay.waltz.common.util.SubcommandCli;
 import com.wepay.waltz.exception.SubCommandFailedException;
+import com.wepay.waltz.store.internal.metadata.ConnectionMetadata;
 import com.wepay.waltz.store.internal.metadata.GroupDescriptor;
 import com.wepay.waltz.store.internal.metadata.PartitionMetadata;
 import com.wepay.waltz.store.internal.metadata.PartitionMetadataSerializer;
@@ -116,6 +117,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                 listClusterInfoAndServerPartitionAssignments(zkClient, root);
                 listStoreParams(storeRoot, storeParams);
                 listReplicaAndGroupAssignments(storeRoot, storeMetadata.getReplicaAssignments(), storeMetadata.getGroupDescriptor());
+                listConnections(storeRoot, storeMetadata.getConnectionMetadata());
                 if (storeParams != null) {
                     for (int id = 0; id < storeParams.numPartitions; id++) {
                         ZNode znode = new ZNode(partitionRoot, Integer.toString(id));
@@ -153,12 +155,26 @@ public final class ZooKeeperCli extends SubcommandCli {
         }
 
         private void listReplicaAndGroupAssignments(ZNode storeRoot, ReplicaAssignments replicaAssignments, GroupDescriptor groupDescriptor) throws Exception {
+            System.out.println("store [" + storeRoot + "] replica and group assignments:");
+
             if ((replicaAssignments != null) && (groupDescriptor != null)) {
-                System.out.println("store [" + storeRoot + "] replica and group assignments:");
                 Map<String, int[]> replicas = new TreeMap<>(replicaAssignments.replicas);
                 Map<String, Integer> groups = groupDescriptor.groups;
                 for (Map.Entry<String, int[]> entry : replicas.entrySet()) {
-                    System.out.println("    " + entry.getKey() + " = " + Arrays.toString(entry.getValue()) + ", GroupId: " + groups.get(entry.getKey()));
+                    System.out.println("  " + entry.getKey() + " = " + Arrays.toString(entry.getValue()) + ", GroupId: " + groups.get(entry.getKey()));
+                }
+            } else {
+                System.out.println("  not found");
+            }
+        }
+
+        private void listConnections(ZNode storeRoot, ConnectionMetadata connectionMetadata) {
+            System.out.println("store [" + storeRoot + "] connections:");
+
+            if ((connectionMetadata != null)) {
+                Map<String, Integer> connections = connectionMetadata.connections;
+                for (Map.Entry<String, Integer> entry : connections.entrySet()) {
+                    System.out.println("  " + entry.getKey() + " has admin port: " + entry.getValue());
                 }
             } else {
                 System.out.println("  not found");
@@ -435,7 +451,7 @@ public final class ZooKeeperCli extends SubcommandCli {
         }
 
         private void deleteCluster(ZooKeeperClient zkClient, ZNode root,
-                                         String clusterName, boolean force) throws Exception {
+                                   String clusterName, boolean force) throws Exception {
             if (zkClient.exists(root) == null) {
                 System.out.println("cluster root [" + root + "] does not exist");
             } else {

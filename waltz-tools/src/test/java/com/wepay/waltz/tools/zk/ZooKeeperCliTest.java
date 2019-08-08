@@ -165,8 +165,11 @@ public final class ZooKeeperCliTest {
             ZooKeeperCli.testMain(showCommandArgs);
 
             String expectedCmdOutput = "store [/test/root/store] replica and group assignments:\n"
-                    + "    fakehost0:6000 = [0, 1, 2], GroupId: 1\n"
-                    + "    fakehost1:6001 = [0, 1, 2], GroupId: 1\n"
+                    + "  fakehost0:6000 = [0, 1, 2], GroupId: 1\n"
+                    + "  fakehost1:6001 = [0, 1, 2], GroupId: 1\n"
+                    + "store [/test/root/store] connections:\n"
+                    + "  fakehost1:6001 has admin port: 6101\n"
+                    + "  fakehost0:6000 has admin port: 6100\n"
                     + "store [/test/root/store/partition/0] replica states:\n"
                     + "  ReplicaId(0,fakehost0:6000), SessionId: -1, closingHighWaterMark: UNRESOLVED\n"
                     + "  ReplicaId(0,fakehost1:6001), SessionId: -1, closingHighWaterMark: UNRESOLVED\n"
