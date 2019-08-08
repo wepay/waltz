@@ -65,7 +65,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "com.github.jengelman.gradle.plugins:shadow:2.0.1"
+        classpath "com.github.jengelman.gradle.plugins:shadow:4.0.4"
         classpath 'se.transmode.gradle:gradle-docker:1.2'
         classpath 'com.wepay:salt:0.1.32'
     }
