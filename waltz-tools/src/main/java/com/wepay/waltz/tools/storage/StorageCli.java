@@ -9,9 +9,12 @@ import com.wepay.waltz.exception.SubCommandFailedException;
 import com.wepay.waltz.server.WaltzServerConfig;
 import com.wepay.waltz.storage.client.StorageAdminClient;
 import com.wepay.waltz.storage.client.StorageClient;
+import com.wepay.waltz.storage.common.SessionInfo;
 import com.wepay.waltz.storage.exception.StorageRpcException;
 import com.wepay.waltz.storage.server.internal.PartitionInfoSnapshot;
 import com.wepay.waltz.store.exception.StoreMetadataException;
+import com.wepay.waltz.store.internal.ReplicaConnection;
+import com.wepay.waltz.store.internal.ReplicaConnectionImpl;
 import com.wepay.waltz.store.internal.metadata.ConnectionMetadata;
 import com.wepay.waltz.store.internal.metadata.ConnectionMetadataSerializer;
 import com.wepay.waltz.store.internal.metadata.GroupDescriptorSerializer;
@@ -48,7 +51,8 @@ public final class StorageCli extends SubcommandCli {
                 new Subcommand(Availability.NAME, Availability.DESCRIPTION, Availability::new),
                 new Subcommand(RecoverPartition.NAME, RecoverPartition.DESCRIPTION, RecoverPartition::new),
                 new Subcommand(SyncPartitionAssignments.NAME, SyncPartitionAssignments.DESCRIPTION, SyncPartitionAssignments::new),
-                new Subcommand(Validate.NAME, Validate.DESCRIPTION, Validate::new)
+                new Subcommand(Validate.NAME, Validate.DESCRIPTION, Validate::new),
+                new Subcommand(MaxTransactionId.NAME, MaxTransactionId.DESCRIPTION, MaxTransactionId::new)
         ));
     }
 
@@ -70,7 +74,7 @@ public final class StorageCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option storageOption = Option.builder("s")
                     .longOpt("storage")
-                    .desc("Specify storage in format of host:port, where port is the admin port")
+                    .desc("Specify storage in format of host:port, where port is admin port")
                     .hasArg()
                     .build();
             Option cliCfgOption = Option.builder("c")
@@ -190,7 +194,7 @@ public final class StorageCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option storageOption = Option.builder("s")
                     .longOpt("storage")
-                    .desc("Specify storage in format of host:port, where port is the admin port")
+                    .desc("Specify storage in format of host:port, where port is admin port")
                     .hasArg()
                     .build();
             Option partitionOption = Option.builder("p")
@@ -284,7 +288,7 @@ public final class StorageCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option storageOption = Option.builder("s")
                     .longOpt("storage")
-                    .desc("Specify storage in format of host:port, where port is the admin port")
+                    .desc("Specify storage in format of host:port, where port is admin port")
                     .hasArg()
                     .build();
             Option partitionOption = Option.builder("p")
@@ -389,7 +393,7 @@ public final class StorageCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option storageOption = Option.builder("s")
                     .longOpt("storage")
-                    .desc("Specify storage in format of host:port, where port is the admin port")
+                    .desc("Specify storage in format of host:port, where port is admin port")
                     .hasArg()
                     .build();
             Option partitionOption = Option.builder("p")
@@ -508,17 +512,17 @@ public final class StorageCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option sourceStorageOption = Option.builder("s")
                     .longOpt("source-storage")
-                    .desc("Specify source storage in format of host:port, where port is the admin port")
+                    .desc("Specify source storage in format of host:port, where port is admin port")
                     .hasArg()
                     .build();
             Option destinationStorageOption = Option.builder("d")
                     .longOpt("destination-storage")
-                    .desc("Specify destination storage in format of host:port, where port is the admin port")
+                    .desc("Specify destination storage in format of host:port, where port is admin port")
                     .hasArg()
                     .build();
             Option destinationStoragePortOption = Option.builder("dp")
                     .longOpt("destination-storage-port")
-                    .desc("Specify the port of destination storage")
+                    .desc("Specify the port of destination storage, where port is non-admin port")
                     .hasArg()
                     .build();
             Option partitionOption = Option.builder("p")
@@ -628,9 +632,6 @@ public final class StorageCli extends SubcommandCli {
             StorageClient destinationStorageClient = null;
             StorageAdminClient destinationStorageAdminClient = null;
 
-            // Force -1 as destination session ID. This will prevent us from ever writing to a replica that's been
-            // written to by a Waltz server, which is desired. We don't want the admin tool and a Waltz server
-            // sharing the same session ID, nor do want them fighting each other for the latest session ID.
             CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
             String zkConnectString = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
             String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
@@ -747,7 +748,7 @@ public final class StorageCli extends SubcommandCli {
     }
 
     /**
-     * The {@code Validate} command validate.
+     * The {@code Validate} command validate Waltz server and Waltz storage node connectivity.
      */
     private static final class Validate extends Cli {
         private static final String NAME = "validate";
@@ -843,6 +844,137 @@ public final class StorageCli extends SubcommandCli {
             } catch (Exception e) {
                 throw new Exception(String.format("Invalid hostname or admin port: %s", e.getMessage()));
             } finally {
+                if (storageAdminClient != null) {
+                    storageAdminClient.close();
+                }
+            }
+        }
+
+        @Override
+        protected String getUsage() {
+            return buildUsage(NAME, DESCRIPTION, getOptions());
+        }
+    }
+
+
+    /**
+     * The {@code MaxTransactionId} command displays the maximum transaction ID of a partition for given storage node.
+     */
+    private static final class MaxTransactionId extends Cli {
+        private static final String NAME = "max-transaction-id";
+        private static final String DESCRIPTION = "Displays the max transaction ID";
+
+        private MaxTransactionId(String[] args) {
+            super(args);
+        }
+
+        @Override
+        protected void configureOptions(Options options) {
+            Option storageOption = Option.builder("s")
+                    .longOpt("storage")
+                    .desc("Specify storage in format of host:port, where port is admin port")
+                    .hasArg()
+                    .build();
+            Option storagePortOption = Option.builder("sp")
+                    .longOpt("storage-port")
+                    .desc("Specify the port of storage, where port is non-admin port")
+                    .hasArg()
+                    .build();
+            Option partitionOption = Option.builder("p")
+                    .longOpt("partition")
+                    .desc("Specify the partition id whose max transaction ID to be returned")
+                    .hasArg()
+                    .build();
+            Option cliCfgOption = Option.builder("c")
+                    .longOpt("cli-config-path")
+                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config")
+                    .hasArg()
+                    .build();
+            Option offlineOption = Option.builder("o")
+                    .longOpt("offline")
+                    .desc("Check max transaction ID when storage is offline")
+                    .hasArg(false)
+                    .build();
+            storageOption.setRequired(true);
+            storagePortOption.setRequired(true);
+            partitionOption.setRequired(true);
+            cliCfgOption.setRequired(true);
+            offlineOption.setRequired(false);
+
+            options.addOption(storageOption);
+            options.addOption(storagePortOption);
+            options.addOption(partitionOption);
+            options.addOption(cliCfgOption);
+            options.addOption(offlineOption);
+        }
+
+        @Override
+        protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
+            String hostAndPort = cmd.getOptionValue("storage");
+            String storagePort = cmd.getOptionValue("storage-port");
+            String partitionId = cmd.getOptionValue("partition");
+            String cliConfigPath = cmd.getOptionValue("cli-config-path");
+            boolean usedByOfflineRecovery = cmd.hasOption("offline");
+
+            try {
+                String[] hostAndPortArray = hostAndPort.split(":");
+                if (hostAndPortArray.length != 2) {
+                    throw new IllegalArgumentException("Storage must be in format of host:port");
+                }
+                String storageHost = hostAndPortArray[0];
+                String storageAdminPort = hostAndPortArray[1];
+
+                long maxTransactionId = getMaxTransactionId(storageHost, Integer.parseInt(storagePort), Integer.parseInt(storageAdminPort), Integer.parseInt(partitionId), cliConfigPath, usedByOfflineRecovery);
+                System.out.println("Max Transaction ID: " + maxTransactionId);
+            } catch (Exception e) {
+                throw new SubCommandFailedException(String.format("Failed to read max transaction ID for storage %s. %n%s", hostAndPort, e.getMessage()));
+            }
+        }
+
+        /**
+         * Return max transaction ID of a partition read from storage.
+         * @param storageHost       storage host
+         * @param storagePort       storage port
+         * @param storageAdminPort  storage admin port
+         * @param cliConfigPath     the cli config file path required for zooKeeper connection string, zooKeeper root path
+         * @return max transaction ID
+         */
+        private long getMaxTransactionId(String storageHost, int storagePort, int storageAdminPort, int partitionId, String cliConfigPath, boolean isOffline) throws Exception {
+            ZooKeeperClient zkClient = null;
+            StorageClient storageClient = null;
+            StorageAdminClient storageAdminClient = null;
+            ReplicaConnection destinationReplicaConnection = null;
+
+            CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
+            String zkConnectString = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
+            String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
+            int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+            try {
+                SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
+                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout);
+
+                storageClient = openStorageClient(storageHost, storagePort, sslContext, zkClient, zkRoot, isOffline);
+                storageAdminClient = openStorageAdminClient(storageHost, storageAdminPort, sslContext, zkClient, zkRoot);
+
+                SessionInfo sessionInfo = (SessionInfo) storageAdminClient.lastSessionInfo(partitionId).get();
+                long sessionId = sessionInfo.sessionId;
+
+                // Create destination storage connection
+                destinationReplicaConnection = new ReplicaConnectionImpl(partitionId, sessionId, storageClient);
+
+                // Get destination storage current high watermark
+                return destinationReplicaConnection.getMaxTransactionId();
+
+            } finally {
+                if (destinationReplicaConnection != null) {
+                    destinationReplicaConnection.close();
+                }
+                if (zkClient != null) {
+                    zkClient.close();
+                }
+                if (storageClient != null) {
+                    storageClient.close();
+                }
                 if (storageAdminClient != null) {
                     storageAdminClient.close();
                 }

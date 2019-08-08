@@ -30,7 +30,6 @@ public class AdminServerHandlerTest {
         assertTrue(msgArg.getValue().exception.toString().contains("Partition:" + partitionId + " is not assigned."));
     }
 
-
     @Test
     public void testLastSessionInfo() throws Exception {
         int partitionId = new Random().nextInt(NUM_PARTITION);

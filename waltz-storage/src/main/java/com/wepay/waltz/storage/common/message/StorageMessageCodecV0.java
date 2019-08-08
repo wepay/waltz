@@ -42,16 +42,16 @@ public class StorageMessageCodecV0 implements MessageCodec {
                 return new OpenRequest(new UUID(reader.readLong(), reader.readLong()), reader.readInt());
 
             case StorageMessageType.LAST_SESSION_INFO_REQUEST:
-                return new LastSessionInfoRequest(sessionId, seqNum, partitionId);
+                return new LastSessionInfoRequest(sessionId, seqNum, partitionId, reader.readBoolean());
 
             case StorageMessageType.LAST_SESSION_INFO_RESPONSE:
                 return new LastSessionInfoResponse(sessionId, seqNum, partitionId, SessionInfo.readFrom(reader));
 
             case StorageMessageType.SET_LOW_WATER_MARK_REQUEST:
-                return new SetLowWaterMarkRequest(sessionId, seqNum, partitionId, reader.readLong());
+                return new SetLowWaterMarkRequest(sessionId, seqNum, partitionId, reader.readLong(), reader.readBoolean());
 
             case StorageMessageType.TRUNCATE_REQUEST:
-                return new TruncateRequest(sessionId, seqNum, partitionId, reader.readLong());
+                return new TruncateRequest(sessionId, seqNum, partitionId, reader.readLong(), reader.readBoolean());
 
             case StorageMessageType.APPEND_REQUEST:
                 int numRecords = reader.readInt();
@@ -59,7 +59,7 @@ public class StorageMessageCodecV0 implements MessageCodec {
                 for (int i = 0; i < numRecords; i++) {
                     records.add(Record.readFrom(reader));
                 }
-                return new AppendRequest(sessionId, seqNum, partitionId, records);
+                return new AppendRequest(sessionId, seqNum, partitionId, records, reader.readBoolean());
 
             case StorageMessageType.SUCCESS_RESPONSE:
                 return new SuccessResponse(sessionId, seqNum, partitionId);
@@ -89,7 +89,7 @@ public class StorageMessageCodecV0 implements MessageCodec {
                 }
 
             case StorageMessageType.MAX_TRANSACTION_ID_REQUEST:
-                return new MaxTransactionIdRequest(sessionId, seqNum, partitionId);
+                return new MaxTransactionIdRequest(sessionId, seqNum, partitionId, reader.readBoolean());
 
             case StorageMessageType.MAX_TRANSACTION_ID_RESPONSE:
                 return new MaxTransactionIdResponse(sessionId, seqNum, partitionId, reader.readLong());
@@ -138,6 +138,8 @@ public class StorageMessageCodecV0 implements MessageCodec {
                 break;
 
             case StorageMessageType.LAST_SESSION_INFO_REQUEST:
+                LastSessionInfoRequest lastSessionInfoRequest = (LastSessionInfoRequest) msg;
+                writer.writeBoolean(lastSessionInfoRequest.usedByOfflineRecovery);
                 break;
 
             case StorageMessageType.LAST_SESSION_INFO_RESPONSE:
@@ -148,11 +150,13 @@ public class StorageMessageCodecV0 implements MessageCodec {
             case StorageMessageType.SET_LOW_WATER_MARK_REQUEST:
                 SetLowWaterMarkRequest setLowWaterMarkRequest = (SetLowWaterMarkRequest) msg;
                 writer.writeLong(setLowWaterMarkRequest.lowWaterMark);
+                writer.writeBoolean(setLowWaterMarkRequest.usedByOfflineRecovery);
                 break;
 
             case StorageMessageType.TRUNCATE_REQUEST:
                 TruncateRequest truncateRequest = (TruncateRequest) msg;
                 writer.writeLong(truncateRequest.transactionId);
+                writer.writeBoolean(truncateRequest.usedByOfflineRecovery);
                 break;
 
             case StorageMessageType.APPEND_REQUEST:
@@ -161,6 +165,7 @@ public class StorageMessageCodecV0 implements MessageCodec {
                 for (Record record : appendRequest.records) {
                     record.writeTo(writer);
                 }
+                writer.writeBoolean(appendRequest.usedByOfflineRecovery);
                 break;
 
             case StorageMessageType.SUCCESS_RESPONSE:
@@ -202,6 +207,8 @@ public class StorageMessageCodecV0 implements MessageCodec {
                 break;
 
             case StorageMessageType.MAX_TRANSACTION_ID_REQUEST:
+                MaxTransactionIdRequest maxTransactionIdRequest = (MaxTransactionIdRequest) msg;
+                writer.writeBoolean(maxTransactionIdRequest.usedByOfflineRecovery);
                 break;
 
             case StorageMessageType.MAX_TRANSACTION_ID_RESPONSE:

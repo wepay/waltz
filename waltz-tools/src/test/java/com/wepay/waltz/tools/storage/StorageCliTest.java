@@ -1,9 +1,9 @@
 package com.wepay.waltz.tools.storage;
 
-import com.wepay.riff.network.ClientSSL;
 import com.wepay.riff.util.PortFinder;
 import com.wepay.waltz.common.message.Record;
 import com.wepay.waltz.common.util.Utils;
+import com.wepay.waltz.server.WaltzServerConfig;
 import com.wepay.waltz.storage.WaltzStorage;
 import com.wepay.waltz.storage.WaltzStorageConfig;
 import com.wepay.waltz.storage.client.StorageAdminClient;
@@ -54,6 +54,8 @@ public final class StorageCliTest {
     private final PrintStream originalErr = System.err;
     private static final String DIR_NAME = "storageCliTest";
     private static final String CONFIG_FILE_NAME = "test-config.yml";
+    private static final String SOURCE_SSL_CONFIG_FILE_NAME = "test-source-ssl-config.yml";
+    private static final String DESTINATION_SSL_CONFIG_FILE_NAME = "test-destination-ssl-config.yml";
 
     @Before
     public void setUpStreams() throws UnsupportedEncodingException {
@@ -68,21 +70,22 @@ public final class StorageCliTest {
     }
 
     Properties createProperties(String connectString, String znodePath, SslSetup sslSetup) {
+        return createProperties(connectString, znodePath, sslSetup, CliConfig.SSL_CONFIG_PREFIX);
+    }
+
+    Properties createProperties(String connectString, String znodePath, SslSetup sslSetup, String sslConfigPrefix) {
         Properties properties =  new Properties();
         properties.setProperty(CliConfig.ZOOKEEPER_CONNECT_STRING, connectString);
         properties.setProperty(CliConfig.CLUSTER_ROOT, znodePath);
-        sslSetup.setConfigParams(properties, CliConfig.SSL_CONFIG_PREFIX);
+        sslSetup.setConfigParams(properties, sslConfigPrefix);
 
         return properties;
     }
 
     @Test
     public void testListPartition() throws Exception {
-        Properties properties =  new Properties();
-        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/storage/cli/test");
-        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, "1");
-        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
-        IntegrationTestHelper helper = new IntegrationTestHelper(properties);
+        int numPartitions = 1;
+        IntegrationTestHelper helper = getIntegrationTestHelper(numPartitions);
         int partitionId = new Random().nextInt(helper.getNumPartitions());
 
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(), helper.getSslSetup());
@@ -150,12 +153,8 @@ public final class StorageCliTest {
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     @Test
     public void testAddAndRemovePartition() throws Exception {
-        Properties properties =  new Properties();
-        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/storage/cli/test");
-        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, "3");
-        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
-
-        IntegrationTestHelper helper = new IntegrationTestHelper(properties);
+        int numPartitions = 3;
+        IntegrationTestHelper helper = getIntegrationTestHelper(numPartitions);
         int partitionId = new Random().nextInt(helper.getNumPartitions());
 
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(), helper.getSslSetup());
@@ -258,11 +257,8 @@ public final class StorageCliTest {
 
     @Test
     public void testRemovePartitionWithDeleteFilesOption() throws Exception {
-        Properties properties = new Properties();
-        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/storage/cli/test");
-        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, "5");
-        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
-        IntegrationTestHelper helper = new IntegrationTestHelper(properties);
+        int numPartitions = 5;
+        IntegrationTestHelper helper = getIntegrationTestHelper(numPartitions);
 
         int partitionId = new Random().nextInt(helper.getNumPartitions());
 
@@ -344,12 +340,8 @@ public final class StorageCliTest {
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     @Test
     public void testAvailability() throws Exception {
-        Properties properties =  new Properties();
-        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/storage/cli/test");
-        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, "3");
-        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
-
-        IntegrationTestHelper helper = new IntegrationTestHelper(properties);
+        int numPartitions = 3;
+        IntegrationTestHelper helper = getIntegrationTestHelper(numPartitions);
         int partitionId = new Random().nextInt(helper.getNumPartitions());
 
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(), helper.getSslSetup());
@@ -410,52 +402,28 @@ public final class StorageCliTest {
     public void testRecoverPartition() throws Exception {
         long sessionId = 123;
         int numPartitions = 3;
-        Properties properties =  new Properties();
-        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/storage/cli/test");
-        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, Integer.toString(numPartitions));
-        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
-        IntegrationTestHelper helper = new IntegrationTestHelper(properties);
+        IntegrationTestHelper helper = getIntegrationTestHelper(numPartitions);
         String host = helper.getHost();
 
-        SslContext sslCtx = ClientSSL.createInsecureContext();
+        SslContext sslCtx = helper.getSslContext();
         int partitionId = new Random().nextInt(helper.getNumPartitions());
 
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(), helper.getSslSetup());
-        String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
+        Properties sslCfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(), helper.getSslSetup(), WaltzServerConfig.SERVER_SSL_CONFIG_PREFIX);
+        String cliConfigPath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
+        String sourceSslConfigPath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, SOURCE_SSL_CONFIG_FILE_NAME, sslCfgProperties);
+        String destinationSslConfigPath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, DESTINATION_SSL_CONFIG_FILE_NAME, sslCfgProperties);
 
         helper.startZooKeeperServer();
-        UUID key = helper.getClusterKey();
 
         PortFinder portFinder = new PortFinder();
-        long segmentSizeThreshold = 400L;
-        Properties props = new Properties();
-        int srcStorageJettyPort = portFinder.getPort();
+        int destinationPort = portFinder.getPort();
+        int destinationAdminPort = portFinder.getPort();
+        int destinationJettyPort = portFinder.getPort();
+        WaltzStorageRunner destinationStorageRunner = helper.getWaltzStorageRunner(destinationPort, destinationAdminPort, destinationJettyPort);
+        WaltzStorageRunner sourceStorageRunner = helper.getWaltzStorageRunner();
 
-        Path srcStorageDir = Files.createTempDirectory(DIR_NAME).resolve("srcStorage-" + srcStorageJettyPort);
-        if (!Files.exists(srcStorageDir)) {
-            Files.createDirectory(srcStorageDir);
-        }
-        props.setProperty(WaltzStorageConfig.STORAGE_JETTY_PORT, String.valueOf(srcStorageJettyPort));
-        props.setProperty(WaltzStorageConfig.STORAGE_DIRECTORY, srcStorageDir.toString());
-        props.setProperty(WaltzStorageConfig.SEGMENT_SIZE_THRESHOLD, String.valueOf(segmentSizeThreshold));
-        props.setProperty(WaltzStorageConfig.CLUSTER_NUM_PARTITIONS, String.valueOf(numPartitions));
-        props.setProperty(WaltzStorageConfig.CLUSTER_KEY, String.valueOf(key));
-        WaltzStorageConfig waltzStorageConfig = new WaltzStorageConfig(props);
-        WaltzStorageRunner sourceStorageRunner = new WaltzStorageRunner(portFinder, waltzStorageConfig, helper.getSegmentSizeThreshold());
-
-        props = new Properties();
-        int dstStorageJettyPort = portFinder.getPort();
-        Path dstStorageDir = Files.createTempDirectory(DIR_NAME).resolve("dstStorage-" + dstStorageJettyPort);
-        if (!Files.exists(dstStorageDir)) {
-            Files.createDirectory(dstStorageDir);
-        }
-        props.setProperty(WaltzStorageConfig.STORAGE_JETTY_PORT, String.valueOf(portFinder.getPort()));
-        props.setProperty(WaltzStorageConfig.STORAGE_DIRECTORY, dstStorageDir.toString());
-        props.setProperty(WaltzStorageConfig.SEGMENT_SIZE_THRESHOLD, String.valueOf(segmentSizeThreshold));
-        props.setProperty(WaltzStorageConfig.CLUSTER_NUM_PARTITIONS, String.valueOf(numPartitions));
-        props.setProperty(WaltzStorageConfig.CLUSTER_KEY, String.valueOf(key));
-        waltzStorageConfig = new WaltzStorageConfig(props);
-        WaltzStorageRunner destinationStorageRunner = new WaltzStorageRunner(portFinder, waltzStorageConfig, helper.getSegmentSizeThreshold());
+        UUID key = helper.getClusterKey();
 
         try {
             sourceStorageRunner.startAsync();
@@ -469,7 +437,7 @@ public final class StorageCliTest {
             // Create partitions on each storage node
             for (WaltzStorage waltzStorage : Utils.list(sourceWaltzStorage, destinationWaltzStorage)) {
                 int adminPort = waltzStorage.adminPort;
-                StorageAdminClient adminClient = new StorageAdminClient(host, adminPort, sslCtx, key, numPartitions);
+                StorageAdminClient adminClient = helper.getStorageAdminClient(adminPort);
                 adminClient.open();
                 for (int i = 0; i < numPartitions; i++) {
                     adminClient.setPartitionAssignment(i, true, false).get();
@@ -487,26 +455,48 @@ public final class StorageCliTest {
             sourceClient.setLowWaterMark(sessionId + 1, partitionId, records.size() - 1).get();
 
             // Validate destination node has no records
-            int destinationPort = destinationWaltzStorage.port;
-            int destinationAdminPort = destinationWaltzStorage.adminPort;
             StorageClient destinationClient = new StorageClient(host, destinationPort, sslCtx, key, numPartitions);
             destinationClient.open();
             Long maxTransactionId = (Long) destinationClient.getMaxTransactionId(-1, partitionId).get();
             assertNotNull(maxTransactionId);
             assertEquals(-1, maxTransactionId.longValue());
 
+            // Set destination storage offline
+            String[] args0 = {
+                    "availability",
+                    "--storage", host + ":" + destinationAdminPort,
+                    "--partition", String.valueOf(partitionId),
+                    "--online", String.valueOf(false),
+                    "--cli-config-path", cliConfigPath
+            };
+
+            StorageCli.testMain(args0);
+
             // Recover destination node
-            String[] args = {
+            String[] args1 = {
                     "recover-partition",
                     "--source-storage", host + ":" + sourceAdminPort,
                     "--destination-storage", host + ":" + destinationAdminPort,
                     "--destination-storage-port", String.valueOf(destinationPort),
                     "--partition", String.valueOf(partitionId),
                     "--batch-size", String.valueOf(20),
-                    "--cli-config-path", configFilePath
+                    "--cli-config-path", cliConfigPath,
+                    "--source-ssl-config-path", sourceSslConfigPath,
+                    "--destination-ssl-config-path", destinationSslConfigPath,
             };
 
-            StorageCli.testMain(args);
+            StorageCli.testMain(args1);
+
+            // Set destination storage online
+            String[] args2 = {
+                    "availability",
+                    "--storage", host + ":" + destinationAdminPort,
+                    "--partition", String.valueOf(partitionId),
+                    "--online", String.valueOf(true),
+                    "--cli-config-path", cliConfigPath
+            };
+
+            StorageCli.testMain(args2);
 
             // Validate destination node has expected records
             maxTransactionId = (Long) destinationClient.getMaxTransactionId(-1, partitionId).get();
@@ -640,11 +630,8 @@ public final class StorageCliTest {
 
     @Test
     public void testValidateConnectivity() throws Exception {
-        Properties properties =  new Properties();
-        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/storage/cli/test");
-        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, "1");
-        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
-        IntegrationTestHelper helper = new IntegrationTestHelper(properties);
+        int numPartitions = 1;
+        IntegrationTestHelper helper = getIntegrationTestHelper(numPartitions);
 
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(), helper.getSslSetup());
         String cliConfigPath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
@@ -687,6 +674,118 @@ public final class StorageCliTest {
         }
     }
 
+    @Test
+    public void testMaxTransactionId() throws Exception {
+        long sessionId = 123;
+        int numPartitions = 3;
+        IntegrationTestHelper helper = getIntegrationTestHelper(numPartitions);
+
+        SslContext sslCtx = helper.getSslContext();
+        int partitionId = new Random().nextInt(helper.getNumPartitions());
+
+        Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(), helper.getSslSetup());
+        String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
+
+        helper.startZooKeeperServer();
+
+        WaltzStorageRunner storageRunner = helper.getWaltzStorageRunner();
+
+        UUID key = helper.getClusterKey();
+
+        try {
+            storageRunner.startAsync();
+            WaltzStorage waltzStorage = storageRunner.awaitStart();
+
+            String host = helper.getHost();
+            int port = waltzStorage.port;
+            int adminPort = waltzStorage.adminPort;
+
+            // Create partitions on each storage node
+            StorageAdminClient adminClient = helper.getStorageAdminClient(adminPort);
+            adminClient.open();
+            for (int i = 0; i < numPartitions; i++) {
+                adminClient.setPartitionAssignment(i, true, false).get();
+            }
+            adminClient.close();
+
+            // successful path
+            String[] args0 = {
+                    "max-transaction-id",
+                    "--storage", host + ":" + adminPort,
+                    "--storage-port", String.valueOf(port),
+                    "--partition", String.valueOf(partitionId),
+                    "--cli-config-path", configFilePath
+            };
+
+            StorageCli.testMain(args0);
+
+            String expectedCmdOutput = "Max Transaction ID: " + -1;
+            assertTrue(outContent.toString("UTF-8").contains(expectedCmdOutput));
+
+            // failure path
+            String[] args1 = {
+                    "max-transaction-id",
+                    "--storage", "badhost.local:" + adminPort,
+                    "--storage-port", String.valueOf(port),
+                    "--partition", String.valueOf(partitionId),
+                    "--cli-config-path", configFilePath
+            };
+            StorageCli.testMain(args1);
+            expectedCmdOutput = "Error: Failed to read max transaction ID for storage badhost.local:" + adminPort;
+            assertTrue(errContent.toString("UTF-8").contains(expectedCmdOutput));
+
+            // Load records into the source node
+            ArrayList<Record> records = ClientUtil.makeRecords(0, 10);
+            StorageClient sourceClient = new StorageClient(host, port, sslCtx, key, numPartitions);
+            sourceClient.open();
+            sourceClient.setLowWaterMark(sessionId, partitionId, -1L).get();
+            sourceClient.appendRecords(sessionId, partitionId, records).get();
+            sourceClient.setLowWaterMark(sessionId + 1, partitionId, records.size() - 1).get();
+
+            // mark storage offline
+            String[] args2 = {
+                    "availability",
+                    "--storage", host + ":" + adminPort,
+                    "--partition", String.valueOf(partitionId),
+                    "--online", String.valueOf(false),
+                    "--cli-config-path", configFilePath
+            };
+
+            StorageCli.testMain(args2);
+
+            // successful path
+            String[] args3 = {
+                    "max-transaction-id",
+                    "--storage", host + ":" + adminPort,
+                    "--storage-port", String.valueOf(port),
+                    "--partition", String.valueOf(partitionId),
+                    "--cli-config-path", configFilePath,
+                    "--offline"
+            };
+
+            StorageCli.testMain(args3);
+
+            expectedCmdOutput = "Max Transaction ID: " + 9;
+            assertTrue(outContent.toString("UTF-8").contains(expectedCmdOutput));
+
+            // failure path
+            String[] args4 = {
+                    "max-transaction-id",
+                    "--storage", host + ":" + adminPort,
+                    "--storage-port", String.valueOf(port),
+                    "--partition", String.valueOf(partitionId),
+                    "--cli-config-path", configFilePath
+            };
+
+            StorageCli.testMain(args4);
+
+            expectedCmdOutput = "Error: Failed to read max transaction ID for storage " + host + ":" + adminPort;
+            assertTrue(errContent.toString("UTF-8").contains(expectedCmdOutput));
+        } finally {
+            helper.closeAll();
+        }
+    }
+
     private void addStorageNode(String cliConfigPath, String host, int port, int adminPort, int i) {
         String[] addStorageArgs = {
                 "add-storage-node",
@@ -696,5 +795,13 @@ public final class StorageCliTest {
                 "-g", String.valueOf(0)
         };
         ZooKeeperCli.testMain(addStorageArgs);
+    }
+
+    private IntegrationTestHelper getIntegrationTestHelper(int numPartitions) throws Exception {
+        Properties properties =  new Properties();
+        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/storage/cli/test");
+        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, String.valueOf(numPartitions));
+        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
+        return new IntegrationTestHelper(properties);
     }
 }
