@@ -21,6 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * A mock implementation of {@link WaltzClientDriver}.
+ */
 public class MockDriver implements WaltzClientDriver {
 
     private static final Logger logger = Logging.getLogger(MockDriver.class);

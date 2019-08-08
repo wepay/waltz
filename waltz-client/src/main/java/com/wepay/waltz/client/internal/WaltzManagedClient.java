@@ -7,11 +7,20 @@ import com.wepay.zktools.clustermgr.PartitionInfo;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * An internal implementation of {@link ManagedClient}.
+ */
 public class WaltzManagedClient implements ManagedClient {
 
     private final InternalRpcClient rpcClient;
     private final InternalStreamClient streamClient;
 
+    /**
+     * Class Constructor.
+     *
+     * @param rpcClient the {@link InternalRpcClient} backing this {@code WaltzManagedClient}.
+     * @param streamClient the {@link InternalStreamClient} backing this {@code WaltzManagedClient}.
+     */
     public WaltzManagedClient(InternalRpcClient rpcClient, InternalStreamClient streamClient) {
         this.rpcClient = rpcClient;
         this.streamClient = streamClient;

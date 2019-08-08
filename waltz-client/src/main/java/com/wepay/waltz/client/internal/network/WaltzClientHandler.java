@@ -21,6 +21,10 @@ import org.slf4j.Logger;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * A subclass of {@link MessageHandler}, internal to Waltz Client, to send messages to Waltz servers
+ * and process messages received from Waltz servers.
+ */
 public class WaltzClientHandler extends MessageHandler {
 
     private static final Logger logger = Logging.getLogger(WaltzClientHandler.class);
@@ -37,6 +41,12 @@ public class WaltzClientHandler extends MessageHandler {
 
     private ConcurrentHashMap<Integer, ReqId> feedSessions = new ConcurrentHashMap<>();
 
+    /**
+     * Class Constructor.
+     *
+     * @param handlerCallbacks a {@code WaltzClientHandlerCallbacks} instance, the callback methods to handle messages will be invoked on this instance.
+     * @param messageProcessingThreadPool a {@code MessageProcessingThreadPool} instance, for the superclass {@link MessageHandler}, to process messages.
+     */
     public WaltzClientHandler(WaltzClientHandlerCallbacks handlerCallbacks, MessageProcessingThreadPool messageProcessingThreadPool) {
         super(CODECS, HELLO_MESSAGE, handlerCallbacks, 30, 60, messageProcessingThreadPool);
         this.handlerCallbacks = handlerCallbacks;
@@ -47,6 +57,11 @@ public class WaltzClientHandler extends MessageHandler {
         return ((AbstractMessage) msg).reqId.partitionId();
     }
 
+    /**
+     * Processes the {@code msg}, of type {@link Message}, according to its {@link MessageType}.
+     *
+     * @param msg the {@code Message} to process.
+     */
     @Override
     protected void process(Message msg) {
         ReqId reqId = ((AbstractMessage) msg).reqId;
@@ -102,6 +117,14 @@ public class WaltzClientHandler extends MessageHandler {
         }
     }
 
+    /**
+     * Sends a message to the corresponding Waltz server.
+     * If the parameter {@code flush} is {@code true}, flushes all pending messages in the channel that this message is written to.
+     *
+     * @param msg the {@code Message} to send.
+     * @param flush a {@code boolean} flag.
+     * @return {@code true} if the operation completed successfully. {@code false}, otherwise.
+     */
     @Override
     public boolean sendMessage(Message msg, boolean flush) {
         if (msg.type() == MessageType.MOUNT_REQUEST) {

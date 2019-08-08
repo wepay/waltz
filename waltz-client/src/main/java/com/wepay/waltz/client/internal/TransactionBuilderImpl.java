@@ -9,6 +9,9 @@ import com.wepay.waltz.common.util.Utils;
 
 import java.util.List;
 
+/**
+ * An implementation of {@link TransactionBuilder} for building {@link AppendRequest}s.
+ */
 public class TransactionBuilderImpl implements TransactionBuilder {
 
     private static final int[] NO_LOCKS = new int[0];
@@ -21,6 +24,11 @@ public class TransactionBuilderImpl implements TransactionBuilder {
     private List<PartitionLocalLock> writeLocks;
     private List<PartitionLocalLock> readLocks;
 
+    /**
+     * Class Constructor.
+     * @param reqId the {@link ReqId} of the transaction request.
+     * @param clientHighWaterMark the client high-water mark.
+     */
     public TransactionBuilderImpl(ReqId reqId, long clientHighWaterMark) {
         this.reqId = reqId;
         this.clientHighWaterMark = clientHighWaterMark;
@@ -46,6 +54,9 @@ public class TransactionBuilderImpl implements TransactionBuilder {
         this.readLocks = locks;
     }
 
+    /**
+     * @return a new instance of {@link AppendRequest} to send to Waltz cluster.
+     */
     public AppendRequest buildRequest() {
         return new AppendRequest(
             reqId,

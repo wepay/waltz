@@ -21,7 +21,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * The main class of Waltz Client API
+ * The main class of Waltz Client API.
  */
 public class WaltzClient {
 
@@ -39,11 +39,11 @@ public class WaltzClient {
     private final ScheduledExecutorService scheduledExecutorService;
 
     /**
-     * Creates a new client instance.
+     * Class Constructor.
      *
-     * @param callbacks WaltzClientCallbacks
-     * @param config WaltzClientConfig
-     * @throws Exception
+     * @param callbacks {@link WaltzClientCallbacks}.
+     * @param config {@link WaltzClientConfig}.
+     * @throws Exception if an exception was encountered while creating a new WaltzClient instance.
      */
     public WaltzClient(WaltzClientCallbacks callbacks, WaltzClientConfig config) throws Exception {
         this(
@@ -54,11 +54,11 @@ public class WaltzClient {
     }
 
     /**
-     * Creates a new client instance.
+     * Class Constructor, uses the provided {@link WaltzClientDriver}.
      *
-     * @param driver WaltzClientDriver
-     * @param numTransactionRetryThreads the number of transaction retry threads
-     * @throws ClusterManagerException
+     * @param driver a {@link WaltzClientDriver} instance backing this {@code WaltzClient}.
+     * @param numTransactionRetryThreads the number of transaction retry threads.
+     * @throws ClusterManagerException if an exception was encountered while creating a new WaltzClient instance.
      */
     public WaltzClient(WaltzClientDriver driver, int numTransactionRetryThreads, long longWaitThreshold) {
         this.driver = driver;
@@ -80,7 +80,8 @@ public class WaltzClient {
 
     /**
      * Returns the client id of this instance. A client id is a unique id assigned to an instance of WaltzClient on creation.
-     * @return the client id
+     *
+     * @return the client id.
      */
     public int clientId() {
         return streamClient.clientId();
@@ -88,7 +89,8 @@ public class WaltzClient {
 
     /**
      * Returns the name of the Waltz cluster.
-     * @return the cluster name
+     *
+     * @return the cluster name.
      */
     public String clusterName() {
         return streamClient.clusterName();
@@ -137,7 +139,9 @@ public class WaltzClient {
      * If {@link TransactionContext#execute(TransactionBuilder)} returns false, the transaction is ignored by Waltz client
      * </p>
      * <p>
+     *
      * @param context the transaction context
+     * @throws Throwable if an exception occurred while submitting the transaction
      */
     public void submit(TransactionContext context) {
         try {
@@ -172,7 +176,7 @@ public class WaltzClient {
     }
 
     /**
-     * Wait until all current pending append requests to finish with either success or failure.
+     * Waits for all current pending append requests to finish with either success or failure.
      */
     public void flushTransactions() {
         streamClient.flushTransactions();
@@ -180,16 +184,18 @@ public class WaltzClient {
 
     /**
      * Checks if there is any pending append request.
-     * @return true if there are pending append requests, otherwise false.
+     * @return {@link true} if there are pending append requests, otherwise {@link false}.
      */
     public boolean hasPendingTransactions() {
         return streamClient.hasPendingTransactions() || transactionRetryQueue.size() > 0;
     }
 
     /**
-     * Sets ids of partitions to work with. Partitions not in {@code partitionIds} will become inaccessible from this client.
+     * Sets ids of partitions for this client to work with.
+     * Partitions not in {@code partitionIds} will become inaccessible from this client.
      * To use this method the client must set the {@code client.autoMount} configuration parameter to {@code false}.
-     * @param partitionIds
+     *
+     * @param partitionIds the set of partition ids.
      */
     public void setPartitions(Set<Integer> partitionIds) {
         streamClient.setActivePartitions(partitionIds);

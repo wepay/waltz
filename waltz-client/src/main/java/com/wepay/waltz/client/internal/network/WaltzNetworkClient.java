@@ -20,6 +20,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+/**
+ * A {@link NetworkClient} implementation for waltz clients to communicate with Waltz cluster.
+ *
+ * One {@link WaltzNetworkClient} instance is associated with exactly one server in the Waltz cluster.
+ */
 public class WaltzNetworkClient extends NetworkClient {
 
     private static final Logger logger = Logging.getLogger(WaltzNetworkClient.class);
@@ -36,6 +41,16 @@ public class WaltzNetworkClient extends NetworkClient {
     private boolean channelReady = false;
     private volatile boolean running = true;
 
+    /**
+     * Class Constructor.
+     *
+     * @param clientId Unique id assigned to an instance of {@link com.wepay.waltz.client.WaltzClient} on creation.
+     * @param endpoint {@link Endpoint} Endpoint of the physical server this instance will be responsible for.
+     * @param sslCtx {@link SslContext} SSL context required for communication
+     * @param seqNum Sequence number of the {@link WaltzNetworkClient} responsible for the server.
+     * @param networkClientCallbacks  {@link WaltzNetworkClientCallbacks}
+     * @param messageProcessingThreadPool {@link MessageProcessingThreadPool}
+     */
     public WaltzNetworkClient(
         int clientId,
         Endpoint endpoint,
@@ -54,6 +69,10 @@ public class WaltzNetworkClient extends NetworkClient {
         this.partitions = new HashMap<>();
     }
 
+    /**
+     * Shuts down this instance by un-mounting all partitions and setting {@link #running} to {@code false}.
+     */
+    @Override
     protected void shutdown() {
         super.shutdown();
 
@@ -69,6 +88,12 @@ public class WaltzNetworkClient extends NetworkClient {
         networkClientCallbacks.onNetworkClientDisconnected(this);
     }
 
+    /**
+     * Mounts a {@link Partition} to the server owned by this instance,
+     * and invokes {@link WaltzNetworkClientCallbacks#onMountingPartition(WaltzNetworkClient, Partition)}.
+     *
+     * @param partition {@code Partition} to mount.
+     */
     public void mountPartition(Partition partition) {
         synchronized (lock) {
             partitions.put(partition.partitionId, partition); // always do this for recovery even when not running
@@ -85,6 +110,11 @@ public class WaltzNetworkClient extends NetworkClient {
         }
     }
 
+    /**
+     * Un-mounts a specific partition.
+     *
+     * @param partitionId id of the partition to un-mount.
+     */
     public void unmountPartition(int partitionId) {
         synchronized (lock) {
             Partition partition = partitions.remove(partitionId);
@@ -94,6 +124,11 @@ public class WaltzNetworkClient extends NetworkClient {
         }
     }
 
+    /**
+     * Un-mounts all partitions.
+     *
+     * @return list of all partitions to un-mount.
+     */
     public List<Partition> unmountAllPartitions() {
         synchronized (lock) {
             ArrayList<Partition> list = new ArrayList<>(partitions.values());
@@ -104,6 +139,13 @@ public class WaltzNetworkClient extends NetworkClient {
         }
     }
 
+    /**
+     * Requests transaction data for a given transactionId.
+     *
+     * @param reqId reqId of the {@link TransactionDataRequest}.
+     * @param transactionId id of the transaction.
+     * @throws NetworkClientClosedException if this instance is already closed.
+     */
     public void requestTransactionData(ReqId reqId, long transactionId) {
         synchronized (lock) {
             if (!running) {

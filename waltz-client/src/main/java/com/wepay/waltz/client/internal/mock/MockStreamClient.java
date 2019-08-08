@@ -14,6 +14,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * A mock implementation of {@link StreamClient}.
+ */
 class MockStreamClient implements StreamClient {
 
     private final Map<Integer, MockClientPartition> clientPartitions;

@@ -22,6 +22,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * An internal waltz client representation of a Partition.
+ */
 public class Partition {
 
     private static final Logger logger = Logging.getLogger(Partition.class);
@@ -51,6 +54,13 @@ public class Partition {
     private volatile PartitionState state = PartitionState.INACTIVE;
     private volatile boolean mounted = false;
 
+    /**
+     * Class Constructor.
+     *
+     * @param partitionId the partition id.
+     * @param clientId the client id.
+     * @param maxConcurrentTransactions the maximum concurrent transactions that can be submitted to this partition.
+     */
     public Partition(int partitionId, int clientId, int maxConcurrentTransactions) {
         this.partitionId = partitionId;
         this.clientId = clientId;
@@ -62,6 +72,9 @@ public class Partition {
         this.dataFutures = new HashMap<>();
     }
 
+    /**
+     * Closes the partition, sets the {@link #state} to {@link PartitionState#CLOSED} besides executing other actions.
+     */
     public void close() {
         synchronized (lock) {
             this.networkClient = null;
@@ -82,6 +95,11 @@ public class Partition {
         }
     }
 
+    /**
+     * Sets {@link #generation} to {@code generation} if it is higher than the existing value.
+     *
+     * @param generation the generation to update to.
+     */
     public void generation(int generation) {
         synchronized (lock) {
             if (this.generation < generation) {
@@ -90,10 +108,19 @@ public class Partition {
         }
     }
 
+    /**
+     * @return the current generation of this partition instance.
+     */
     public int generation() {
         return generation;
     }
 
+    /**
+     * Activates the partition, sets {@link #state} to {@link PartitionState#ACTIVE},
+     * with client high-water mark as {@code highWaterMark}.
+     *
+     * @param highWaterMark the client high-water mark.
+     */
     public void activate(long highWaterMark) {
         synchronized (lock) {
             if (transactionMonitor.start()) {
@@ -103,6 +130,9 @@ public class Partition {
         }
     }
 
+    /**
+     * Deactivates the partition, sets {@link #state} to {@link PartitionState#INACTIVE} besides executing other actions.
+     */
     public void deactivate() {
         if (transactionMonitor.stop()) {
             // Wait until the transaction monitor becomes empty (no outstanding append request).
@@ -123,10 +153,16 @@ public class Partition {
         }
     }
 
+    /**
+     * @return {@code true} if {@link #state} is {@link PartitionState#ACTIVE}. {@code false}, otherwise.
+     */
     public boolean isActive() {
         return state == PartitionState.ACTIVE;
     }
 
+    /**
+     * @return the {@code Endpoint} of the waltz server that owns the partition represented by this {@code Partition} instance.
+     */
     public Endpoint endPoint() {
         // Cache the network client in the local variable for safety
         WaltzNetworkClient networkClient = this.networkClient;
@@ -134,6 +170,11 @@ public class Partition {
         return networkClient != null ? networkClient.endpoint : null;
     }
 
+    /**
+     * Invoked while the partition is being mounted through {@code networkClient}.
+     *
+     * @param networkClient the {@code WaltzNetworkClient} being used to mount the partition.
+     */
     public void mounting(WaltzNetworkClient networkClient) {
         synchronized (lock) {
             logger.debug("mounting partition: {}", this);
@@ -143,6 +184,11 @@ public class Partition {
         }
     }
 
+    /**
+     * Invoked after the partition is mounted through {@code networkClient}.
+     *
+     * @param networkClient the {@code WaltzNetworkClient} used to mount the partition.
+     */
     public void mounted(WaltzNetworkClient networkClient) {
         synchronized (lock) {
             // Make sure the network client is the right one
@@ -156,6 +202,11 @@ public class Partition {
         flushTransactionsAsyncInternal();
     }
 
+    /**
+     * Invoked after the partition is unmounted through {@code networkClient}.
+     *
+     * @param networkClient the {@code WaltzNetworkClient} used to unmount the partition.
+     */
     public void unmounted(WaltzNetworkClient networkClient) {
         synchronized (lock) {
             // Make sure the network client is the right one
@@ -168,6 +219,12 @@ public class Partition {
         }
     }
 
+    /**
+     * Ensures that this partition is mounted.
+     * Waits until interrupted, or a PartitionInactiveException to occur, for the partition to be mounted.
+     *
+     * @throws PartitionInactiveException if this partition is not active.
+     */
     public void ensureMounted() {
         if (!mounted) {
             synchronized (lock) {
@@ -186,10 +243,20 @@ public class Partition {
         }
     }
 
+    /**
+     * Request id for the next request to be sent to the corresponding partition on a Waltz server.
+     *
+     * @return the {@link ReqId} for the next request.
+     */
     public ReqId nextReqId() {
         return new ReqId(clientId, generation, partitionId, seqNumGenerator.incrementAndGet());
     }
 
+    /**
+     * Client high-water mark of this partition.
+     *
+     * @return the client high-water mark.
+     */
     public long clientHighWaterMark() {
         return clientHighWaterMark.get();
     }
@@ -218,6 +285,15 @@ public class Partition {
         }
     }
 
+    /**
+     * Invoked after a transaction is committed to the corresponding partition on a Waltz server.
+     * In turn invokes {@link WaltzNetworkClientCallbacks#onTransactionReceived(long, int, ReqId)} on {@code networkClientCallbacks}.
+     *
+     * @param transactionId the id of the transaction.
+     * @param header the header data of the transaction.
+     * @param reqId the req id of corresponding append request of the transaction.
+     * @param networkClientCallbacks the {@code WaltzNetworkClientCallbacks} instance to invoke callbacks on.
+     */
     public void applyTransaction(long transactionId, int header, ReqId reqId, WaltzNetworkClientCallbacks networkClientCallbacks) {
         try {
             if (state != PartitionState.ACTIVE) {
@@ -248,6 +324,12 @@ public class Partition {
         }
     }
 
+    /**
+     * Sends an append request to the corresponding partition on a Waltz server.
+     *
+     * @param request the AppendRequest representing payload.
+     * @return a {@link TransactionFuture} which completes when the append response is received.
+     */
     public TransactionFuture append(AppendRequest request) {
         ensureMounted();
 
@@ -281,6 +363,11 @@ public class Partition {
         return future;
     }
 
+    /**
+     * Nudges all pending transactions if the last submitted transaction has been waiting for more than {@code longWaitThreshold} millis.
+     *
+     * @param longWaitThreshold the wait time threshold in millis.
+     */
     public void nudgeWaitingTransactions(long longWaitThreshold) {
         long lastEnqueueTime = transactionMonitor.lastEnqueuedTime();
         if (lastEnqueueTime >= 0 && System.currentTimeMillis() > lastEnqueueTime + longWaitThreshold) {
@@ -288,6 +375,11 @@ public class Partition {
         }
     }
 
+    /**
+     * Asynchronously flushes all the pending transactions for this partition.
+     *
+     * @return a {@link TransactionFuture} which completes when flush response is received from the Waltz server.
+     */
     public TransactionFuture flushTransactionsAsync() {
         ensureMounted();
         return flushTransactionsAsyncInternal();
@@ -317,6 +409,12 @@ public class Partition {
         }
     }
 
+    /**
+     * Gets transaction data for a given {@code transactionId}.
+     *
+     * @param transactionId the id of the transaction.
+     * @return a {@link Future} which completes with serialized transaction data received from a Waltz server.
+     */
     public Future<byte[]> getTransactionData(long transactionId) {
         return getTransactionData(transactionId, 1);
     }
@@ -345,6 +443,9 @@ public class Partition {
         return future;
     }
 
+    /**
+     * Resubmits pending TransactionData requests.
+     */
     public void resubmitTransactionDataRequests() {
         Long[] pendingRequests;
 
@@ -357,6 +458,14 @@ public class Partition {
         }
     }
 
+    /**
+     * Invoked when the transaction data is received from a Waltz server.
+     *
+     * @param transactionId the id of the transaction.
+     * @param data the serialized transaction data as a byte array.
+     * @param checksum the transaction data checksum.
+     * @param throwable an exception associated with that transaction.
+     */
     public void transactionDataReceived(long transactionId, byte[] data, int checksum, Throwable throwable) {
         DataFuture future;
 
@@ -390,6 +499,12 @@ public class Partition {
         }
     }
 
+    /**
+     * Invoked when a flush response is received.
+     *
+     * @param reqId the request id of the corresponding flush request.
+     * @param transactionId the id of the transaction that was flushed.
+     */
     public void flushCompleted(ReqId reqId, long transactionId) {
         if (clientHighWaterMark.get() >= transactionId) {
             logger.debug("completing flush: {} reqId={}", this, reqId);
@@ -402,6 +517,11 @@ public class Partition {
         }
     }
 
+    /**
+     * Invoked if a lock request was failed.
+     *
+     * @param lockFailure a {@link LockFailure} object with the id of the transaction that made the lock request to fail.
+     */
     public void lockFailed(LockFailure lockFailure) {
         if (clientHighWaterMark.get() >= lockFailure.transactionId) {
             transactionMonitor.abort(lockFailure.reqId);
@@ -412,6 +532,10 @@ public class Partition {
         }
     }
 
+    /**
+     * @return {@code true} if there are any pending transactions waiting for response from the corresponding waltz server.
+     *         {@code false}, otherwise.
+     */
     public boolean hasPendingTransactions() {
         return transactionMonitor.registeredCount() > 0;
     }
@@ -430,6 +554,10 @@ public class Partition {
         }
     }
 
+    /**
+     * A class representing the high-water mark, after a successful flush of pending transactions,
+     * and the corresponding flush request's {@link ReqId}.
+     */
     public static class FlushPoint {
         final long transactionId;
         final ReqId reqId;

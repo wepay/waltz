@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import java.util.concurrent.ExecutionException;
 
 /**
- * A class that represents a committed transaction
+ * A class that represents a committed transaction.
  */
 public class Transaction {
 
@@ -26,6 +26,14 @@ public class Transaction {
     private final RpcClient rpcClient;
     private final int header;
 
+    /**
+     * Class Constructor.
+     *
+     * @param transactionId the id of the transaction.
+     * @param header the header of the transaction.
+     * @param reqId the req Id of the transaction.
+     * @param rpcClient a {@code RpcClient} instance which will be used to get transaction data from a Waltz server over the network.
+     */
     public Transaction(long transactionId, int header, ReqId reqId, RpcClient rpcClient) {
         this.reqId = reqId;
         this.transactionId = transactionId;
@@ -34,8 +42,7 @@ public class Transaction {
     }
 
     /**
-     * Returns the transaction header
-     * @return the transaction header
+     * @return the transaction header.
      */
     public int getHeader() {
         return header;
@@ -43,17 +50,28 @@ public class Transaction {
 
     /**
      * Returns the transaction data. This call retrieves the transaction data from a Waltz server over the network.
-     * @param serializer the serializer for decoding the transaction data. {@link WaltzClientRuntimeException} will
-     *                   be thrown when Waltz client failed to fetch the transaction data. This exception should not
-     *                   be caught by an application code in general.
-     * @param <T>
-     * @return the transaction data
-     * @throws WaltzClientRuntimeException This exception should not be caught by an application code in general.
+     *
+     * @param serializer the serializer for decoding the transaction data.
+     * @param <T> the type of the object to de-serialize to.
+     * @return the transaction data.
+     * @throws WaltzClientRuntimeException will be thrown when Waltz client failed to fetch the transaction data.
+     *                                     This exception should not be caught by an application code in general.
      */
     public <T> T getTransactionData(Serializer<T> serializer) {
         return getTransactionData(serializer, INITIAL_RETRY_INTERVAL, MAX_RETRY_INTERVAL);
     }
 
+    /**
+     * Functionally similar to {@link Transaction#getTransactionData(Serializer)},
+     * but retries until the transaction data is fetched or an exception is thrown.
+     *
+     * @param serializer the serializer for decoding the transaction data.
+     * @param initialRetryInterval the initial retry interval.
+     * @param maxRetryInterval the maximum retry interval.
+     * @param <T> the type of the object to de-serialize to.
+     * @return the transaction data.
+     * @throws WaltzClientRuntimeException This exception should not be caught by an application code in general.
+     */
     public <T> T getTransactionData(Serializer<T> serializer, final long initialRetryInterval, final long maxRetryInterval) {
         long retryInterval = initialRetryInterval;
         BackoffTimer backoffTimer = null;

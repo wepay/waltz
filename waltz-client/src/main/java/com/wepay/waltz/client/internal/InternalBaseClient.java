@@ -29,6 +29,10 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * An abstract internal client to communicate with waltz cluster over a network,
+ * implements {@link WaltzNetworkClientCallbacks} and {@link ManagedClient}.
+ */
 public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks, ManagedClient {
 
     private static final Logger logger = Logging.getLogger(InternalBaseClient.class);
@@ -50,6 +54,14 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
     private volatile Map<Endpoint, List<PartitionInfo>> endpoints;
     private volatile boolean running = true;
 
+    /**
+     * Class Constructor.
+     *
+     * @param autoMount if {@code true}, automatically mount all partitions.
+     * @param sslCtx SSLContext for communication.
+     * @param callbacks a {@code WaltzClientCallbacks} instance.
+     * @param messageProcessingThreadPool a {@code MessageProcessingThreadPool} for message processing.
+     */
     protected InternalBaseClient(
         boolean autoMount,
         SslContext sslCtx,
@@ -65,6 +77,12 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         this.endpoints = Collections.emptyMap();
     }
 
+    /**
+     * Closes this {@code InternalBaseClient} instance by:
+     *     1. Closing all associated {@link WaltzNetworkClient}s.
+     *     2. Closing all associated {@link Partition}s.
+     *     3. Releasing other internal resources.
+     */
     public void close() {
         synchronized (networkClients) {
             running = false;
@@ -83,6 +101,14 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         }
     }
 
+    /**
+     * Sets the given partition ids for this {@code InternalBaseClient} instance to work with.
+     * Partitions not in {@code partitionIds} will become inaccessible from this client.
+     * To use this method the client must set the {@code client.autoMount} configuration parameter to {@code false}.
+     *
+     * @param partitionIds the {@link Set<Integer>} of active partitions' ids.
+     * @throws InvalidOperationException if {@link InternalBaseClient#autoMount} is {@code true}.
+     */
     public void setActivePartitions(Set<Integer> partitionIds) {
         if (autoMount) {
             throw new InvalidOperationException("failed to set partitions: the client is configured with auto-mount on");
@@ -111,15 +137,32 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         doSetEndpoints();
     }
 
+    /**
+     * Returns ids of all active partitions of this client.
+     *
+     * @return a set of all active partitions' ids.
+     */
     public Set<Integer> getActivePartitions() {
         return new HashSet<>(activePartitions);
     }
 
-    // WaltzNetworkClientCallbacks API
+    /**
+     * A {@link WaltzNetworkClientCallbacks} callback method invoked when mounting a partition.
+     * Implemented by the subclasses of {@link InternalBaseClient}.
+     *
+     * @param networkClient the {@code WaltzNetworkClient} being used to mount the partition.
+     * @param partition the {@code Partition} being mounted.
+     */
     @Override
     public abstract void onMountingPartition(WaltzNetworkClient networkClient, Partition partition);
 
-    // WaltzNetworkClientCallbacks API
+    /**
+     * Implements {@link WaltzNetworkClientCallbacks#onNetworkClientDisconnected(WaltzNetworkClient)}.
+     * Asynchronously attempts to recover from the connection loss by replacing the old {@code closedNetworkClient}
+     * with a new {@link WaltzNetworkClient}.
+     *
+     * @param closedNetworkClient the {@code WaltzNetworkClient} that was disconnected/closed.
+     */
     @Override
     public void onNetworkClientDisconnected(final WaltzNetworkClient closedNetworkClient) {
         // If the network client in use is closed, it is a recoverable failure.
@@ -161,25 +204,48 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         );
     }
 
-    // WaltzNetworkClientCallbacks API
+    /**
+     * Not supported on {@code InternalBaseClient}.
+     *
+     * @throws UnsupportedOperationException if invoked.
+     */
     @Override
     public void onTransactionReceived(long transactionId, int header, ReqId reqId) {
         throw new UnsupportedOperationException("not supported by " + this.getClass().getSimpleName());
     }
 
-    // ManagedClient API
+    /**
+     * Implements {@link ManagedClient#setClusterName(String)}.
+     * Sets the cluster name.
+     *
+     * @param clusterName the cluster name to set to.
+     */
     @Override
     public void setClusterName(String clusterName) {
         this.clusterName = clusterName;
     }
 
-    // ManagedClient API
+    /**
+     * Implements {@link ManagedClient#setClientId(int)}.
+     * Sets the client id.
+     *
+     * @param clientId the client id to set to.
+     */
     @Override
     public void setClientId(int clientId) {
         this.clientId = clientId;
     }
 
-    // ManagedClient API
+    /**
+     * Implements {@link ManagedClient#setNumPartitions(int)}.
+     *
+     * Sets the number of partitions, if not set already.
+     * If {@link InternalBaseClient#autoMount} is {@code true}, activates all partitions.
+     *
+     * @param numPartitions the number of partitions.
+     * @throws UnsupportedOperationException if {@link #numPartitions} is already set,
+     *                                       but is not equal to the parameter {@code numPartitions}.
+     */
     @Override
     public void setNumPartitions(int numPartitions) {
         if (this.numPartitions != 0) {
@@ -208,7 +274,13 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         }
     }
 
-    // ManagedClient API
+    /**
+     * Implements {@link ManagedClient#setEndpoints(Map)}.
+     * Sets {@link InternalBaseClient#endpoints} and asynchronously mounts actual partitions.
+     *
+     * @param endpoints A map of {@link Endpoint} to {@link List<PartitionInfo>} representing servers
+     *                  and the partitions owned by each of them.
+     */
     @Override
     public void setEndpoints(Map<Endpoint, List<PartitionInfo>> endpoints) {
         logger.debug("submitting setEndpoints task");
@@ -219,7 +291,11 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         submitAsyncTask(this::doSetEndpoints);
     }
 
-    // ManagedClient API
+    /**
+     * Asynchronously removes the server by invoking {@link WaltzNetworkClient#close()} on the corresponding network client.
+     *
+     * @param endpoint the {@code Endpoint} of the server to be removed.
+     */
     @Override
     public void removeServer(Endpoint endpoint) {
         logger.debug("submitting removeServer task: endpoint={}", endpoint);
@@ -235,14 +311,24 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         });
     }
 
+    /**
+     * @return the clientId.
+     */
     public int clientId() {
         return clientId;
     }
 
+    /**
+     * @return the clusterName.
+     */
     public String clusterName() {
         return clusterName;
     }
 
+    /**
+     * Flushes pending transactions by invoking {@link Partition#flushTransactionsAsync()} for each partition.
+     * Blocks until the flushing is complete or {@link #running} is {@code false}, whichever happens earlier.
+     */
     public void flushTransactions() {
         ArrayList<TransactionFuture> futures = new ArrayList<>(partitions.size());
         for (Partition partition : partitions.values()) {
@@ -261,12 +347,21 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         }
     }
 
+    /**
+     * Invokes {@link Partition#nudgeWaitingTransactions(long)} for each partition
+     * to nudge any transactions pending for more than {@code longWaitThreshold} millis.
+     *
+     * @param longWaitThreshold the wait time threshold for transactions.
+     */
     public void nudgeWaitingTransactions(long longWaitThreshold) {
         for (Partition partition : partitions.values()) {
             partition.nudgeWaitingTransactions(longWaitThreshold);
         }
     }
 
+    /**
+     * @return {@code true}, if at least one of the partitions has pending transactions. {@code false}, otherwise.
+     */
     public boolean hasPendingTransactions() {
         for (Partition partition : partitions.values()) {
             if (partition.hasPendingTransactions()) {
@@ -276,6 +371,14 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         return false;
     }
 
+    /**
+     * Returns the corresponding {@link Partition} object for a given partition id.
+     *
+     * @param partitionId the id to get the {@code Partition} object for.
+     * @return the corresponding {@code Partition} object.
+     * @throws PartitionNotFoundException if no Partition exists for such partition id.
+     * @throws ClientClosedException if {@link InternalBaseClient} is not running.
+     */
     protected Partition getPartition(int partitionId) {
         if (running) {
             Partition partition = partitions.get(partitionId);

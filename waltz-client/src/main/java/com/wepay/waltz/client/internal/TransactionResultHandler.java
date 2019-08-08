@@ -2,6 +2,9 @@ package com.wepay.waltz.client.internal;
 
 import java.util.function.BiConsumer;
 
+/**
+ * An implementation of {@link BiConsumer} to handle transaction results.
+ */
 public class TransactionResultHandler implements BiConsumer<Boolean, Throwable> {
 
     @Override

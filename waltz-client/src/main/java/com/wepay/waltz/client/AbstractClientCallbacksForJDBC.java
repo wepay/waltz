@@ -55,6 +55,12 @@ public abstract class AbstractClientCallbacksForJDBC implements WaltzClientCallb
     private final ConcurrentHashMap<Integer, HighWaterMark> highWaterMarkCache = new ConcurrentHashMap<>();
     private final BackoffTimer backoffTimer = new BackoffTimer(MAX_RETRY_INTERVAL);
 
+    /**
+     * Class Constructor.
+     *
+     * @param dataSource the {@link DataSource} to communicate with the underlying Sql database.
+     * @param clientHighWaterMarkTableName the client high-water mark table name.
+     */
     public AbstractClientCallbacksForJDBC(DataSource dataSource, String clientHighWaterMarkTableName) {
         this.dataSource = dataSource;
 
@@ -74,6 +80,14 @@ public abstract class AbstractClientCallbacksForJDBC implements WaltzClientCallb
      */
     protected abstract void applyTransaction(Transaction transaction, Connection connection) throws SQLException;
 
+    /**
+     * For a given partition, gets the high-water mark from the client high-water mark table and updates the {@link #highWaterMarkCache} cache.
+     *
+     * Retries indefinitely, with a backOff interval of {@link #INITIAL_RETRY_INTERVAL} millis, in case of exceptions.
+     *
+     * @param partitionId the partition id to get client high-water mark for.
+     * @return the high-water mark.
+     */
     @Override
     public long getClientHighWaterMark(int partitionId) {
         long retryInterval = INITIAL_RETRY_INTERVAL;
@@ -102,13 +116,24 @@ public abstract class AbstractClientCallbacksForJDBC implements WaltzClientCallb
 
     /**
      * Handles SQLException raised in {@link #getClientHighWaterMark(int)}.
+     *
      * @param attempts the number of trials to get the client high-water mark.
-     * @param exception SQLException raised in {@link #getClientHighWaterMark(int)}
+     * @param exception the SQLException raised in {@link #getClientHighWaterMark(int)}.
      */
     protected void onErrorGettingClientHighWaterMark(int attempts, SQLException exception) {
         // A subclass may override this.
     }
 
+    /**
+     * If <pre>{@code transactionId - 1 == highWaterMark}</pre>;
+     * in a database transaction with {@link Connection#TRANSACTION_SERIALIZABLE} isolation and autoCommit as false:
+     *      1. Calls {@link #applyTransaction(Transaction, Connection)} which should be implemented by sub-class.
+     *      2. Updates the high-water mark.
+     *
+     * Tries indefinitely as long as the above condition holds.
+     *
+     * @param transaction the committed transaction.
+     */
     @Override
     public void applyTransaction(Transaction transaction) {
         final int partitionId = transaction.reqId.partitionId();

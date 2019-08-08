@@ -10,6 +10,10 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * A class that monitors pending transactions.
+ * Each {@link Partition} instance has one {@link TransactionMonitor} instance associated with it.
+ */
 public class TransactionMonitor {
 
     private static final Logger logger = Logging.getLogger(TransactionMonitor.class);
@@ -26,10 +30,18 @@ public class TransactionMonitor {
     private long lastTimestamp = -1;
     private int numRegistered = 0;
 
+    /**
+     * Class Constructor.
+     * @param maxConcurrentTransactions the maximum number of concurrent transactions.
+     */
     public TransactionMonitor(int maxConcurrentTransactions) {
         this.maxConcurrentTransactions = maxConcurrentTransactions;
     }
 
+    /**
+     * Closes this {@link TransactionMonitor} by completing all pending transactions exceptionally.
+     * Sets {@link #state} to {@link State#CLOSED}
+     */
     public void close() {
         synchronized (this) {
             state = State.CLOSED;
@@ -46,6 +58,12 @@ public class TransactionMonitor {
         }
     }
 
+    /**
+     * Starts this instance by setting the state to {@link State#STARTED}.
+     * Closed transaction monitors cannot be STARTED.
+     *
+     * @return {@code true}, if started successfully. {@code false}, otherwise.
+     */
     public boolean start() {
         synchronized (this) {
             if (state == State.STOPPED) {
@@ -58,6 +76,12 @@ public class TransactionMonitor {
         }
     }
 
+    /**
+     * Stops this instance by setting the state to {@link State#STOPPED}
+     * Closed transaction monitors cannot be STOPPED.
+     *
+     * @return {@code true}, if stopped successfully. {@code false}, otherwise.
+     */
     public boolean stop() {
         synchronized (this) {
             if (state == State.STARTED) {
@@ -70,16 +94,22 @@ public class TransactionMonitor {
         }
     }
 
+    /**
+     * @return {@code true}, if this instance is in {@link State#STOPPED} state. {@code false}, otherwise.
+     */
     public boolean isStopped() {
         synchronized (this) {
             return state == State.STOPPED;
         }
     }
 
+    /**
+     * When this method is called, it is certain that all append requests from this client are flushed,
+     * and there shouldn't be any pending transactions.
+     * Complete all pending futures by marking them failed.
+     */
     public void clear() {
         synchronized (this) {
-            // When clear() is called, it is certain that all append requests from this client are flushed, and
-            // there shouldn't be any pending transactions. Complete all pending futures by marking them failed.
             registered.values().forEach(future -> {
                 future.complete(false);
                 future.flushed();
@@ -90,10 +120,26 @@ public class TransactionMonitor {
         }
     }
 
+    /**
+     * Maximum capacity of this {@code TransactionMonitor} instance i.e., maximum concurrent transactions.
+     *
+     * @return the maximum number of concurrent transactions (a.k.a maxCapacity)
+     */
     public int maxCapacity() {
         return maxConcurrentTransactions;
     }
 
+    /**
+     * Registers a transaction represented by {@code reqId}.
+     *
+     * If the maximum capacity is reached,
+     * waits for a maximum of registrationTimeout millis for an existing pending transaction to complete.
+     *
+     * @param reqId the {@code ReqId} of the transaction.
+     * @param registrationTimeout the maximum wait time in millis for registration to complete.
+     * @return a {@link TransactionFuture} which will complete when the corresponding transaction is {@link #committed(ReqId)}.
+     *         Or, a {@code null}, if {@code registrationTimeout} has passed before registration.
+     */
     public TransactionFuture register(ReqId reqId, long registrationTimeout) {
         synchronized (this) {
             final long due = System.currentTimeMillis() + registrationTimeout;
@@ -140,6 +186,12 @@ public class TransactionMonitor {
         }
     }
 
+    /**
+     * If the transaction monitor is not closed,
+     * the corresponding {@link TransactionFuture} of the {@code reqId} is completed with {@code true}.
+     *
+     * @param reqId the {@code ReqId} of the transaction that was committed to a Waltz server.
+     */
     public void committed(ReqId reqId) {
         synchronized (this) {
             if (state != State.CLOSED) {
@@ -152,6 +204,12 @@ public class TransactionMonitor {
         }
     }
 
+    /**
+     * If the transaction monitor is not closed,
+     * the corresponding {@link TransactionFuture} of the {@code reqId} is aborted.
+     *
+     * @param reqId the {@code ReqId} of the transaction that was aborted
+     */
     public void abort(ReqId reqId) {
         synchronized (this) {
             if (state != State.CLOSED) {
@@ -167,6 +225,12 @@ public class TransactionMonitor {
         }
     }
 
+    /**
+     * If the transaction monitor is not closed,
+     * the corresponding {@link TransactionFuture} of the {@code reqId} is completed with {@code false}.
+     *
+     * @param reqId the {@code ReqId} of the transaction that was aborted on a Waltz server.
+     */
     public void flush(ReqId reqId) {
         synchronized (this) {
             if (state != State.CLOSED) {
@@ -178,18 +242,27 @@ public class TransactionMonitor {
         }
     }
 
+    /**
+     * @return {@link TransactionFuture} of the transaction that was last enqueued.
+     */
     public TransactionFuture lastEnqueued() {
         synchronized (this) {
             return lastReqId != null ? registered.get(lastReqId) : null;
         }
     }
 
+    /**
+     * @return the timestamp at which the last transaction was enqueued.
+     */
     public long lastEnqueuedTime() {
         synchronized (this) {
             return lastReqId != null ? lastTimestamp : -1L;
         }
     }
 
+    /**
+     * @return the total number of transactions currently registered.
+     */
     public int registeredCount() {
         synchronized (this) {
             return numRegistered;

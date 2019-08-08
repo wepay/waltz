@@ -6,6 +6,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
+/**
+ * A mock implementation of {@link RpcClient}.
+ */
 class MockRpcClient implements RpcClient {
 
     private final Map<Integer, MockClientPartition> partitions;

@@ -19,6 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * Server's mock representation of a partition.
+ */
 public class MockServerPartition {
 
     private static final Logger logger = Logging.getLogger(MockServerPartition.class);

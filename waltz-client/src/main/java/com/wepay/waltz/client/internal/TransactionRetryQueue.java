@@ -9,6 +9,10 @@ import org.slf4j.Logger;
 
 import java.util.concurrent.LinkedBlockingQueue;
 
+/**
+ * A class representing a queue of {@link TransactionContext}s to be retried.
+ * Internally uses a {@link RequestQueue} backed by a {@link LinkedBlockingQueue}.
+ */
 public class TransactionRetryQueue {
 
     private static final Logger logger = Logging.getLogger(TransactionRetryQueue.class);
@@ -16,6 +20,12 @@ public class TransactionRetryQueue {
     private final RequestQueue<TransactionContext> queue = new RequestQueue<>(new LinkedBlockingQueue<>());
     private final QueueConsumerTask[] tasks;
 
+    /**
+     * Class Constructor.
+     *
+     * @param waltzClient the {@code WaltzClient} to use to submit {@link TransactionContext}s
+     * @param numThread the number of threads to process the retry queue.
+     */
     public TransactionRetryQueue(final WaltzClient waltzClient, int numThread) {
         this.tasks = new QueueConsumerTask[numThread];
 
@@ -47,6 +57,9 @@ public class TransactionRetryQueue {
         }
     }
 
+    /**
+     * Closes this instance by stopping all retry tasks.
+     */
     public void close() {
         for (QueueConsumerTask task : tasks) {
             try {
@@ -57,6 +70,10 @@ public class TransactionRetryQueue {
         }
     }
 
+    /**
+     * Enqueues a {@code context} to be retried.
+     * @param context the {@code TransactionContext} to be retried.
+     */
     public void enqueue(final TransactionContext context) {
         queue.enqueue(context);
         if (logger.isDebugEnabled()) {
@@ -64,6 +81,9 @@ public class TransactionRetryQueue {
         }
     }
 
+    /**
+     * @return the size of the retry queue.
+     */
     public int size() {
         return queue.size();
     }

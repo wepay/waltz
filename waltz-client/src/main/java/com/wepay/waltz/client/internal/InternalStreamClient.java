@@ -12,12 +12,25 @@ import com.wepay.waltz.common.message.ReqId;
 import io.netty.handler.ssl.SslContext;
 import org.slf4j.Logger;
 
+/**
+ * An internal implementation of {@link StreamClient}, extending {@link InternalBaseClient}.
+ */
 public class InternalStreamClient extends InternalBaseClient implements StreamClient {
 
     private static final Logger logger = Logging.getLogger(InternalStreamClient.class);
 
     private final InternalRpcClient rpcClient;
 
+    /**
+     * Class Constructor.
+     *
+     * @param autoMount if {@code true}, mounts all partitions.
+     * @param sslCtx {@link SslContext}
+     * @param maxConcurrentTransactions the maximum number of concurrent transactions
+     * @param callbacks {@link WaltzClientCallbacks}
+     * @param rpcClient {@link InternalRpcClient}
+     * @param threadPool {@link MessageProcessingThreadPool}
+     */
     public InternalStreamClient(
         boolean autoMount,
         SslContext sslCtx,
@@ -30,12 +43,27 @@ public class InternalStreamClient extends InternalBaseClient implements StreamCl
         this.rpcClient = rpcClient;
     }
 
+    /**
+     * Invoked when a {@link Partition} is being mounted.
+     *
+     * @param networkClient the {@code WaltzNetworkClient} being to mount the partition.
+     * @param partition the {@code Partition} being mounted.
+     */
     @Override
     public void onMountingPartition(WaltzNetworkClient networkClient, Partition partition) {
         logger.info("sending MountRequest: {} to={}", partition, networkClient.endpoint);
         networkClient.sendMessage(new MountRequest(partition.nextReqId(), partition.clientHighWaterMark(), networkClient.seqNum));
     }
 
+    /**
+     * Invoked when a transaction committed response is received from a waltz server.
+     * Internally, invokes {@link WaltzClientCallbacks#applyTransaction(Transaction)}.
+     *
+     * @param transactionId the id of the received transaction.
+     * @param header the header of the received transaction.
+     * @param reqId the reqId of the received transaction.
+     * @throws Throwable if any exception occurred when applying the transaction.
+     */
     @Override
     public void onTransactionReceived(long transactionId, int header, ReqId reqId) {
         try {
@@ -52,6 +80,12 @@ public class InternalStreamClient extends InternalBaseClient implements StreamCl
         }
     }
 
+    /**
+     * Returns a {@link TransactionBuilderImpl} for a given {@link TransactionContext}.
+     *
+     * @param context the {@code TransactionContext} to get a transaction builder for.
+     * @return the corresponding {@code TransactionBuilderImpl} instance.
+     */
     @Override
     public TransactionBuilderImpl getTransactionBuilder(TransactionContext context) {
         Partition partition = getPartition(context.partitionId(numPartitions));
@@ -60,6 +94,13 @@ public class InternalStreamClient extends InternalBaseClient implements StreamCl
         return new TransactionBuilderImpl(partition.nextReqId(), callbacks.getClientHighWaterMark(partition.partitionId));
     }
 
+    /**
+     * Appends the data to the given partition.
+     * Internally, an append request is sent to the waltz server corresponding to the given partition.
+     *
+     * @param request the {@link AppendRequest} with actual payload, partition info, etc.
+     * @return a {@link TransactionFuture} which completes when the append response is processed.
+     */
     @Override
     public TransactionFuture append(AppendRequest request) {
         Partition partition = getPartition(request.reqId.partitionId());

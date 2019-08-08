@@ -5,6 +5,9 @@ import com.wepay.waltz.common.message.AppendRequest;
 
 import java.util.Set;
 
+/**
+ * The interface for implementations of Stream clients to communicate with Waltz cluster.
+ */
 public interface StreamClient {
 
     void close();

@@ -14,6 +14,9 @@ import com.wepay.zktools.zookeeper.internal.ZooKeeperClientImpl;
 import io.netty.handler.ssl.SslContext;
 import org.slf4j.Logger;
 
+/**
+ * An internal implementation of {@link WaltzClientDriver}.
+ */
 public class WaltzClientDriverImpl implements WaltzClientDriver {
 
     private static final Logger logger = Logging.getLogger(WaltzClientDriverImpl.class);
