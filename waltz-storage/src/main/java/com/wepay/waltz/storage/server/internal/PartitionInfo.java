@@ -90,7 +90,7 @@ class PartitionInfo {
 
     SessionInfo getLastSessionInfo() {
         synchronized (this) {
-            return new SessionInfo(current.sessionId(), current.lowWaterMark());
+            return new SessionInfo(current.sessionId(), current.lowWaterMark(), current.localLowWaterMark());
         }
     }
 

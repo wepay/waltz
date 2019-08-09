@@ -90,7 +90,7 @@ public class AdminMessageCodecV0Test {
 
     @Test
     public void testLastSessionInfoResponse() {
-        SessionInfo sessionInfo = new SessionInfo(rand.nextLong(), rand.nextLong());
+        SessionInfo sessionInfo = new SessionInfo(rand.nextLong(), rand.nextLong(), rand.nextLong());
         LastSessionInfoResponse lastSessionInfoResponse1 = new LastSessionInfoResponse(
                 rand.nextLong(), rand.nextInt(), sessionInfo);
         LastSessionInfoResponse lastSessionInfoResponse2 = encodeThenDecode(lastSessionInfoResponse1);
@@ -98,6 +98,7 @@ public class AdminMessageCodecV0Test {
         assertEquals(lastSessionInfoResponse1.partitionId, lastSessionInfoResponse2.partitionId);
         assertEquals(lastSessionInfoResponse1.seqNum, lastSessionInfoResponse2.seqNum);
         assertEquals(sessionInfo.lowWaterMark, lastSessionInfoResponse2.lastSessionInfo.lowWaterMark);
+        assertEquals(sessionInfo.localLowWaterMark, lastSessionInfoResponse2.lastSessionInfo.localLowWaterMark);
         assertEquals(sessionInfo.sessionId, lastSessionInfoResponse2.lastSessionInfo.sessionId);
     }
 

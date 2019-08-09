@@ -86,7 +86,7 @@ public class StorageRecoveryRunnable implements Runnable {
 
             // Get stopping point from source node
             SessionInfo sourceSessionInfo = (SessionInfo) sourceStorageAdminClient.lastSessionInfo(destinationReplicaConnection.getPartitionId()).get();
-            long targetLowWaterMark = sourceSessionInfo.lowWaterMark;
+            long targetLowWaterMark = sourceSessionInfo.localLowWaterMark;
             logger.info("source target low watermark = " + targetLowWaterMark);
 
             while (currentHighWaterMark < targetLowWaterMark) {

@@ -29,8 +29,9 @@ public class StorageRecoveryRunnableTest {
         int partitionId = 0;
         long maxTransactionId = 35L;
         long lowWaterMark = 32L;
+        long localLowWaterMark = 31L;
         long sessionId = 123L;
-        SessionInfo sessionInfo = new SessionInfo(sessionId, lowWaterMark);
+        SessionInfo sessionInfo = new SessionInfo(sessionId, lowWaterMark, localLowWaterMark);
         CompletableFuture<Object> sessionInfoCompletableFuture = mock(CompletableFuture.class);
         CompletableFuture<Object> maxTransactionIdCompletableFuture = mock(CompletableFuture.class);
         CompletableFuture<Object> lowWatermarkCompletableFuture = mock(CompletableFuture.class);
@@ -62,10 +63,11 @@ public class StorageRecoveryRunnableTest {
         int partitionId = 0;
         long destinationMaxTransactionId = 15L;
         long destinationLowWaterMark = 10L;
-        long sourceLowWaterMark = 31L;
+        long sourceLowWaterMark = 32L;
+        long sourceLocalLowWaterMark = 31L;
         long sessionId = 123L;
-        SessionInfo sourceSessionInfo = new SessionInfo(sessionId, sourceLowWaterMark);
-        SessionInfo destinationSessionInfo = new SessionInfo(sessionId, destinationLowWaterMark);
+        SessionInfo sourceSessionInfo = new SessionInfo(sessionId, sourceLowWaterMark, sourceLocalLowWaterMark);
+        SessionInfo destinationSessionInfo = new SessionInfo(sessionId, destinationLowWaterMark, sourceLocalLowWaterMark);
         ArrayList<Record> twentyRecordList = ClientUtil.makeRecords(10L, 30L);
         ArrayList<Record> oneRecordList = ClientUtil.makeRecords(30L, 31L);
         CompletableFuture<Object> sourceSessionInfoCompletableFuture = mock(CompletableFuture.class);

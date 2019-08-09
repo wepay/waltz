@@ -131,7 +131,7 @@ public class MockReplicaConnectionFactory implements ReplicaConnectionFactory {
 
         private long currentSessionId = -1L;
         private long maxTransactionId = -1L;
-        private SessionInfo lastSessionInfo = new SessionInfo(-1L, -1L);
+        private SessionInfo lastSessionInfo = new SessionInfo(-1L, -1L, -1L);
 
         void setCurrentSession(long sessionId) {
             synchronized (this) {
@@ -141,7 +141,7 @@ public class MockReplicaConnectionFactory implements ReplicaConnectionFactory {
 
         void setLastSessionInfo(long lastSessionId, long lowWaterMark) {
             synchronized (this) {
-                lastSessionInfo = new SessionInfo(lastSessionId, lowWaterMark);
+                lastSessionInfo = new SessionInfo(lastSessionId, lowWaterMark, -1L);
             }
         }
 
