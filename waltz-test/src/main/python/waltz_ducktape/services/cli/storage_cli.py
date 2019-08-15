@@ -21,7 +21,7 @@ class StorageCli(Cli):
 
         java com.wepay.waltz.tools.storage.StorageCli \
             list \
-            --storage <in format of host:port, where port is the admin port>
+            --storage <in format of host:admin_port>
         """
         cmd_arr = [
             "java", self.java_cli_class_name(),
@@ -38,7 +38,7 @@ class StorageCli(Cli):
 
         java com.wepay.waltz.tools.storage.StorageCli \
             add-partition \
-            --storage <in format of host:port, where port is the admin port> \
+            --storage <in format of host:admin_port> \
             --partition <the partition id to be added to the storage node> \
             --cli-config-path <the path to cli config file>
         """
@@ -58,7 +58,7 @@ class StorageCli(Cli):
 
         java com.wepay.waltz.tools.storage.StorageCli \
             remove-partition \
-            --storage <in format of host:port, where port is the admin port> \
+            --storage <in format of host:admin_port> \
             --partition <the partition id to be removed from the storage node> \
             --cli-config-path <the path to cli config file>
         """
@@ -72,15 +72,15 @@ class StorageCli(Cli):
         ]
         self.node.account.ssh(self.build_cmd(cmd_arr))
 
-    def availability(self, storage, partition, availability=None):
+    def availability(self, storage, partition, online):
         """
         Runs this command to set the read/write availability the partition in a storage node:
 
         java com.wepay.waltz.tools.storage.StorageCli \
             availability \
-            --storage <in format of host:port, where port is the admin port> \
+            --storage <in format of host:admin_port> \
             --partition <the partition id to be added to the storage node> \
-            --availability <'offline' or 'online' for the storage node> \
+            --online <'true' or 'false' for the storage node> \
             --cli-config-path <the path to cli config file>
         """
         cmd_arr = [
@@ -88,21 +88,22 @@ class StorageCli(Cli):
             "availability",
             "--storage", storage,
             "--partition", partition,
-            "--availability {}".format(availability) if availability is not None else "",
+            "--online", "true" if online else "false",
             "--cli-config-path", self.cli_config_path
         ]
 
         self.node.account.ssh(self.build_cmd(cmd_arr))
 
-    def recover_partition(self, source_storage, destination_storage, partition, batch_size,
-                          source_ssl_config_path=None, destination_ssl_config_path=None):
+    def recover_partition(self, source_storage, destination_storage, destination_storage_port,
+                          partition, batch_size, source_ssl_config_path=None, destination_ssl_config_path=None):
         """
         Runs this command to load data from a partition into a storage node:
 
         java com.wepay.waltz.tools.storage.StorageCli \
             recover-partition \
-            --source-storage <in format of host:port, where port is the admin port> \
-            --destination-storage <in format of host:port, where port is the admin port> \
+            --source-storage <in format of host:admin_port> \
+            --destination-storage <in format of host:admin_port> \
+            --destination-storage-port <the port number of destination storage> \
             --partition <the partition id to be removed from the storage node> \
             --batch-size <the batch size to use when fetching records from storage node> \
             --cli-config-path <the path to cli config file> \
@@ -114,6 +115,7 @@ class StorageCli(Cli):
             "recover-partition",
             "--source-storage", source_storage,
             "--destination-storage", destination_storage,
+            "--destination-storage-port", destination_storage_port,
             "--partition", partition,
             "--batch-size", batch_size,
             "--cli-config-path", self.cli_config_path,
@@ -129,12 +131,52 @@ class StorageCli(Cli):
 
         java com.wepay.waltz.tools.storage.StorageCli \
             sync-partitions \
-            --cli-config-path <the path to cli config file> \
+            --cli-config-path <the path to cli config file>
         """
         cmd_arr = [
             "java", self.java_cli_class_name(),
             "sync-partitions",
             "--cli-config-path", self.cli_config_path,
+        ]
+
+        self.node.account.ssh(self.build_cmd(cmd_arr))
+
+    def max_transaction_id(self, storage, storage_port, partition, offline=None):
+        """
+        Runs this command to display the maximum transaction Id of a partition for given storage node:
+
+        java com.wepay.waltz.tools.storage.StorageCli \
+            max-transaction-id \
+            --storage <in format of host:admin_port> \
+            --storage-port <the port of storage, where port is non-admin port> \
+            --partition <the partition id whose max transaction ID to be returned> \
+            --cli-config-path <the path to cli config file> \
+            --offline <check max transaction ID when storage is offline>
+        """
+        cmd_arr = [
+            "java", self.java_cli_class_name(),
+            "max-transaction-id",
+            "--storage", storage,
+            "--storage-port", storage_port,
+            "--partition", partition,
+            "--cli-config-path", self.cli_config_path,
+            "--offline" if offline else ""
+        ]
+
+        return self.node.account.ssh_output(self.build_cmd(cmd_arr))
+
+    def validate_connectivity(self):
+        """
+        Runs this command to validate Waltz storage and Waltz server node connectivity:
+
+        java com.wepay.waltz.tools.storage.StorageCli \
+            validate \
+            --cli-config-path <the path to cli config file>
+        """
+        cmd_arr = [
+            "java", self.java_cli_class_name(),
+            "validate",
+            "--cli-config-path", self.cli_config_path
         ]
 
         self.node.account.ssh(self.build_cmd(cmd_arr))

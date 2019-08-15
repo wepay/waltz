@@ -74,7 +74,7 @@ public final class StorageCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option storageOption = Option.builder("s")
                     .longOpt("storage")
-                    .desc("Specify storage in format of host:port, where port is admin port")
+                    .desc("Specify storage in format of host:admin_port")
                     .hasArg()
                     .build();
             Option cliCfgOption = Option.builder("c")
@@ -96,7 +96,7 @@ public final class StorageCli extends SubcommandCli {
             try {
                 String[] hostAndPortArray = hostAndPort.split(":");
                 if (hostAndPortArray.length != 2) {
-                    throw new IllegalArgumentException("Http must be in format of host:port");
+                    throw new IllegalArgumentException("Http must be in format of host:admin_port");
                 }
                 String storageHost = hostAndPortArray[0];
                 String storagePort = hostAndPortArray[1];
@@ -194,7 +194,7 @@ public final class StorageCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option storageOption = Option.builder("s")
                     .longOpt("storage")
-                    .desc("Specify storage in format of host:port, where port is admin port")
+                    .desc("Specify storage in format of host:admin_port")
                     .hasArg()
                     .build();
             Option partitionOption = Option.builder("p")
@@ -226,7 +226,7 @@ public final class StorageCli extends SubcommandCli {
             try {
                 String[] hostAndPortArray = hostAndPort.split(":");
                 if (hostAndPortArray.length != 2) {
-                    throw new IllegalArgumentException("Storage must be in format of host:port");
+                    throw new IllegalArgumentException("Storage must be in format of host:admin_port");
                 }
                 String storageHost = hostAndPortArray[0];
                 String storagePort = hostAndPortArray[1];
@@ -288,7 +288,7 @@ public final class StorageCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option storageOption = Option.builder("s")
                     .longOpt("storage")
-                    .desc("Specify storage in format of host:port, where port is admin port")
+                    .desc("Specify storage in format of host:admin_port")
                     .hasArg()
                     .build();
             Option partitionOption = Option.builder("p")
@@ -328,7 +328,7 @@ public final class StorageCli extends SubcommandCli {
             try {
                 String[] hostAndPortArray = hostAndPort.split(":");
                 if (hostAndPortArray.length != 2) {
-                    throw new IllegalArgumentException("Storage must be in format of host:port");
+                    throw new IllegalArgumentException("Storage must be in format of host:admin_port");
                 }
                 String storageHost = hostAndPortArray[0];
                 String storagePort = hostAndPortArray[1];
@@ -393,7 +393,7 @@ public final class StorageCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option storageOption = Option.builder("s")
                     .longOpt("storage")
-                    .desc("Specify storage in format of host:port, where port is admin port")
+                    .desc("Specify storage in format of host:admin_port")
                     .hasArg()
                     .build();
             Option partitionOption = Option.builder("p")
@@ -436,7 +436,7 @@ public final class StorageCli extends SubcommandCli {
             try {
                 String[] hostAndPortArray = hostAndPort.split(":");
                 if (hostAndPortArray.length != 2) {
-                    throw new IllegalArgumentException("Storage must be in format of host:port");
+                    throw new IllegalArgumentException("Storage must be in format of host:admin_port");
                 }
                 String storageHost = hostAndPortArray[0];
                 String storagePort = hostAndPortArray[1];
@@ -512,12 +512,12 @@ public final class StorageCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option sourceStorageOption = Option.builder("s")
                     .longOpt("source-storage")
-                    .desc("Specify source storage in format of host:port, where port is admin port")
+                    .desc("Specify source storage in format of host:admin_port")
                     .hasArg()
                     .build();
             Option destinationStorageOption = Option.builder("d")
                     .longOpt("destination-storage")
-                    .desc("Specify destination storage in format of host:port, where port is admin port")
+                    .desc("Specify destination storage in format of host:admin_port")
                     .hasArg()
                     .build();
             Option destinationStoragePortOption = Option.builder("dp")
@@ -585,7 +585,7 @@ public final class StorageCli extends SubcommandCli {
                 String[] sourceHostAndAdminPortArray = sourceHostAndAdminPort.split(":");
                 String[] destinationHostAndAdminPortArray = destinationHostAndAdminPort.split(":");
                 if (sourceHostAndAdminPortArray.length != 2 || destinationHostAndAdminPortArray.length != 2) {
-                    throw new IllegalArgumentException("Source and destination storage must both be in format of host:port");
+                    throw new IllegalArgumentException("Source and destination storage must both be in format of host:admin_port");
                 }
                 String sourceStorageHost = sourceHostAndAdminPortArray[0];
                 String sourceStorageAdminPort = sourceHostAndAdminPortArray[1];
@@ -872,7 +872,7 @@ public final class StorageCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option storageOption = Option.builder("s")
                     .longOpt("storage")
-                    .desc("Specify storage in format of host:port, where port is admin port")
+                    .desc("Specify storage in format of host:admin_port")
                     .hasArg()
                     .build();
             Option storagePortOption = Option.builder("sp")
@@ -919,7 +919,7 @@ public final class StorageCli extends SubcommandCli {
             try {
                 String[] hostAndPortArray = hostAndPort.split(":");
                 if (hostAndPortArray.length != 2) {
-                    throw new IllegalArgumentException("Storage must be in format of host:port");
+                    throw new IllegalArgumentException("Storage must be in format of host:admin_port");
                 }
                 String storageHost = hostAndPortArray[0];
                 String storageAdminPort = hostAndPortArray[1];

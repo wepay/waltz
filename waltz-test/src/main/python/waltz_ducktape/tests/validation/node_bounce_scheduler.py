@@ -66,31 +66,31 @@ class NodeBounceScheduler(Thread):
         :param node_idx: operating node index
         """
         if action == self.START_A_NODE:
-            node_idx = node_idx or self.random_node_idx(self.STOPPED)
+            node_idx = node_idx if node_idx is not None else self.random_node_idx(self.STOPPED)
             node = self.service.nodes[node_idx]
             self.service.logger.debug("Starting {} on node {} ...".format(self.service.service_name(), node_idx))
             self.take_action(from_state=self.STOPPED, to_state=self.STARTED, node_idx=node_idx,
                              action_func=lambda: self.service.start_node(node))
         elif action == self.RESUME_PROCESS:
-            node_idx = node_idx or self.random_node_idx(self.PAUSED)
+            node_idx = node_idx if node_idx is not None else self.random_node_idx(self.PAUSED)
             node = self.service.nodes[node_idx]
             self.service.logger.debug("Resuming {} process on node {} ...".format(self.service.service_name(), node_idx))
             self.take_action(from_state=self.PAUSED, to_state=self.STARTED, node_idx=node_idx,
                              action_func=lambda: node.account.ssh_capture("pgrep -f waltz | xargs sudo kill -CONT"))
         elif action == self.STOP_A_NODE:
-            node_idx = node_idx or self.random_node_idx(self.STARTED)
+            node_idx = node_idx if node_idx is not None else self.random_node_idx(self.STARTED)
             node = self.service.nodes[node_idx]
             self.service.logger.debug("Stopping {} on node {} ...".format(self.service.service_name(), node_idx))
             self.take_action(from_state=self.STARTED, to_state=self.STOPPED, node_idx=node_idx,
                              action_func=lambda: self.service.stop_node(node))
         elif action == self.KILL_PROCESS:
-            node_idx = node_idx or self.random_node_idx(self.STARTED)
+            node_idx = node_idx if node_idx is not None else self.random_node_idx(self.STARTED)
             node = self.service.nodes[node_idx]
             self.service.logger.debug("Killing {} process on node {} ...".format(self.service.service_name(), node_idx))
             self.take_action(from_state=self.STARTED, to_state=self.STARTED, node_idx=node_idx,
-                             action_func=lambda: node.account.ssh_capture("pgrep -f waltz | xargs sudo kill -9", allow_fail=True))
+                             action_func=lambda: node.account.ssh_capture("pgrep -f waltz | xargs sudo kill -9"))
         elif action == self.PAUSE_PROCESS:
-            node_idx = node_idx or self.random_node_idx(self.STARTED)
+            node_idx = node_idx if node_idx is not None else self.random_node_idx(self.STARTED)
             node = self.service.nodes[node_idx]
             self.service.logger.debug("Pausing {} process on node {} ...".format(self.service.service_name(), node_idx))
             self.take_action(from_state=self.STARTED, to_state=self.PAUSED, node_idx=node_idx,

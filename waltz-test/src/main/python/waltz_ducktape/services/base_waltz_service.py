@@ -48,7 +48,7 @@ class BaseWaltzService(Service):
 
     def restart_node(self, node):
         node.account.ssh(self.restart_cmd())
-        wait_until(lambda: self.alive(node), timeout_sec=10, \
+        wait_until(lambda: self.alive(node), timeout_sec=10,
                    err_msg="{} server node failed to restart".format(self.service_name()))
 
     def clean_node(self, node):

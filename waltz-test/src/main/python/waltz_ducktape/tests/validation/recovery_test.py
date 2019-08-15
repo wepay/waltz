@@ -2,134 +2,116 @@ from ducktape.mark import parametrize
 from ducktape.mark.resource import cluster
 from ducktape.utils.util import wait_until
 from waltz_ducktape.tests.produce_consume_validate import ProduceConsumeValidateTest
-from waltz_ducktape.tests.validation.node_bounce_scheduler import NodeBounceScheduler
 
 
 class RecoveryTest(ProduceConsumeValidateTest):
     """
-    Test Waltz recovery by performing partition management operations
-    with CLI tools, including scaling up replica, moving storage node
-    online/offline before/after maintenance, and so on.
+    Test Waltz recovery by running offline recovery with CLI tools,
+    including recover dirty replicas, bring up offline replica, and
+    so on.
     """
     def __init__(self, test_context):
-        super(RecoveryTest, self).__init__(test_context=test_context, num_storage_nodes=4)
+        super(RecoveryTest, self).__init__(test_context=test_context)
 
-    @cluster(nodes_spec={'storage':4, 'server':2, 'client':1})
-    @parametrize(partition=1, txn_per_client=100, num_clients=1, interval=60, timeout=240)
-    def test_scale_up_replica_for_partition(self, partition, txn_per_client, num_clients, interval, timeout):
-        # new_replica will not be added to zookeeper during setup
-        # src_replica will be the source that new replica recovers from
+    @cluster(nodes_spec={'storage':3, 'server':2, 'client':1})
+    @parametrize(partition=1, txn_per_client=250, num_clients=1, interval=100, timeout=240)
+    def test_recover_dirty_replica(self, partition, txn_per_client, num_clients, interval, timeout):
         src_replica_idx = 0
-        new_replica_idx = 3
-        self.set_storage_nodes_to_skip([new_replica_idx])
+        dst_replica_idx = 2
+        self.run_produce_consume_validate(lambda: self.recover_dirty_replica(src_replica_idx, dst_replica_idx, partition,
+                                                                             txn_per_client, num_clients, interval, timeout))
 
-        self.run_produce_consume_validate(lambda: self.scale_up_replica(src_replica_idx, new_replica_idx, partition,
-                                                                        txn_per_client, num_clients, interval, timeout))
+    @cluster(nodes_spec={'storage':3, 'server':2, 'client':1})
+    @parametrize(partition=1, txn_per_client=250, num_clients=1, interval=100, timeout=240)
+    def test_bring_replica_back_online(self, partition, txn_per_client, num_clients, interval, timeout):
+        offline_replica_idx = 0
 
-    @cluster(nodes_spec={'storage':4, 'server':2, 'client':1})
-    @parametrize(partition=1, txn_per_client=500, num_clients=1, interval=60, timeout=240)
-    def test_recovery_fail_when_replica_offline(self, partition, txn_per_client, num_clients, interval, timeout):
-        self.run_produce_consume_validate(lambda: self.replica_back_online(partition, txn_per_client, num_clients, interval, timeout))
+        self.run_produce_consume_validate(lambda: self.bring_replica_back_online(offline_replica_idx, partition, txn_per_client,
+                                                                           num_clients, interval, timeout))
 
-    def scale_up_replica(self, src_node_idx, new_node_idx, partition, txn_per_client, num_clients, interval, timeout):
+    def recover_dirty_replica(self, src_replica_idx, dst_replica_idx, partition, txn_per_client, num_clients, interval, timeout):
         """
-        A validate function to test scaling up replica for given partition.
-        """
-        # Step 1: Produce transactions with current cluster.
-        # Trigger recovery to update replicas' partition low watermark.
-        cmd = self.client_cli.validate_txn_cmd(partition, txn_per_client, num_clients, interval, -1)
-        self.verifiable_client.start(cmd)
-        self._trigger_recovery(bounce_replica_idx=1)
-        wait_until(lambda: self.verifiable_client.task_complete() == True, timeout_sec=timeout,
-                   err_msg="verifiable_client failed to complete task in %d seconds." % timeout)
+        A validate function to test offline recovery if a dirty replica.
 
-        # Step 2: Add an empty replica and add partition to it.
-        new_node = self.waltz_storage.nodes[new_node_idx]
-        new_node_hostname = new_node.account.ssh_hostname
+        :param src_replica_idx: The index of source replica, where new replica recovers from
+        :param dst_replica_idx: The index of destination replica
+        :param partition: The partition id to test against
+        :param txn_per_client: Number of transactions per client
+        :param num_clients: Number of total clients
+        :param interval: Average interval(millisecond) between transactions
+        :param timeout: Test timeout
+        """
         port = self.waltz_storage.port
         admin_port = self.waltz_storage.admin_port
-        storage = self.get_host(new_node_hostname, admin_port)
-        self.storage_add_partition(storage=storage, partition=partition)
-
-        # Step 3: Run recovery operation on new replica.
-        # Source replica's partition low watermark will be used as target for recovery.
-        src_node = self.waltz_storage.nodes[src_node_idx]
+        src_node = self.waltz_storage.nodes[src_replica_idx]
         src_node_hostname = src_node.account.ssh_hostname
         src_storage = self.get_host(src_node_hostname, admin_port)
-        dst_storage = self.get_host(new_node_hostname, port)
-        self.storage_recover_partition(source_storage=src_storage, destination_storage=dst_storage,
-                               partition=partition, batch_size=20)
+        dst_node = self.waltz_storage.nodes[dst_replica_idx]
+        dst_node_hostname = dst_node.account.ssh_hostname
+        dst_storage = self.get_host(dst_node_hostname, admin_port)
 
-        # Step 4: Check if new replica catch up with source replica.
-        src_node_local_low_watermark = self.get_storage_local_low_watermark(self.get_host(src_node_hostname, admin_port), partition)
-        new_node_local_low_watermark = self.get_storage_local_low_watermark(self.get_host(new_node_hostname, admin_port), partition)
-        assert -1 < src_node_local_low_watermark == new_node_local_low_watermark,\
-            "Partition recovery failed on storage %s, with local low watermark = %d"\
-            % (new_node_hostname, new_node_local_low_watermark)
-
-        # Step 5: Mark new replica online for reads and writes
-        self.storage_set_availability(storage=storage, partition=partition, availability="online")
-
-        # Step 6: Add new replica to the replica set in ZooKeeper
-        storage=self.get_host(new_node_hostname, port)
-        self.zk_add_storage_node(storage=storage, storage_admin_port=admin_port, group=new_node_idx)
-        self.zk_assign_partition(storage=storage, partition=partition)
-
-        # Step 7: Produce transactions after adding new replica.
-        # Trigger recovery to update new replica's partition low watermark (for assertion)
-        cmd = self.client_cli.validate_txn_cmd(partition, txn_per_client, num_clients, interval, 99)
+        # Step 1: Submit transactions to all replicas.
+        cmd = self.client_cli.validate_txn_cmd(partition, txn_per_client, num_clients, interval)
         self.verifiable_client.start(cmd)
-        self._trigger_recovery(bounce_replica_idx=1)
+        wait_until(lambda: self.is_max_transaction_id_updated(src_storage, port, partition, -1), timeout_sec=timeout)
+
+        # Step 2: Mark destination replica offline for reads and writes
+        self.storage_set_availability(storage=dst_storage, partition=partition, online=False)
+
+        # Step 3: Trigger recovery to update source replicas' low watermark.
+        self.trigger_recovery(bounce_node_idx=src_replica_idx)
+        wait_until(lambda: self.is_triggered_recovery_completed(), timeout_sec=timeout)
+        src_node_local_low_watermark = self.get_storage_local_low_watermark(self.get_host(src_node_hostname, admin_port), partition)
+
+        # Step 4: Run recovery operation on offline replica.
+        # Source replica's partition low watermark will be used as target for recovery.
+        self.storage_recover_partition(source_storage=src_storage, destination_storage=dst_storage,
+                                       destination_storage_port=port, partition=partition, batch_size=20)
+
+        # Step 5: Check if destination replica catch up with source replica.
+        dst_node_max_transaction_id = self.get_storage_max_transaction_id(self.get_host(dst_node_hostname, admin_port), port, partition, True)
+        assert src_node_local_low_watermark == dst_node_max_transaction_id, \
+            "partition recovery failed on storage {}, expected max transaction ID = {}, actual max transaction ID = {}" \
+            .format(dst_node_hostname, src_node_local_low_watermark, dst_node_max_transaction_id)
+
+        # Step 6: Wait until validation complete.
         wait_until(lambda: self.verifiable_client.task_complete() == True, timeout_sec=timeout,
                    err_msg="verifiable_client failed to complete task in %d seconds." % timeout)
 
-        # Step 8: Check if new transactions can reach new replica.
-        pre_new_node_local_low_watermark = new_node_local_low_watermark
-        cur_new_node_local_low_watermark = self.get_storage_local_low_watermark(self.get_host(new_node_hostname, admin_port), partition)
-
-        assert cur_new_node_local_low_watermark > pre_new_node_local_low_watermark, \
-            "No new transactions reach new replica, expect local low water mark greater than {}, but got {}"\
-            .format(pre_new_node_local_low_watermark, cur_new_node_local_low_watermark)
-
-        return self.verifiable_client.get_validation_result()
-
-    def replica_back_online(self, partition, txn_per_client, num_clients, interval, timeout):
+    def bring_replica_back_online(self, offline_replica_idx, partition, txn_per_client, num_clients, interval, timeout):
         """
-        A validate function to test recovery when replica back online
+        A validate function to test if a replica can successfully recover when brought back online.
+
+        :param offline_replica_idx: The index of offline replica
+        :param partition: The partition id to test against
+        :param txn_per_client: Number of transactions per client
+        :param num_clients: Number of total clients
+        :param interval: Average interval(millisecond) between transactions
+        :param timeout: Test timeout
         """
+        admin_port = self.waltz_storage.admin_port
+        node = self.waltz_storage.nodes[offline_replica_idx]
+        hostname = node.account.ssh_hostname
+
         # Step 1: Produce a number of transactions.
         cmd = self.client_cli.validate_txn_cmd(partition, txn_per_client, num_clients, interval, -1)
         self.verifiable_client.start(cmd)
 
-        # Step 2: Set storage node 0 offline, quorum still meet.
-        node0 = self.waltz_storage.nodes[0]
-        hostname = node0.account.ssh_hostname
-        admin_port = self.waltz_storage.admin_port
+        # Step 2: Mark storage node 0 offline for reads and writes.
         storage = self.get_host(hostname, admin_port)
-        self.storage_set_availability(storage=storage, partition=partition, availability="offline")
+        self.storage_set_availability(storage=storage, partition=partition, online=False)
+        storage_session_id_offline = self.get_storage_session_id(self.get_host(hostname, admin_port), partition)
 
-        # Step 3: Wait until all transactions appended.
+        # Step 3: Mark storage node online. Wait until recovery is completed.
+        self.storage_set_availability(storage=storage, partition=partition, online=True)
+        wait_until(lambda: self.is_triggered_recovery_completed(), timeout_sec=timeout)
+
+        # Step 4: Check if storage node's session ID bumps up by 1.
+        storage_session_id_online = self.get_storage_session_id(storage, partition)
+        assert storage_session_id_online == storage_session_id_offline + 1, \
+               "recovery failed to complete on storage {}, expected session ID = {}, actual session ID = {}" \
+               .format(hostname, storage_session_id_offline + 1, storage_session_id_online)
+
+        # Step 5: Wait until all transactions appended.
         wait_until(lambda: self.verifiable_client.task_complete() == True, timeout_sec=timeout,
                    err_msg="verifiable_client failed to complete task in %d seconds." % timeout)
-
-        # Step 4: Set storage node 0 online.
-        storage_session_id_offline = self.get_storage_session_id(self.get_host(hostname, admin_port), partition)
-        self.storage_set_availability(storage=storage, partition=partition, availability="online")
-
-        # Step 5: Wait until recovery complete on current replica.
-        wait_until(lambda: self.get_storage_session_id(self.get_host(hostname, admin_port), partition) == storage_session_id_offline + 1,
-                   timeout_sec=timeout, err_msg="recovery failed to complete on current replica.")
-
-    def _trigger_recovery(self, bounce_replica_idx):
-        """
-        Bounce a storage node to trigger recovery procedure. This will force
-        current replicas to update their low watermark for all partitions.
-        """
-        cmd_list = [
-            {"action": NodeBounceScheduler.IDLE},
-            {"action": NodeBounceScheduler.KILL_PROCESS, "node": bounce_replica_idx}
-        ]
-        storage_node_bounce_scheduler = NodeBounceScheduler(service=self.waltz_storage, interval=3,
-                                                            stop_condition=lambda: self.verifiable_client.task_complete(),
-                                                            iterable_cmd_list=iter(cmd_list))
-        storage_node_bounce_scheduler.start()

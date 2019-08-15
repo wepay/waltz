@@ -1,10 +1,12 @@
 from re import search
 from ducktape.utils.util import wait_until
+from ducktape.cluster.remoteaccount import RemoteCommandError
 from waltz_ducktape.tests.waltz_test import WaltzTest
 from waltz_ducktape.services.cli.zk_cli import ZkCli
 from waltz_ducktape.services.cli.storage_cli import StorageCli
 from waltz_ducktape.services.cli.client_cli import ClientCli
 from waltz_ducktape.services.cli.performance_cli import PerformanceCli
+from waltz_ducktape.tests.validation.node_bounce_scheduler import NodeBounceScheduler
 
 
 class ProduceConsumeValidateTest(WaltzTest):
@@ -44,8 +46,7 @@ class ProduceConsumeValidateTest(WaltzTest):
         self.client_cli = ClientCli(self.client_config_path)
         self.performance_cli = PerformanceCli(self.client_config_path)
 
-        # a list of storage nodes to skip during setup
-        self.storage_nodes_to_skip = []
+        self.storage_nodes_to_ignore = []
 
     def run_produce_consume_validate(self, validation_func, torture_func=None):
         """
@@ -73,7 +74,7 @@ class ProduceConsumeValidateTest(WaltzTest):
         self.reset_cluster()
 
         # Step 2: ZkCli - add storage nodes to cluster, one in each group.
-        storage_nodes_to_setup = [node for idx, node in enumerate(self.waltz_storage.nodes) if idx not in self.storage_nodes_to_skip]
+        storage_nodes_to_setup = [node for idx, node in enumerate(self.waltz_storage.nodes) if idx not in self.storage_nodes_to_ignore]
         for idx, node in enumerate(storage_nodes_to_setup):
             hostname = node.account.ssh_hostname
             port = self.waltz_storage.port
@@ -96,7 +97,7 @@ class ProduceConsumeValidateTest(WaltzTest):
         for node in storage_nodes_to_setup:
             hostname = node.account.ssh_hostname
             admin_port = self.waltz_storage.admin_port
-            self.storage_set_availability(storage=self.get_host(hostname, admin_port), partition=0, availability="online")
+            self.storage_set_availability(storage=self.get_host(hostname, admin_port), partition=0, online=True)
 
         # Step 7: WaltzServer - start server instances.
         self.waltz_server.start()
@@ -151,20 +152,29 @@ class ProduceConsumeValidateTest(WaltzTest):
         self.logger.info("Adding partition {} to storage node {}".format(partition, storage))
         self.storage_cli.add_partition(storage, partition)
 
-    def storage_set_availability(self, storage, partition, availability=None):
+    def storage_set_availability(self, storage, partition, online):
         self.logger.info("Setting the partition {} read/write availability of storage node {}".format(partition, storage))
-        self.storage_cli.availability(storage, partition, availability)
+        self.storage_cli.availability(storage, partition, online)
 
     def storage_sync_partition_assignments(self):
         self.logger.info("Synchronizing partition ownership to storage nodes based on assignment in ZooKeeper")
         self.storage_cli.sync_partition_assignments()
 
-    def storage_recover_partition(self, source_storage, destination_storage, partition, batch_size):
+    def storage_recover_partition(self, source_storage, destination_storage, destination_storage_port, partition, batch_size):
         self.logger.info("Loading partition {} data from storage {} to a storage {}".format(partition, source_storage, destination_storage))
         source_ssl_config_path = self.waltz_server.service_config_file_path()
         destination_ssl_config_path = source_ssl_config_path
-        self.storage_cli.recover_partition(source_storage, destination_storage, partition, batch_size,
-                                           source_ssl_config_path, destination_ssl_config_path)
+        self.storage_cli.recover_partition(source_storage, destination_storage, destination_storage_port,
+                                           partition, batch_size, source_ssl_config_path, destination_ssl_config_path)
+
+    def get_storage_max_transaction_id(self, storage, storage_port, partition, offline=None):
+        """
+        Return maximum transaction Id of a partition for given storage node.
+        """
+        self.logger.info("Retrieving max transaction id of storage {}".format(storage))
+        max_transaction_id_info = self.storage_cli.max_transaction_id(storage, storage_port, partition, offline)
+        regex = "Max Transaction ID:\s*(-?\d+)"
+        return int(search(regex, max_transaction_id_info).group(1))
 
     def get_storage_local_low_watermark(self, storage, partition):
         """
@@ -203,5 +213,51 @@ class ProduceConsumeValidateTest(WaltzTest):
     def get_host(self, hostname, port):
         return "{}:{}".format(hostname, port)
 
-    def set_storage_nodes_to_skip(self, nodes_idx):
-        self.storage_nodes_to_skip = nodes_idx
+    def set_storage_nodes_to_ignore(self, nodes_idx):
+        """
+        Set a list of storage nodes to ignore. These storage nodes will
+        not be added to Zookeeper during setup, thus will be ignored
+        by Waltz Server.
+        """
+        self.storage_nodes_to_ignore = nodes_idx
+
+    def trigger_recovery(self, bounce_node_idx, interval=10):
+        """
+        Bounce a storage node to trigger recovery procedure. This will force
+        current replicas to update their low watermark for all partitions.
+        :param bounce_node_idx: The index of node to bounce
+        :param interval: Seconds to wait before trigger recovery
+        """
+        cmd_list = [
+            {"action": NodeBounceScheduler.KILL_PROCESS, "node": bounce_node_idx}
+        ]
+        storage_node_bounce_scheduler = NodeBounceScheduler(service=self.waltz_storage, interval=interval,
+                                                            stop_condition=lambda: self.verifiable_client.task_complete(),
+                                                            iterable_cmd_list=iter(cmd_list))
+        storage_node_bounce_scheduler.start()
+
+    def is_triggered_recovery_completed(self):
+        """
+        Return True if triggered recovery complete. Because the node bounced
+        by triggered recovery will automatically restart, we can verify that
+        complete by checking cluster connectivity.
+        """
+        try:
+            self.storage_cli.validate_connectivity()
+            return True
+        except RemoteCommandError:
+            return False
+
+    def is_max_transaction_id_updated(self, storage, port, partition, cur_high_watermark):
+        """
+        Return True if max transaction ID is greater than current high watermark.
+        :param storage: the storage host in format of host:admin_port
+        :param port: the storage port
+        :param partition: the partition id whose max transaction ID to update
+        :param cur_high_watermark: current high watermark to compare with
+        :return: boolean
+        """
+        try:
+            return self.get_storage_max_transaction_id(storage, port, partition) > cur_high_watermark
+        except RemoteCommandError:
+            return False

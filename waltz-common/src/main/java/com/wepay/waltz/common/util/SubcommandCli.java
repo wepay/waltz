@@ -54,6 +54,7 @@ public class SubcommandCli {
             Cli cli = subcommand.cliFunction.apply(subcommandArgs);
             try {
                 cli.processCmd();
+                System.exit(0);
             } catch (SubCommandFailedException e) {
                 cli.printError(e.getMessage());
                 if (!useByTest) {

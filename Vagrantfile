@@ -14,7 +14,7 @@ Vagrant.configure("2") do |config|
   config.vm.box = "google/gce"
 
   # Provision waltz-storage nodes
-  (0..4).each do |i|
+  (0..3).each do |i|
     config.vm.define "storage-#{i}" do |node|
       node.vm.provider :google do |google, override|
         # google project & service account
