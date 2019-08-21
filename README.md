@@ -54,13 +54,19 @@ A log file (`smoketest.log`) can be found in your home directory.
 
 ## Demo app
 
-Waltz comes with a demo app that shows an example account balance database built on top of Waltz. See the [Running Waltz Demo Code](https://confluence.corp.wepay-inc.com/display/DI/Running+Waltz+Demo+Code) wiki for information on how to run it.
+Waltz comes with a demo app that shows an example account balance database built on top of Waltz. 
 
-It can be run against the test cluster running in Docker containers. See below.
+Start a test Waltz cluster in docker environment.
 
-## Tickets
+    bin/test-cluster.sh start
 
-All tickets should be tracked under the [DI JIRA project](https://jira.corp.wepay-inc.com/browse/DI) with the component set to `waltz`.
+Start a MySQL instance in docker environment.
+
+    bin/demo-bank-db.sh start
+
+Run demo application with simple self-explanatory commands.
+
+    bin/demo-bank-app.sh
 
 ## Run Waltz in Docker
 
