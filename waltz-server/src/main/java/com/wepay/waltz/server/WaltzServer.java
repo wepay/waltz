@@ -327,8 +327,8 @@ public class WaltzServer {
         ZooKeeperClient zkClient = null;
         ClusterManager clusterManager = null;
 
-        try {
-            Map<Object, Object> props = yaml.load(new FileInputStream(configPath));
+        try (FileInputStream input = new FileInputStream(configPath)) {
+            Map<Object, Object> props = yaml.load(input);
 
             WaltzServerConfig config = new WaltzServerConfig(props);
 

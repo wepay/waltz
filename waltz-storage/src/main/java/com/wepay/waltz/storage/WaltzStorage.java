@@ -148,9 +148,9 @@ public class WaltzStorage {
         cli.processCmd();
         String configPath = cli.getConfigPath();
 
-        try {
+        try (FileInputStream input = new FileInputStream(configPath)) {
             Yaml yaml = new Yaml();
-            Map<Object, Object> props = yaml.load(new FileInputStream(configPath));
+            Map<Object, Object> props = yaml.load(input);
 
             WaltzStorageConfig config = new WaltzStorageConfig(props);
 

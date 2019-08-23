@@ -52,15 +52,17 @@ public final class DemoBankApp extends DemoAppBase {
 
         String configPath = cli.getConfigPath();
         if (configPath != null) {
-            Yaml yaml = new Yaml();
-            Map<Object, Object> props = yaml.load(new FileInputStream(configPath));
-            DemoBankAppConfig config = new DemoBankAppConfig(props);
-            String dataSourceConnectString = (String) config.get(DemoBankAppConfig.DS_CONNECT_STRING);
-            String dataSourceUsername = (String) config.get(DemoBankAppConfig.DS_USERNAME);
-            String dataSourcePassword = (String) config.get(DemoBankAppConfig.DS_PASSWORD);
+            try (FileInputStream input = new FileInputStream(configPath)) {
+                Yaml yaml = new Yaml();
+                Map<Object, Object> props = yaml.load(input);
+                DemoBankAppConfig config = new DemoBankAppConfig(props);
+                String dataSourceConnectString = (String) config.get(DemoBankAppConfig.DS_CONNECT_STRING);
+                String dataSourceUsername = (String) config.get(DemoBankAppConfig.DS_USERNAME);
+                String dataSourcePassword = (String) config.get(DemoBankAppConfig.DS_PASSWORD);
 
-            dataSource = new DemoDataSource(dataSourceConnectString, dataSourceUsername, dataSourcePassword);
-            waltzClientConfig = new WaltzClientConfig(props);
+                dataSource = new DemoDataSource(dataSourceConnectString, dataSourceUsername, dataSourcePassword);
+                waltzClientConfig = new WaltzClientConfig(props);
+            }
         } else {
             dataSource = new DemoDataSource(DemoConst.BANK_DB, "demo", "demo");
             waltzClientConfig = config();
