@@ -5,6 +5,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+/**
+ * The transaction data that is written/read to/from a partition.
+ */
 @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "internal class")
 public class TransactionData {
 
@@ -16,15 +19,29 @@ public class TransactionData {
     public final byte[] data;
     public final int checksum;
 
+    /**
+     * Class constructor.
+     * @param data The data to be written to a partition.
+     * @param checksum The checksum of the data received from the client.
+     */
     TransactionData(byte[] data, int checksum) {
         this.data = data;
         this.checksum = checksum;
     }
 
+    /**
+     * Returns the size of the data (header + payload).
+     * @return the size of the data (header + payload).
+     */
     public int serializedSize() {
         return RECORD_OVERHEAD + data.length;
     }
 
+    /**
+     * Writes the data to a buffer.
+     * @param offset The location where to append the data to in the given buffer.
+     * @param buf The buffer to write to.
+     */
     public void writeTo(int offset, ByteBuffer buf) {
         buf.putInt(offset, data.length);
         offset += DATA_LENGTH_SIZE;
@@ -36,6 +53,13 @@ public class TransactionData {
         buf.putInt(offset, checksum);
     }
 
+    /**
+     * Reads the data from the buffer.
+     * @param offset The location from where to read the data from.
+     * @param length The length of the data to read.
+     * @param buf The buffer to read from.
+     * @return The transaction data read from the given buffer.
+     */
     public static TransactionData readFrom(int offset, int length, ByteBuffer buf) {
         if (length < RECORD_OVERHEAD) {
             return null;

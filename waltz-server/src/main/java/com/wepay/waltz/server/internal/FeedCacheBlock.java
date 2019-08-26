@@ -26,12 +26,23 @@ public class FeedCacheBlock {
         this.usage = 0L;
     }
 
+    /**
+     * Resets a given block.
+     * @param key The key to a block that has to be reset.
+     */
     public void reset(FeedCacheBlockKey key) {
         this.firstTransactionId = key.firstTransactionId();
         this.usage = 0L;
     }
 
-    public boolean add(long transactionId, ReqId reqId, int header) throws IllegalStateException {
+    /**
+     * Adds feed data (i.e. transaction information) to the feed cache block.
+     * @param transactionId The transaction ID.
+     * @param reqId The request ID.
+     * @param header The header of the given transaction ID.
+     * @return True if added successfully, otherwise returns False.
+     */
+    public boolean add(long transactionId, ReqId reqId, int header) {
         if (transactionId >= firstTransactionId && transactionId < firstTransactionId + NUM_TRANSACTIONS) {
             int index = (int) (transactionId & INDEX_MASK);
             int rindex = index << 1; // = 2 * i
@@ -46,6 +57,11 @@ public class FeedCacheBlock {
         return false;
     }
 
+    /**
+     * Returns feed data for a given transaction ID.
+     * @param transactionId The transaction ID.
+     * @return feed data for a given transaction ID.
+     */
     public FeedData get(long transactionId) {
         if (transactionId >= firstTransactionId && transactionId < firstTransactionId + NUM_TRANSACTIONS) {
             int index = (int) (transactionId & INDEX_MASK);

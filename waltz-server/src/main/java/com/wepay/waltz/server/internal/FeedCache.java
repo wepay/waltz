@@ -53,6 +53,11 @@ public class FeedCache {
     private int partitionSize;
     private boolean running = true;
 
+    /**
+     * Class constructor. Initializes the shared pool.
+     * @param size The size of the Feed cache.
+     * @param cacheMissMeter Metric to track cache miss.
+     */
     public FeedCache(int size, Meter cacheMissMeter) {
         this.cacheMissMeter = cacheMissMeter;
         this.sharedPool = new LinkedHashMap<>();
@@ -64,6 +69,9 @@ public class FeedCache {
         }
     }
 
+    /**
+     * Closes the feed cache.
+     */
     public void close() {
         synchronized (sharedPool) {
             running = false;
@@ -73,8 +81,8 @@ public class FeedCache {
 
     /**
      * Returns a cache partition.
-     * @param partitionId
-     * @return
+     * @param partitionId The ID of the partition whose feed cache is requested.
+     * @return Feed cache for a given partition.
      */
     public FeedCachePartition getPartition(Integer partitionId) {
         synchronized (partitions) {
@@ -91,7 +99,7 @@ public class FeedCache {
 
     /**
      * Remove a partition. This method should be called only from FeedCachePartition.
-     * @param partitionId
+     * @param partitionId The ID of the partition that has to be removed.
      */
     void removePartition(Integer partitionId) {
         synchronized (partitions) {
@@ -102,7 +110,7 @@ public class FeedCache {
 
     /**
      * Returns the number of active partitions.
-     * @return the number of active partitions
+     * @return the number of active partitions.
      */
     int getNumPartitions() {
         synchronized (partitions) {
@@ -110,14 +118,19 @@ public class FeedCache {
         }
     }
 
+    /**
+     * Returns local pool size of a partition.
+     * @return local pool size of a partition.
+     */
     int getPartitionSize() {
         synchronized (partitions) {
             return partitionSize;
         }
     }
+
     /**
      * Returns the number of blocks to the shared pool.
-     * @return the number of blocks
+     * @return the number of blocks.
      */
     int getSharedPoolSize() {
         synchronized (sharedPool) {
@@ -127,8 +140,8 @@ public class FeedCache {
 
     /**
      * Checks out a cache block from the shared pool.
-     * @param key
-     * @return a cache block
+     * @param key The key of a specific block from the shared pool.
+     * @return a cache block.
      */
     FeedCacheBlock checkOut(FeedCacheBlockKey key) {
         synchronized (sharedPool) {
@@ -162,8 +175,8 @@ public class FeedCache {
 
     /**
      * Checks in a block into the shared pool.
-     * @param key
-     * @param block
+     * @param key The key of a block to be added to the shared pool.
+     * @param block The block associated with the given key.
      */
     void checkIn(FeedCacheBlockKey key, FeedCacheBlock block) {
         synchronized (sharedPool) {

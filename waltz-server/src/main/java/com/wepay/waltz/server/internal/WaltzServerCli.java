@@ -4,9 +4,17 @@ import com.wepay.waltz.common.util.Cli;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 
+/**
+ * Extends {@link Cli} to parse {@link com.wepay.waltz.server.WaltzServer} CLI arguments.
+ */
 public class WaltzServerCli extends Cli {
     private String configPath;
 
+    /**
+     * Class constructor.
+     * @param args CLI arguments.
+     * @throws Exception thrown in case of argument parsing exception.
+     */
     public WaltzServerCli(String[] args) throws Exception {
         super(args);
     }
@@ -30,6 +38,10 @@ public class WaltzServerCli extends Cli {
         return "<waltz_server_app> <config_path>";
     }
 
+    /**
+     * Returns WaltzServer CLI config path.
+     * @return WaltzServer CLI config path.
+     */
     public String getConfigPath() {
         return configPath;
     }

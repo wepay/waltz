@@ -44,6 +44,9 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Implementation of a partition within {@link com.wepay.waltz.server.WaltzServer}.
+ */
 public class Partition {
 
     private static final Logger logger = Logging.getLogger(Partition.class);
@@ -76,6 +79,14 @@ public class Partition {
     private Timer responseLatencyTimer;
     private volatile long commitHighWaterMark = Long.MIN_VALUE;
 
+    /**
+     * Class Constructor.
+     * @param partitionId ID of the partition.
+     * @param storePartition {@link StorePartition} associated with the given partition ID.
+     * @param feedCachePartition {@link FeedCachePartition} associated with the given partition ID.
+     * @param transactionFetcher {@link TransactionFetcher} associated with the {@code WaltzServer} to which the partition is part of.
+     * @param config the config of the {@code WaltzServer} to which the partition is part of.
+     */
     public Partition(int partitionId, StorePartition storePartition, FeedCachePartition feedCachePartition, TransactionFetcher transactionFetcher, WaltzServerConfig config) {
         this.partitionId = partitionId;
         this.lockTableSize = (int) config.get(WaltzServerConfig.OPTIMISTIC_LOCK_TABLE_SIZE);
@@ -95,6 +106,10 @@ public class Partition {
         this.transactionFetcher = transactionFetcher;
     }
 
+    /**
+     * Opens the partition by starting the {@link AppendTask} and {@link FeedTask} threads.
+     * @throws StoreException
+     */
     public void open() throws StoreException {
         // Start threads
         appendTask.start();
@@ -102,6 +117,11 @@ public class Partition {
         catchupFeedTask.start();
     }
 
+    /**
+     * Asynchronously closes the partition by closing its corresponding {@code StorePartition} and {@link FeedSynchronizer}.
+     * @return {@link CompletableFuture} with status as True if all {@code AppendTask} and {@code FeedTask} threads are
+     * stopped successfully..
+     */
     public CompletableFuture<Boolean> closeAsync() {
         if (running.compareAndSet(true, false)) {
             storePartition.close();
@@ -117,6 +137,10 @@ public class Partition {
         return closeFuture;
     }
 
+    /**
+     * Closes the partition by stopping the {@link AppendTask} and {@link FeedTask} threads that are started when open()
+     * was called.
+     */
     public void close() {
         CompletableFuture<Boolean> future = closeAsync();
         Uninterruptibly.run(future::get);
@@ -125,34 +149,69 @@ public class Partition {
         unregisterMetrics();
     }
 
+    /**
+     * Updates the generation in the {@code StorePartition}.
+     * @param generation The new generation value of the partition.
+     */
     public void generation(int generation) {
         storePartition.generation(generation);
     }
 
+    /**
+     * Returns True if the {@code StorePartition} is healthy, otherwise returns False.
+     * @return True if the {@code StorePartition} is healthy, otherwise returns False.
+     */
     public boolean isHealthy() {
         return storePartition.isHealthy();
     }
 
+    /**
+     * Returns True if the partition is closed, otherwise returns False.
+     * @return True if the partition is closed, otherwise returns False.
+     */
     public boolean isClosed() {
         return !running.get();
     }
 
+    /**
+     * Returns total number of realtime {@link FeedContext} added to this partition.
+     * @return total number of realtime {@link FeedContext} added to this partition.
+     */
     public long getTotalRealtimeFeedContextAdded() {
         return nearRealtimeFeedTask.totalAdded();
     }
 
+    /**
+     * Returns total number of realtime {@link FeedContext} removed from this partition.
+     * @return total number of realtime {@link FeedContext} removed from this partition.
+     */
     public long getTotalRealtimeFeedContextRemoved() {
         return nearRealtimeFeedTask.totalRemoved();
     }
 
+    /**
+     * Returns total number of catchup {@link FeedContext} added this partition.
+     * @return total number of catchup {@link FeedContext} added this partition.
+     */
     public int getTotalCatchupFeedContextAdded() {
         return (int) catchupFeedTask.totalAdded();
     }
 
+    /**
+     * Returns total number of catchup {@link FeedContext} removed from this partition.
+     * @return total number of catchup {@link FeedContext} removed from this partition.
+     */
     public int getTotalCatchupFeedContextRemoved() {
         return (int) catchupFeedTask.totalRemoved();
     }
 
+    /**
+     * Processes the request message received by this partition.
+     * @param msg The {@link Message} received by this partition.
+     * @param client The client that has sent the request to this partition.
+     * @throws PartitionClosedException thrown if the partition is closed.
+     * @throws StoreException thrown if {@code StorePartition} for this partition is closed.
+     */
     public void receiveMessage(Message msg, PartitionClient client) throws PartitionClosedException, StoreException {
         if (!running.get()) {
             throw new PartitionClosedException("already closed");
@@ -197,6 +256,10 @@ public class Partition {
         }
     }
 
+    /**
+     * Assigns a sequence number for the given client and stores this information in a map.
+     * @param client The client that is interested in this partition.
+     */
     public void setPartitionClient(PartitionClient client) {
         synchronized (partitionClientSeqNums) {
             Long currentSeqNum = partitionClientSeqNums.get(client.clientId());
@@ -206,6 +269,10 @@ public class Partition {
         }
     }
 
+    /**
+     * Removes the client from the list of clients that are part of this partition.
+     * @param client The client that has to be removed from this partition.
+     */
     public void removePartitionClient(PartitionClient client) {
         synchronized (partitionClientSeqNums) {
             Long currentSeqNum = partitionClientSeqNums.get(client.clientId());
@@ -215,6 +282,11 @@ public class Partition {
         }
     }
 
+    /**
+     * Sends out a response to the client if the partition is not found (i.e. if the partition is null).
+     * @param msg The request message received from the client.
+     * @param client The client that has sent a request to a partition.
+     */
     public static void partitionNotFound(Message msg, PartitionClient client) {
         AbstractMessage r = (AbstractMessage) msg;
         ReqId reqId = r.reqId;
@@ -283,6 +355,10 @@ public class Partition {
         resumePausedFeedContexts();
     }
 
+    /**
+     * Resumes the previously paused feed context for this partition.
+     * @throws StoreException thrown if {@code StorePartition} for this partition is closed.
+     */
     public void resumePausedFeedContexts() throws StoreException {
         synchronized (pausedFeedContexts) {
             Iterator<FeedContext> iter = pausedFeedContexts.iterator();

@@ -26,6 +26,13 @@ public class TransactionCache {
     private int startOfFreeSpace;
     private int endOfFreeSpace;
 
+    /**
+     * Class constructor.
+     * @param cacheSize The maximum size of the cache.
+     * @param maxSerializedSize The maximum size of the serializable data to be allowed.
+     * @param directAllocation If True, allocates a new direct byte buffer (outside Head memory) else a new byte buffer (from Heap memory).
+     * @param cacheMissMeter Metric to track cache miss.
+     */
     public TransactionCache(int cacheSize, int maxSerializedSize, boolean directAllocation, Meter cacheMissMeter) {
         if (cacheSize < maxSerializedSize) {
             throw new IllegalArgumentException("cacheSize must be greater than maxSerializedSize");
@@ -41,13 +48,17 @@ public class TransactionCache {
         this.endOfFreeSpace = cacheSize;
     }
 
+    /**
+     * Returns size of the cache.
+     * @return size of the cache.
+     */
     public int size() {
         return cacheSize;
     }
 
     /**
-     * Gets the cached transaction data with the specified partition id and transaction id.
-     * @param key transaction data key
+     * Gets the cached transaction data with the specified partition ID and transaction ID.
+     * @param key transaction data key.
      * @return TransactionData, or null if not found.
      */
     public TransactionData get(TransactionKey key) {
@@ -84,8 +95,8 @@ public class TransactionCache {
 
     /**
      * Puts a transaction data in the cache. If the serialized size if more than quarter the cache size, the data is not cached.
-     * @param key transaction key
-     * @param data transaction data
+     * @param key transaction key.
+     * @param data transaction data.
      */
     public void put(TransactionKey key, TransactionData data) {
         int serializedSize = TransactionKey.SERIALIZED_KEY_SIZE + data.serializedSize();
@@ -126,7 +137,7 @@ public class TransactionCache {
     }
 
     /**
-     * Clear the cache
+     * Clear the cache.
      */
     public void clear() {
         synchronized (this) {

@@ -15,6 +15,9 @@ import com.wepay.waltz.store.exception.StorePartitionClosedException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Implements {@link com.wepay.waltz.server.WaltzServer} message handler.
+ */
 public class WaltzServerHandler extends MessageHandler implements PartitionClient {
 
     private static final int QUEUE_LOW_WATER_MARK = 300;
@@ -32,6 +35,10 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
     private Integer clientId = null;
     private Long seqNum = null;
 
+    /**
+     * Class constructor.
+     * @param partitions Partition IDs that are part of the {@link com.wepay.waltz.server.WaltzServer} and their corresponding {@link Partition} object.
+     */
     public WaltzServerHandler(Map<Integer, Partition> partitions) {
         this(partitions, new WaltzServerHandlerCallbacks(partitions));
     }

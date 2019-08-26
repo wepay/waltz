@@ -15,6 +15,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
+/**
+ * Used to fetch the transaction data from the {@link StorePartition}. Unique for each Waltz-Server.
+ */
 public class TransactionFetcher {
 
     private static final Logger logger = Logging.getLogger(TransactionFetcher.class);
@@ -24,6 +27,12 @@ public class TransactionFetcher {
     private final ConcurrentHashMap<TransactionKey, CompletableFuture<TransactionData>> futures;
     private final CachingTask task;
 
+    /**
+     * Class constructor.
+     * @param cacheSize The maximum size of the transaction cache.
+     * @param directAllocation If True, allocates a new direct byte buffer (outside Head memory) else a new byte buffer (from Heap memory).
+     * @param cacheMissMeter Metric to track cache miss.
+     */
     public TransactionFetcher(int cacheSize, boolean directAllocation, Meter cacheMissMeter) {
         this.cache = new TransactionCache(cacheSize, cacheSize / 4, directAllocation, cacheMissMeter);
         this.futures = new ConcurrentHashMap<>();
@@ -31,10 +40,18 @@ public class TransactionFetcher {
         this.task.start();
     }
 
+    /**
+     * Stops the task that is responsible for enqueuing the transaction to the cache asynchronously.
+     */
     public void close() {
         task.stop();
     }
 
+    /**
+     * Adds the transaction information to the cache.
+     * @param key Transaction data key.
+     * @param data The data to be written to a partition.
+     */
     public void cache(TransactionKey key, TransactionData data) {
         CompletableFuture<TransactionData> future = CompletableFuture.completedFuture(data);
 
@@ -46,6 +63,13 @@ public class TransactionFetcher {
         }
     }
 
+    /**
+     * Returns the transaction data for a specific {@link TransactionKey} from the given {@link StorePartition}.
+     * @param key Transaction data key.
+     * @param storePartition {@link StorePartition} associated with the given partition ID.
+     * @return Transaction data for the given key.
+     * @throws StoreException thrown if {@code StorePartition} is closed.
+     */
     public TransactionData fetch(TransactionKey key, StorePartition storePartition) throws StoreException {
         CompletableFuture<TransactionData> existingFuture = futures.get(key);
 

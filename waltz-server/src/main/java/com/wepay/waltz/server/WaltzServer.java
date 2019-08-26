@@ -66,6 +66,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Main implementation of the Waltz Server API.
+ */
 public class WaltzServer {
 
     private static final Logger logger = Logging.getLogger(WaltzServer.class);
@@ -89,6 +92,15 @@ public class WaltzServer {
     protected final FeedCache feedCache;
     protected final TransactionFetcher transactionFetcher;
 
+    /**
+     * Class constructor.
+     * @param port Server port.
+     * @param sslCtx The {@link javax.net.ssl.SSLContext} used to instantiate the Waltz Server.
+     * @param store The {@link Store} associated with the Waltz Server.
+     * @param clusterManager {@link ClusterManager} instance.
+     * @param config The Waltz Server configuration file.
+     * @throws Exception thrown in case the Waltz Server instance cannot be created.
+     */
     public WaltzServer(final int port, SslContext sslCtx, Store store, ClusterManager clusterManager, WaltzServerConfig config) throws Exception {
         logVersion();
 
@@ -193,6 +205,9 @@ public class WaltzServer {
         return Collections.unmodifiableMap(partitions);
     }
 
+    /**
+     * Closes the Waltz Server instance.
+     */
     public void close() {
         logger.info("Closing WaltzServer: id=" + serverId + " endpoint=" + endpoint);
 
@@ -259,6 +274,11 @@ public class WaltzServer {
         logger.info("WaltzServer Closed: id=" + serverId + " endpoint=" + endpoint);
     }
 
+    /**
+     * Starts the jetty server by using the jetty port to configure the Waltz server metrics.
+     * @param zkClient The ZooKeeper client used for the Waltz cluster.
+     * @throws Exception thrown if the jetty server is already started.
+     */
     public void setJettyServer(ZooKeeperClient zkClient) throws Exception {
         Optional<Object> jettyPortOpt = config.getOpt(WaltzServerConfig.SERVER_JETTY_PORT);
         if (jettyPortOpt.isPresent()) {
@@ -292,6 +312,10 @@ public class WaltzServer {
         }
     }
 
+    /**
+     * Returns the health of the partitions.
+     * @return the health of the partitions.
+     */
     public Map<Integer, Boolean> getPartitionHealth() {
         Map<Integer, Boolean> partitionHealth = new HashMap<>();
 
@@ -303,10 +327,18 @@ public class WaltzServer {
         }
     }
 
+    /**
+     * Returns True if the Waltz server is not closed, otherwise returns False.
+     * @return True if the Waltz server is not closed, otherwise returns False.
+     */
     public boolean isClosed() {
         return !running.get();
     }
 
+    /**
+     * Returns list of partition IDs of this Waltz server.
+     * @return list of partition IDs of this Waltz server.
+     */
     public List<Integer> getPartitionIds() {
         ArrayList<Integer> partitionIds;
 
@@ -318,6 +350,11 @@ public class WaltzServer {
         return partitionIds;
     }
 
+    /**
+     * Starts the Waltz server and jetty server.
+     * @param args The CLI arguments.
+     * @throws Exception thrown in case the Waltz server cannot be started.
+     */
     public static void main(String[] args) throws Exception {
         WaltzServerCli cli = new WaltzServerCli(args);
         cli.processCmd();

@@ -9,6 +9,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Implements the local feed cache for a given partition.
+ */
 public class FeedCachePartition {
 
     private final int partitionId;
@@ -19,6 +22,11 @@ public class FeedCachePartition {
     private int refCount;
     private FeedCacheBlock frontier;
 
+    /**
+     * Class constructor.
+     * @param partitionId The partition ID.
+     * @param feedCache Initially assigned feed cache for a given partition.
+     */
     FeedCachePartition(int partitionId, FeedCache feedCache) {
         this.partitionId = partitionId;
         this.feedCache = feedCache;
@@ -27,6 +35,9 @@ public class FeedCachePartition {
         this.refCount = 0;
     }
 
+    /**
+     * Opens feed cache partition and increments its reference count.
+     */
     public void open() {
         synchronized (this) {
             refCount++;
@@ -34,8 +45,9 @@ public class FeedCachePartition {
     }
 
     /**
-     * Closes this partition. This decrements the reference count.
-     * If the reference count reaches zero, this method actually clears the cache and remove the partition from FeedCache.
+     * Closes the feed cache partition. This decrements the reference count.
+     * If the reference count reaches zero, this method actually clears the cache and
+     * removes the partition from FeedCache.
      */
     public void close() {
         synchronized (this) {
@@ -48,7 +60,7 @@ public class FeedCachePartition {
     }
 
     /**
-     * Clear this partition. This removed all cache blocks from this partition.
+     * Clears the feed cache partition. This will remove all cache blocks.
      */
     public void clear() {
         synchronized (this) {
@@ -60,7 +72,7 @@ public class FeedCachePartition {
 
     /**
      * Returns the number of blocks held by this partition.
-     * @return
+     * @return number of blocks held by this partition.
      */
     int getNumBlocks() {
         synchronized (this) {
@@ -70,7 +82,7 @@ public class FeedCachePartition {
 
     /**
      * Sets the max number of blocks held by this partition.
-     * @param numBlocks
+     * @param numBlocks the max number of blocks held by this partition.
      */
     public void setMaxNumBlocks(int numBlocks) {
         synchronized (this) {
@@ -91,9 +103,9 @@ public class FeedCachePartition {
 
     /**
      * Adds a feed data to the cache.
-     * @param transactionId
-     * @param reqId
-     * @param header
+     * @param transactionId The transaction ID.
+     * @param reqId The request ID.
+     * @param header The header of the given transaction ID.
      */
     public void add(long transactionId, ReqId reqId, int header) {
         synchronized (this) {
@@ -117,7 +129,7 @@ public class FeedCachePartition {
 
     /**
      * Adds a list of record headers as feed data.
-     * @param recordHeaderList
+     * @param recordHeaderList list of record headers to be added.
      */
     public void addAll(List<RecordHeader> recordHeaderList) {
         synchronized (this) {
@@ -141,8 +153,8 @@ public class FeedCachePartition {
     }
 
     /**
-     * Gets a feed data of the specified transaction from the cache
-     * @param transactionId
+     * Gets a feed data of the specified transaction from the cache.
+     * @param transactionId The transaction ID.
      * @return A feed data, or null on cache miss.
      */
     public FeedData get(long transactionId) {
@@ -184,7 +196,7 @@ public class FeedCachePartition {
 
     /**
      * Reduces the local pool size if the current size is greater than the specified size.
-     * @param size
+     * @param size The size of the local pool.
      */
     private void reduceLocalPoolSize(int size) {
         int numBlocksToEvict = localPool.size() - size;
@@ -207,7 +219,7 @@ public class FeedCachePartition {
 
     /**
      * Checks out a cache block. This returns null if FeedCache is closed.
-     * @param key
+     * @param key The key of a block to be checked out of the shared pool.
      * @return a cache block, or null if FeedCache is closed.
      */
     private FeedCacheBlock checkOut(FeedCacheBlockKey key) {
