@@ -6,6 +6,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+/**
+ * Implements the methods to serialize and deserialize {@link StoreParams} object.
+ */
 public class StoreParamsSerializer extends SerializerHelper<StoreParams> {
 
     public static final StoreParamsSerializer INSTANCE = new StoreParamsSerializer();

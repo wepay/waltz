@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.UUID;
 
+/**
+ *  Implements the config needed for the replica connection.
+ */
 public class ConnectionConfig {
 
     public final SslContext sslCtx;
@@ -16,6 +19,14 @@ public class ConnectionConfig {
     public final long initialRetryInterval;
     public final long maxRetryInterval;
 
+    /**
+     * Class constructor.
+     * @param key The cluster key.
+     * @param numPartitions The total number of partitions in the cluster.
+     * @param waltzServerConfig The configuration of the {@link com.wepay.waltz.server.WaltzServer}.
+     * @throws GeneralSecurityException thrown if failed to create {@link javax.net.ssl.SSLContext}.
+     * @throws IOException thrown if any issue occurs.
+     */
     public ConnectionConfig(UUID key, int numPartitions, WaltzServerConfig waltzServerConfig) throws GeneralSecurityException, IOException {
         this(
             ClientSSL.createContext(waltzServerConfig.getSSLConfig()),
@@ -26,6 +37,16 @@ public class ConnectionConfig {
         );
     }
 
+    /**
+     * Class constructor.
+     * @param sslCtx SSLContext for communication.
+     * @param key The cluster key.
+     * @param numPartitions The total number of partitions in the cluster.
+     * @param initialRetryInterval The initial retry interval.
+     * @param maxRetryInterval The maximum retry interval.
+     * @throws GeneralSecurityException thrown if failed to create {@link javax.net.ssl.SSLContext}.
+     * @throws IOException thrown if any issue occurs.
+     */
     public ConnectionConfig(
         SslContext sslCtx,
         UUID key,

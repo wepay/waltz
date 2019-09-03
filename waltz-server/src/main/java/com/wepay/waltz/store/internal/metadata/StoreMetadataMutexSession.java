@@ -5,11 +5,19 @@ import com.wepay.zktools.zookeeper.NodeData;
 import com.wepay.zktools.zookeeper.ZNode;
 import com.wepay.zktools.zookeeper.ZooKeeperSession;
 
+/**
+ * This class implements {@link StoreMetadata}'s mutex session.
+ */
 public class StoreMetadataMutexSession {
 
     private final ZNode storeRoot;
     private final ZooKeeperSession zkSession;
 
+    /**
+     * Class constructor.
+     * @param storeRoot Path to the store ZNode.
+     * @param zkSession The corresponding zookeeper session.
+     */
     StoreMetadataMutexSession(ZNode storeRoot, ZooKeeperSession zkSession) {
         this.storeRoot = storeRoot;
         this.zkSession = zkSession;
@@ -18,8 +26,8 @@ public class StoreMetadataMutexSession {
     /**
      * Returns StoreParams node data read from store Znode.
      *
-     * @return StoreParams node data
-     * @throws StoreMetadataException
+     * @return StoreParams node data.
+     * @throws StoreMetadataException thrown if unable to read metadata from the store.
      */
     public NodeData<StoreParams> getStoreParamsNodeData() throws StoreMetadataException {
         try {
@@ -33,7 +41,7 @@ public class StoreMetadataMutexSession {
      * Sets StoreParams node data
      *
      * @param storeParams store parameters
-     * @throws StoreMetadataException
+     * @throws StoreMetadataException thrown if unable to read metadata from the store.
      */
     public void setStoreParams(StoreParams storeParams) throws StoreMetadataException {
         try {
@@ -47,7 +55,7 @@ public class StoreMetadataMutexSession {
      * Returns GroupDescriptor node data read from group Znode.
      *
      * @return GroupDescriptor node data
-     * @throws StoreMetadataException
+     * @throws StoreMetadataException thrown if unable to read metadata from the store.
      */
     public NodeData<GroupDescriptor> getGroupDescriptorNodeData() throws StoreMetadataException {
         try {
@@ -60,7 +68,9 @@ public class StoreMetadataMutexSession {
     /**
      * Sets GroupDescriptor node data.
      *
-     * @throws StoreMetadataException
+     * @param groupDescriptor The {@link GroupDescriptor} object.
+     * @param version The version.
+     * @throws StoreMetadataException thrown if unable to read metadata from the store.
      */
     public void setGroupDescriptor(GroupDescriptor groupDescriptor, int version) throws StoreMetadataException {
         try {
@@ -74,7 +84,7 @@ public class StoreMetadataMutexSession {
      * Returns ReplicaAssignments node data read from assignment ZNode.
      *
      * @return ReplicaAssignments node data
-     * @throws StoreMetadataException
+     * @throws StoreMetadataException thrown if unable to read metadata from the store.
      */
     public NodeData<ReplicaAssignments> getReplicaAssignmentsNodeData() throws StoreMetadataException {
         try {
@@ -87,7 +97,9 @@ public class StoreMetadataMutexSession {
     /**
      * Sets ReplicaAssignments node data.
      *
-     * @throws StoreMetadataException
+     * @param replicaAssignments The {@link ReplicaAssignments} object.
+     * @param version The version.
+     * @throws StoreMetadataException thrown if unable to read metadata from the store.
      */
     public void setReplicaAssignments(ReplicaAssignments replicaAssignments, int version) throws StoreMetadataException {
         try {
@@ -101,7 +113,7 @@ public class StoreMetadataMutexSession {
      * Returns ConnectionMetadata node data read from connection ZNode.
      *
      * @return ConnectionMetadata node data
-     * @throws StoreMetadataException
+     * @throws StoreMetadataException thrown if unable to read metadata from the store.
      */
     public NodeData<ConnectionMetadata> getConnectionMetadataNodeData() throws StoreMetadataException {
         try {
@@ -114,7 +126,9 @@ public class StoreMetadataMutexSession {
     /**
      * Sets ConnectionMetadata node data.
      *
-     * @throws StoreMetadataException
+     * @param connectionMetadata The {@link ConnectionMetadata} object.
+     * @param version The version.
+     * @throws StoreMetadataException thrown if unable to read metadata from the store.
      */
     public void setConnectionMetadata(ConnectionMetadata connectionMetadata, int version) throws StoreMetadataException {
         try {

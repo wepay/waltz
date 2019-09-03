@@ -20,6 +20,9 @@ import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+/**
+ * This class implements the replica session.
+ */
 public class ReplicaSession extends LatencyWeightedRoute {
 
     private static final Logger logger = Logging.getLogger(ReplicaSession.class);
@@ -44,6 +47,13 @@ public class ReplicaSession extends LatencyWeightedRoute {
     private volatile RecoveryManager recoveryManager;
     private volatile StoreSession storeSession;
 
+    /**
+     * Class constructor.
+     * @param replicaId The replica Id.
+     * @param sessionId The Session Id.
+     * @param config The replica connection config.
+     * @param connectionFactory The {@link ReplicaConnectionFactory}.
+     */
     public ReplicaSession(final ReplicaId replicaId, long sessionId, final ConnectionConfig config, final ReplicaConnectionFactory connectionFactory) {
         this.replicaId = replicaId;
         this.sessionId = sessionId;
@@ -56,6 +66,11 @@ public class ReplicaSession extends LatencyWeightedRoute {
         this.writer = new ReplicaWriter(connectionFuture);
     }
 
+    /**
+     * Opens the replica session.
+     * @param recoveryManager The {@link RecoveryManager}.
+     * @param storeSession The {@link StoreSession}.
+     */
     public void open(final RecoveryManager recoveryManager, final StoreSession storeSession) {
         synchronized (this) {
             this.recoveryManager = recoveryManager;
@@ -64,6 +79,9 @@ public class ReplicaSession extends LatencyWeightedRoute {
         this.task.start();
     }
 
+    /**
+     * Closes the replica session.
+     */
     public void close() {
         try {
             if (connectionFuture.isDone()) {
@@ -103,6 +121,10 @@ public class ReplicaSession extends LatencyWeightedRoute {
         }
     }
 
+    /**
+     * Checks if the replica session is connected.
+     * @return True if connected, otherwise False.
+     */
     public boolean isConnected() {
         return connectionFuture.isDone();
     }
@@ -112,6 +134,12 @@ public class ReplicaSession extends LatencyWeightedRoute {
         return !task.isRunning();
     }
 
+    /**
+     * Appends the request.
+     * @param transactionId The transaction Id.
+     * @param requests The {@link StoreAppendRequest}s.
+     * @param voting The {@link Voting}.
+     */
     public void append(final long transactionId, final Iterable<StoreAppendRequest> requests, final Voting voting) {
         synchronized (this) {
             if (task.isRunning()) {
@@ -128,6 +156,11 @@ public class ReplicaSession extends LatencyWeightedRoute {
         }
     }
 
+    /**
+     * Returns the next transaction Id.
+     * @return the next transaction Id.
+     * @throws ReplicaSessionException
+     */
     public long nextTransactionId() throws ReplicaSessionException {
         try {
             return writer.nextTransactionId();
@@ -137,6 +170,12 @@ public class ReplicaSession extends LatencyWeightedRoute {
         }
     }
 
+    /**
+     * Returns {@link Record} for the given transaction Id.
+     * @param transactionId The transaction Id.
+     * @return the {@link Record}.
+     * @throws ReplicaSessionException thrown if it fails to get the record.
+     */
     public Record getRecord(long transactionId) throws ReplicaSessionException {
         if (task.isRunning()) {
             if (transactionId < writer.nextTransactionId()) {
@@ -149,6 +188,13 @@ public class ReplicaSession extends LatencyWeightedRoute {
         }
     }
 
+    /**
+     * Returns {@link Record}s for the given list of transaction Ids.
+     * @param transactionId The transaction Id.
+     * @param maxNumRecords The maximum number of records.
+     * @return list of {@link Record}s.
+     * @throws ReplicaSessionException thrown if it fails to get the records.
+     */
     public ArrayList<Record> getRecordList(long transactionId, int maxNumRecords) throws ReplicaSessionException {
         if (task.isRunning()) {
             long numRecords = writer.nextTransactionId() - transactionId;
@@ -164,6 +210,12 @@ public class ReplicaSession extends LatencyWeightedRoute {
         }
     }
 
+    /**
+     * Returns {@link RecordHeader} for the given transaction Id.
+     * @param transactionId The transaction Id.
+     * @return the {@link RecordHeader}.
+     * @throws ReplicaSessionException thrown if it fails to get the record header.
+     */
     public RecordHeader getRecordHeader(long transactionId) throws ReplicaSessionException {
         if (task.isRunning()) {
             long nextTransactionId = writer.nextTransactionId();
@@ -178,6 +230,13 @@ public class ReplicaSession extends LatencyWeightedRoute {
         }
     }
 
+    /**
+     * Returns {@link RecordHeader}s for the given list of transaction Ids.
+     * @param transactionId The transaction Id.
+     * @param maxNumRecords The maximum number of records.
+     * @return list of {@link RecordHeader}s.
+     * @throws ReplicaSessionException thrown if it fails to get the record headers.
+     */
     public ArrayList<RecordHeader> getRecordHeaderList(long transactionId, int maxNumRecords) throws ReplicaSessionException {
         if (task.isRunning()) {
             long numRecords = writer.nextTransactionId() - transactionId;
@@ -193,6 +252,9 @@ public class ReplicaSession extends LatencyWeightedRoute {
         }
     }
 
+    /**
+     * Waits for some duration.
+     */
     public void awaitRecovery() {
         synchronized (this) {
             while (recoveryManager != null) {

@@ -21,6 +21,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * This class implements the store metadata to keep track of the state of the storage nodes.
+ */
 public class StoreMetadata {
 
     public static final String STORE_ZNODE_NAME = "store";
@@ -34,11 +37,24 @@ public class StoreMetadata {
     private final ZooKeeperClient zkClient;
     private final ZNode storeRoot;
 
+    /**
+     * Class constructor.
+     * @param zkClient The ZooKeeperClient used for Waltz Cluster.
+     * @param storeRoot Path to the store ZNode.
+     */
     public StoreMetadata(ZooKeeperClient zkClient, ZNode storeRoot) {
         this.zkClient = zkClient;
         this.storeRoot = storeRoot;
     }
 
+    /**
+     * Creates store, partition, group, assignment, connection ZNode.
+     * @param numPartitions The number of partitions.
+     * @param storageGroups A map of <storage_node_connect_string, group_id>.
+     * @param connectionMetadata Map of Storage connect string (in host:port format)
+     *                           to its corresponding admin port.
+     * @throws Exception is thrown if the initialization fails.
+     */
     public void create(int numPartitions, Map<String, Integer> storageGroups, Map<String, Integer> connectionMetadata) throws Exception {
         zkClient.createPath(storeRoot);
         zkClient.createPath(new ZNode(storeRoot, PARTITION_ZNODE_NAME));

@@ -34,6 +34,11 @@ public class GroupDescriptor {
         this.groups = copy ? new HashMap<>(groups) : groups;
     }
 
+    /**
+     * Writes storage node group metadata via the {@link DataOutput} provided.
+     * @param out The interface that converts the data to a series of bytes.
+     * @throws IOException thrown if the write fails.
+     */
     public void writeTo(DataOutput out) throws IOException {
         out.writeByte(VERSION);
         out.writeInt(groups.size());
@@ -45,6 +50,13 @@ public class GroupDescriptor {
         }
     }
 
+    /**
+     * Reads storage node group metadata via the {@link DataInput} provided.
+     * @param in The interface that reads bytes from a binary stream and converts it
+     *        to the data of required type.
+     * @return Returns the storage node's {@code GroupDescriptor}.
+     * @throws IOException thrown if the read fails.
+     */
     public static GroupDescriptor readFrom(DataInput in) throws IOException {
         byte version = in.readByte();
 

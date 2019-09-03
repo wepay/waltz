@@ -7,6 +7,9 @@ import com.wepay.waltz.store.exception.SessionClosedException;
 
 import java.util.ArrayList;
 
+/**
+ * Implements store session.
+ */
 public interface StoreSession {
 
     /**

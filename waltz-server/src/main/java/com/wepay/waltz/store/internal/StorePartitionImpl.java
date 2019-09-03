@@ -17,6 +17,9 @@ import org.slf4j.Logger;
 import java.util.ArrayList;
 import java.util.function.LongConsumer;
 
+/**
+ * Implements {@link StorePartition}
+ */
 public class StorePartitionImpl implements StorePartition {
 
     private static final Logger logger = Logging.getLogger(StorePartitionImpl.class);
@@ -28,6 +31,11 @@ public class StorePartitionImpl implements StorePartition {
 
     private volatile boolean running = true;
 
+    /**
+     * Class constructor.
+     * @param storeSessionManager The {@link StoreSessionManager}.
+     * @param config Waltz server config.
+     */
     public StorePartitionImpl(StoreSessionManager storeSessionManager, WaltzServerConfig config) {
         this.initialRetryInterval = (long) config.get(WaltzServerConfig.INITIAL_RETRY_INTERVAL);
         this.backoffTimer = new BackoffTimer((long) config.get(WaltzServerConfig.MAX_RETRY_INTERVAL));
@@ -35,6 +43,9 @@ public class StorePartitionImpl implements StorePartition {
         this.storeSessionManager = storeSessionManager;
     }
 
+    /**
+     * Closes the store partition.
+     */
     public void close() {
         running = false;
 

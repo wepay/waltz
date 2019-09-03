@@ -4,6 +4,9 @@ import com.wepay.waltz.store.internal.metadata.ReplicaId;
 
 import java.util.Set;
 
+/**
+ * This class handles the store.
+ */
 public interface Store {
 
     /**

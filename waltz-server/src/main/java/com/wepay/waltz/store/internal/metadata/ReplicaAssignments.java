@@ -7,20 +7,39 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * ReplicaAssignments contains storage node replica assignments metadata in zookeeper.
+ */
 public class ReplicaAssignments {
 
     private static final byte VERSION = 1;
 
     public final Map<String, int[]> replicas;
 
+    /**
+     * Class constructor.
+     * @param replicas Mapping of Storage connect string (in host:port format) to
+     *                  list of partition Ids.
+     */
     public ReplicaAssignments(final Map<String, int[]> replicas) {
         this(replicas, true);
     }
 
+    /**
+     * Class constructor.
+     * @param replicas Mapping of Storage connect string (in host:port format) to
+     *                  list of partition Ids.
+     * @param copy Boolean flag indicating whether to create a copy or not.
+     */
     private ReplicaAssignments(final Map<String, int[]> replicas, boolean copy) {
         this.replicas = copy ? new HashMap<>(replicas) : replicas;
     }
 
+    /**
+     * Writes storage node replica assignment metadata via the {@link DataOutput} provided.
+     * @param out The interface that converts the data to a series of bytes.
+     * @throws IOException thrown if the write fails.
+     */
     public void writeTo(DataOutput out) throws IOException {
         out.writeByte(VERSION);
         out.writeInt(replicas.size());
@@ -36,6 +55,13 @@ public class ReplicaAssignments {
         }
     }
 
+    /**
+     * Reads storage node replica assignment metadata via the {@link DataInput} provided.
+     * @param in The interface that reads bytes from a binary stream and converts it
+     *        to the data of required type.
+     * @return Returns the storage node's {@code ReplicaAssignments}.
+     * @throws IOException thrown if the read fails.
+     */
     public static ReplicaAssignments readFrom(DataInput in) throws IOException {
         byte version = in.readByte();
 
