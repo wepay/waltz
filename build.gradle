@@ -1,20 +1,6 @@
 allprojects {
     apply plugin: 'idea'
 
-    group = "com.wepay.waltz"
-    def major_version = 0
-    def minor_version = 3
-
-    def get_version_name =  {
-        if (System.getenv("BUILD_NUMBER") == null) {
-            return "$major_version.$minor_version-SNAPSHOT"
-        } else {
-            return "$major_version.$minor_version." + System.getenv("BUILD_NUMBER");
-        }
-    }
-
-    version = get_version_name();
-
     repositories {
         mavenLocal()
         mavenCentral()
@@ -34,27 +20,13 @@ project.ext {
     slf4jVersion = '1.7.25'
     mockitoVersion = '1.9.5'
     assertjVersion = '3.8.0'
-    zkToolsVersion = '0.3.25'
+    zkToolsVersion = '0.2.1'
     yamlVersion = '1.20'
-    riffVersion = '2.3.5-39-24182ad573'
+    riffVersion = '2.4.2'
     jacksonVersion = '2.9.6'
     jettyVersion = '9.4.12.v20180830'
 
     mainClass = 'Main'
-}
-
-buildscript {
-    repositories {
-        mavenCentral()
-        jcenter()
-        maven {
-            url 'https://artifactory.devops.wepay-inc.com/artifactory/libs-release'
-        }
-    }
-
-    dependencies {
-        classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:3.1.1'
-    }
 }
 
 buildscript {
@@ -65,11 +37,11 @@ buildscript {
     }
 
     dependencies {
-        classpath "com.github.jengelman.gradle.plugins:shadow:4.0.4"
+        classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:3.1.1'
+        classpath "com.github.jengelman.gradle.plugins:shadow:5.1.0"
         classpath 'se.transmode.gradle:gradle-docker:1.2'
     }
 }
-
 
 subprojects {
     apply plugin: 'java'
@@ -78,6 +50,8 @@ subprojects {
     apply plugin: 'com.jfrog.artifactory'
     apply plugin: 'maven-publish'
     apply plugin: "com.github.johnrengelman.shadow"
+    apply plugin: 'maven-publish'
+    apply plugin: 'signing'
 
     configurations.all {
         resolutionStrategy {
@@ -90,17 +64,6 @@ subprojects {
             attributes(
                 "Implementation-Title": "Waltz",
                 "Implementation-Version": version)
-        }
-    }
-
-
-    artifactory {
-        contextUrl = 'https://artifactory.devops.wepay-inc.com/artifactory/'
-        publish {
-            repoKey = 'libs-release'
-        }
-        resolve {
-            repoKey = 'libs-release'
         }
     }
 
@@ -118,36 +81,8 @@ subprojects {
         toolVersion = "8.10"
     }
 
-    checkstyleMain {
-        reports {
-            xml {
-                destination new File(rootDir, '/build/reports/checkstyle/main.xml')
-            }
-        }
-        configFile = new File(rootDir, 'config/checkstyle/checkstyle.xml')
-
-        doLast {
-            ant.xslt(in: "$rootDir/build/reports/checkstyle/main.xml",
-                style: "../config/checkstyle/checkstyle-noframes.xsl",
-                out: "$rootDir/build/reports/checkstyle/main.html"
-            )
-        }
-    }
-
     checkstyleTest {
-        reports {
-            xml {
-                destination new File(rootDir, '/build/reports/checkstyle/test.xml')
-            }
-        }
-        configFile = new File(rootDir, "config/checkstyle/checkstyle_test.xml")
-
-        doLast {
-            ant.xslt(in: "$rootDir/build/reports/checkstyle/test.xml",
-                style: "$rootDir/config/checkstyle/checkstyle-noframes.xsl",
-                out: "$rootDir/build/reports/checkstyle/test.html"
-            )
-        }
+        configFile = project.file ("${rootProject.projectDir}/config/checkstyle/checkstyle_test.xml")
     }
 
     // findbugs html only report
@@ -165,17 +100,64 @@ subprojects {
         }
     }
 
+    task sourcesJar(type: Jar) {
+        from sourceSets.main.allJava
+        archiveClassifier = 'sources'
+    }
+
+    task javadocJar(type: Jar) {
+        from javadoc
+        archiveClassifier = 'javadoc'
+    }
+
     publishing {
         publications {
             mavenJava(MavenPublication) {
-                artifactId project.name
+                artifactId = project.name
+
                 from components.java
+                artifact sourcesJar
+                artifact javadocJar
+
+                pom {
+                    name = 'Waltz'
+                    description = 'Waltz is a distributed/replicated write ahead log for transactions.'
+                    url = 'https://www.github.com/wepay/waltz'
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'ymatsuda'
+                            name = 'Yasuhiro Matsuda'
+                        }
+                    }
+                    scm {
+                        connection = 'scm:git:git://github.com/wepay/waltz.git'
+                        developerConnection = 'scm:git:ssh://github.com/wepay/waltz.git'
+                        url = 'https://github.com/wepay/waltz'
+                    }
+                }
+            }
+        }
+        repositories {
+            maven {
+                def releasesRepoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
+                def snapshotsRepoUrl = 'https://oss.sonatype.org/content/repositories/snapshots'
+                url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                credentials {
+                    username findProperty('ossrhUsername')?: ''
+                    password findProperty('ossrhPassword')?: ''
+                }
             }
         }
     }
 
-    artifactoryPublish {
-            publications(publishing.publications.mavenJava)
+    signing {
+        sign publishing.publications.mavenJava
     }
 
     task execute(type:JavaExec) {
@@ -243,6 +225,11 @@ project(':waltz-server') {
             "junit:junit:$junitVersion",
             "org.mockito:mockito-all:$mockitoVersion"
         )
+    }
+
+    test {
+        maxHeapSize = "2G"
+        jvmArgs '-Xmx2G'
     }
 
     distDocker {
