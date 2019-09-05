@@ -105,16 +105,12 @@ final class MockClientPartition {
     }
 
     boolean isActive() {
-        synchronized (this) {
-            return !transactionMonitor.isStopped();
-        }
+        return !transactionMonitor.isStopped();
     }
 
     void ensureActive() {
-        synchronized (this) {
-            if (transactionMonitor.isStopped()) {
-                throw new PartitionInactiveException(serverPartition.partitionId);
-            }
+        if (transactionMonitor.isStopped()) {
+            throw new PartitionInactiveException(serverPartition.partitionId);
         }
     }
 

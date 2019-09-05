@@ -1,6 +1,6 @@
 # Waltz
 
-Waltz is a distributed/replicated write ahead log for transactions. For more information, see the [Waltz](https://confluence.corp.wepay-inc.com/display/DI/Waltz) wiki.
+Waltz is a distributed/replicated write ahead log for transactions.
 
 ## Building
 

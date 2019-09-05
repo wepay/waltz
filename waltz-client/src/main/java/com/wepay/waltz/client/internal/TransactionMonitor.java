@@ -25,7 +25,7 @@ public class TransactionMonitor {
     private final LinkedHashMap<ReqId, TransactionFuture> registered = new LinkedHashMap<>();
     private final int maxConcurrentTransactions;
 
-    private State state = State.STOPPED;
+    private volatile State state = State.STOPPED;
     private ReqId lastReqId = null;
     private long lastTimestamp = -1;
     private int numRegistered = 0;
@@ -98,9 +98,7 @@ public class TransactionMonitor {
      * @return {@code true}, if this instance is in {@link State#STOPPED} state. {@code false}, otherwise.
      */
     public boolean isStopped() {
-        synchronized (this) {
-            return state == State.STOPPED;
-        }
+        return state == State.STOPPED;
     }
 
     /**
