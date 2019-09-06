@@ -20,7 +20,7 @@ project.ext {
     slf4jVersion = '1.7.25'
     mockitoVersion = '1.9.5'
     assertjVersion = '3.8.0'
-    zkToolsVersion = '0.2.1'
+    zkToolsVersion = '0.5.0'
     yamlVersion = '1.20'
     riffVersion = '2.4.2'
     jacksonVersion = '2.9.6'
