@@ -18,6 +18,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Implements {@link Store}.
+ */
 public class StoreImpl implements Store {
 
     private static final Logger logger = Logging.getLogger(StoreImpl.class);
@@ -30,6 +33,13 @@ public class StoreImpl implements Store {
     private final AtomicBoolean running = new AtomicBoolean(true);
     private final WatcherHandle assignmentWatcherHandle;
 
+    /**
+     * Class constructor.
+     * @param zkClient The ZooKeeperClient used for Waltz Cluster.
+     * @param storeRoot Path to the store ZNode.
+     * @param config Waltz server config.
+     * @throws StoreException thrown if it fails to get the store metadata.
+     */
     public StoreImpl(ZooKeeperClient zkClient, ZNode storeRoot, WaltzServerConfig config) throws StoreException {
         try {
             this.zkClient = zkClient;

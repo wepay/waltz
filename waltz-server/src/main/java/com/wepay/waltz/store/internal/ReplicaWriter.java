@@ -8,6 +8,9 @@ import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+/**
+ * This class handles the writes to the replicas.
+ */
 public class ReplicaWriter {
 
     private final CompletableFuture<ReplicaConnection> connectionFuture;
@@ -15,16 +18,30 @@ public class ReplicaWriter {
     private long nextTransactionId = -1L;
     private boolean running = true;
 
+    /**
+     * Class constructor.
+     * @param connectionFuture The completable future of {@link ReplicaConnection}.
+     */
     public ReplicaWriter(CompletableFuture<ReplicaConnection> connectionFuture) {
         this.connectionFuture = connectionFuture;
     }
 
+    /**
+     * Opens the replica writer for the given transaction Id.
+     * @param nextTransactionId The transaction Id.
+     */
     public void open(long nextTransactionId) {
         synchronized (this) {
             this.nextTransactionId = nextTransactionId;
         }
     }
 
+    /**
+     * Appends the given {@link StoreAppendRequest}s.
+     * @param transactionId The transaction Id.
+     * @param requests The {@link StoreAppendRequest}s.
+     * @throws ReplicaWriterException thrown if the write fails.
+     */
     public void append(final long transactionId, final Iterable<StoreAppendRequest> requests) throws ReplicaWriterException {
         synchronized (this) {
             if (!running) {
@@ -57,6 +74,11 @@ public class ReplicaWriter {
         }
     }
 
+    /**
+     * Appends the given list of {@link Record}s.
+     * @param records The list of {@code Record}s.
+     * @throws ReplicaWriterException thrown if the write fails.
+     */
     public void append(ArrayList<Record> records) throws ReplicaWriterException {
         synchronized (this) {
             if (!running) {
@@ -84,6 +106,11 @@ public class ReplicaWriter {
         }
     }
 
+    /**
+     * Returns the next transaction Id.
+     * @return the next transaction Id.
+     * @throws ReplicaWriterException thrown if the write fails.
+     */
     public long nextTransactionId() throws ReplicaWriterException {
         synchronized (this) {
             if (running) {

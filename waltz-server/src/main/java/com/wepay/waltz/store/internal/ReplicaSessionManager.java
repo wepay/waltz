@@ -11,12 +11,20 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * This class handles the {@link ReplicaSession}s.
+ */
 public class ReplicaSessionManager {
 
     private final ConnectionConfig config;
     private Set<ReplicaId> replicaIds;
     private Map<String, ReplicaConnectionFactory> connectionFactories;
 
+    /**
+     * Class constructor.
+     * @param assignments The {@link ReplicaAssignments}.
+     * @param config The replica connection config.
+     */
     public ReplicaSessionManager(ReplicaAssignments assignments, ConnectionConfig config) {
         this.config = config;
         this.replicaIds = createReplicaIds(assignments);
@@ -54,6 +62,9 @@ public class ReplicaSessionManager {
         }
     }
 
+    /**
+     * Closes the replica session manager.
+     */
     public void close() {
         synchronized (this) {
             for (ReplicaConnectionFactory connectionFactory : connectionFactories.values()) {

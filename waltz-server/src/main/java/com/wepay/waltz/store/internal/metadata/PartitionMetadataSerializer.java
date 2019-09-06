@@ -6,6 +6,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+/**
+ * Implements the methods to serialize and deserialize {@link PartitionMetadata} object.
+ */
 public class PartitionMetadataSerializer extends SerializerHelper<PartitionMetadata> {
 
     public static final PartitionMetadataSerializer INSTANCE = new PartitionMetadataSerializer();

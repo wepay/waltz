@@ -20,6 +20,9 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Hanldes {@link StoreSession}s.
+ */
 public class StoreSessionManager {
 
     private static final Logger logger = Logging.getLogger(StoreSessionManager.class);
@@ -39,6 +42,14 @@ public class StoreSessionManager {
     private volatile boolean healthy = true;
     private volatile StoreSession currentSession;
 
+    /**
+     * Class constructor.
+     * @param partitionId The partition Id.
+     * @param generation The generation number.
+     * @param replicaSessionManager The {@link ReplicaSessionManager}.
+     * @param zkClient The Zoo Keeper Client used in the Waltz cluster.
+     * @param znode Path to the znode.
+     */
     public StoreSessionManager(
         final int partitionId,
         final int generation,
@@ -185,12 +196,11 @@ public class StoreSessionManager {
                     }
                 }
 
-            } catch (GenerationMismatchException ex) {
+           } catch (GenerationMismatchException ex) {
                 if (session != null) {
                     session.close();
                 }
                 throw ex;
-
             } catch (RecoveryFailedException ex) {
                 healthy = false;
                 if (session != null) {

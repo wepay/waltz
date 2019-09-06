@@ -6,6 +6,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+/**
+ * Implements the methods to serialize and deserialize {@link ConnectionMetadata} object.
+ */
 public class ConnectionMetadataSerializer extends SerializerHelper<ConnectionMetadata> {
 
     public static final ConnectionMetadataSerializer INSTANCE = new ConnectionMetadataSerializer();

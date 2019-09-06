@@ -46,6 +46,10 @@ public abstract class LatencyWeightedRoute {
 
     public abstract boolean isClosed();
 
+    /**
+     * Returns the weight.
+     * @return the weight.
+     */
     public long weight() {
         return weight.get();
     }

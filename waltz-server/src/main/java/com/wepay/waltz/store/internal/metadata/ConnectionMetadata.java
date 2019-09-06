@@ -18,22 +18,27 @@ public class ConnectionMetadata {
     public final Map<String, Integer> connections; // <connect_string, admin_port>
 
     /**
-     * Initialize ConnectionMetadata with a copy of connections
-     * @param connections
+     * Initialize ConnectionMetadata with a copy of connections.
+     * @param connections a map of <storage_node_connect_string, admin_port>.
      */
     public ConnectionMetadata(final Map<String, Integer> connections) {
         this(connections, true);
     }
 
     /**
-     * Initialize ConnectionMetadata with connections or a copy of connections
-     * @param connections
-     * @param copy
+     * Initialize ConnectionMetadata with connections or a copy of connections.
+     * @param connections a map of <storage_node_connect_string, admin_port>.
+     * @param copy Boolean flag indicating whether to create a copy or not.
      */
     private ConnectionMetadata(final Map<String, Integer> connections, boolean copy) {
         this.connections = copy ? new HashMap<>(connections) : connections;
     }
 
+    /**
+     * Writes storage node connection metadata via the {@link DataOutput} provided.
+     * @param out The interface that converts the data to a series of bytes.
+     * @throws IOException thrown if the write fails.
+     */
     public void writeTo(DataOutput out) throws IOException {
         out.writeByte(VERSION);
         out.writeInt(connections.size());
@@ -45,6 +50,13 @@ public class ConnectionMetadata {
         }
     }
 
+    /**
+     * Reads storage node connection metadata via the {@link DataInput} provided.
+     * @param in The interface that reads bytes from a binary stream and converts it
+     *        to the data of required type.
+     * @return Returns the storage node's {@code ConnectionMetadata}.
+     * @throws IOException thrown if the read fails.
+     */
     public static ConnectionMetadata readFrom(DataInput in) throws IOException {
         byte version = in.readByte();
 

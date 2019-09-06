@@ -18,6 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 
+/**
+ * Implements {@link StoreSession}.
+ */
 public class StoreSessionImpl implements StoreSession {
 
     private static final Logger logger = Logging.getLogger(StoreSessionImpl.class);
@@ -44,6 +47,15 @@ public class StoreSessionImpl implements StoreSession {
     private volatile long nextTransactionId;
     private volatile boolean running = true;
 
+    /**
+     * Class constructor.
+     * @param partitionId The partition Id.
+     * @param generation The generation number.
+     * @param sessionId The session Id.
+     * @param replicaSessions List of {@link ReplicaSession}s.
+     * @param zkClient The ZooKeeperClient used in Waltz cluster.
+     * @param znode Path to the znode.
+     */
     public StoreSessionImpl(
         final int partitionId,
         final int generation,
@@ -63,6 +75,11 @@ public class StoreSessionImpl implements StoreSession {
         this.task = new StoreSessionTask();
     }
 
+    /**
+     * Opens the store session.
+     * @throws RecoveryFailedException thrown if the recovery fails.
+     * @throws StoreException thrown is fail to read the store metadata.
+     */
     public void open() throws RecoveryFailedException, StoreException {
         if (quorum < 1) {
             throw new StoreException("not enough replicas");

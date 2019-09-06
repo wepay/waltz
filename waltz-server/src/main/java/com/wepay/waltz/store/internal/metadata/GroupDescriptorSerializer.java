@@ -6,6 +6,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+/**
+ * Implements the methods to serialize and deserialize {@link GroupDescriptor} object.
+ */
 public class GroupDescriptorSerializer extends SerializerHelper<GroupDescriptor> {
 
     public static final GroupDescriptorSerializer INSTANCE = new GroupDescriptorSerializer();

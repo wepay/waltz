@@ -5,6 +5,12 @@ package com.wepay.waltz.store.exception;
  */
 public class TransactionNotFoundException extends StoreException {
 
+    /**
+     * Class constructor.
+     *
+     * @param partitionId The Id of the partition.
+     * @param transactionId The Id of the transaction.
+     */
     public TransactionNotFoundException(int partitionId, long transactionId) {
         super("partition=" + partitionId + "transactionId=" + transactionId);
     }

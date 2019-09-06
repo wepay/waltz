@@ -24,6 +24,9 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * This class implements the {@link RecoveryManager}.
+ */
 public class RecoveryManagerImpl implements RecoveryManager {
 
     private static final Logger logger = Logging.getLogger(RecoveryManagerImpl.class);
@@ -53,6 +56,14 @@ public class RecoveryManagerImpl implements RecoveryManager {
 
     private boolean started = false;
 
+    /**
+     * Class constructor.
+     * @param generation The generation number.
+     * @param sessionId The session Id.
+     * @param quorum The Quorum required.
+     * @param zkClient The ZooKeeperClient used for the Waltz Cluster.
+     * @param znode Path to the znode.
+     */
     public RecoveryManagerImpl(int generation, long sessionId, int quorum, ZooKeeperClient zkClient, ZNode znode) {
         this.generation = generation;
         this.sessionId = sessionId;
@@ -196,6 +207,11 @@ public class RecoveryManagerImpl implements RecoveryManager {
         }
     }
 
+    /**
+     * This method handles recovery completion.
+     * @param replicaId The replica Id.
+     * @throws RecoveryFailedException thrown if the recovery fails.
+     */
     public void end(ReplicaId replicaId) throws RecoveryFailedException {
         recoveredReplicas.add(replicaId);
         cleanReplicas.add(replicaId);

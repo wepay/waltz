@@ -18,6 +18,10 @@ public class LatencyWeightedRouter<R extends LatencyWeightedRoute> {
 
     private final PriorityQueue<R> pq;
 
+    /**
+     * Class constructor.
+     * @param routes A Collection of routes.
+     */
     public LatencyWeightedRouter(Collection<R> routes) {
         this.pq = new PriorityQueue<>(routes.size(), COMPARATOR);
         this.pq.addAll(routes);
