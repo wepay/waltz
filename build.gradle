@@ -1,0 +1,193 @@
+allprojects {
+    apply plugin: 'idea'
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        maven { url 'http://packages.confluent.io/maven/' }
+    }
+}
+
+project.ext {
+    junitVersion = '4.11'
+    assertjVersion = '3.8.0'
+    mockitoVersion = '2.23.0'
+    nettyVersion = '4.1.15.Final'
+    slf4jVersion = '1.7.21'
+    zkToolsVersion = '0.5.0'
+    jacksonVersion = '2.9.6'
+    servletVersion = '4.0.1'
+    jettyVersion = '9.4.10.v20180503'
+}
+
+buildscript {
+    repositories {
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:3.1.1'
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'checkstyle'
+    apply plugin: 'findbugs'
+    apply plugin: 'maven-publish'
+    apply plugin: 'signing'
+
+    sourceCompatibility = 1.8
+
+    jar {
+        manifest {
+            attributes 'Implementation-Title': 'Networking library built on Netty',
+                       'Implementation-Version': version
+        }
+    }
+
+    compileJava {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+    }
+
+    compileTestJava {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+    }
+
+    checkstyle {
+        toolVersion = "8.10"
+    }
+
+    checkstyleTest {
+        configFile = project.file ("${rootProject.projectDir}/config/checkstyle/checkstyle_test.xml")
+    }
+
+    // findbugs html only report
+    findbugsMain {
+        reports {
+            xml.enabled = false
+            html.enabled = true
+        }
+    }
+
+    findbugsTest {
+        reports {
+            xml.enabled = false
+            html.enabled = true
+        }
+    }
+
+    task sourcesJar(type: Jar) {
+        from sourceSets.main.allJava
+        archiveClassifier = 'sources'
+    }
+
+    task javadocJar(type: Jar) {
+        from javadoc
+        archiveClassifier = 'javadoc'
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                artifactId = project.name
+
+                from components.java
+                artifact sourcesJar
+                artifact javadocJar
+
+                pom {
+                    name = 'Riff'
+                    description = 'Riff is a networking library built based on Netty.'
+                    url = 'https://www.github.com/wepay/riff'
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'ymatsuda'
+                            name = 'Yasuhiro Matsuda'
+                        }
+                    }
+                    scm {
+                        connection = 'scm:git:git://github.com/wepay/riff.git'
+                        developerConnection = 'scm:git:ssh://github.com/wepay/riff.git'
+                        url = 'https://github.com/wepay/riff'
+                    }
+                }
+            }
+        }
+        repositories {
+            maven {
+                def releasesRepoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
+                def snapshotsRepoUrl = 'https://oss.sonatype.org/content/repositories/snapshots'
+                url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                credentials {
+                    username findProperty('ossrhUsername')?: ''
+                    password findProperty('ossrhPassword')?: ''
+                }
+            }
+        }
+    }
+
+    signing {
+        sign publishing.publications.mavenJava
+    }
+}
+
+project(':riff-config') {
+    dependencies {
+        compile (
+                "org.slf4j:slf4j-api:$slf4jVersion"
+        )
+
+        testCompile (
+                "junit:junit:$junitVersion"
+        )
+    }
+}
+
+project(':riff-metrics') {
+    dependencies {
+        compile (
+                project(':riff-config'),
+                "com.wepay.zktools:zktools:$zkToolsVersion",
+                "org.slf4j:slf4j-api:$slf4jVersion",
+                "org.eclipse.jetty:jetty-http:$jettyVersion",
+                "org.eclipse.jetty:jetty-servlet:$jettyVersion",
+                "org.eclipse.jetty:jetty-server:$jettyVersion",
+                "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
+                "javax.servlet:javax.servlet-api:$servletVersion"
+        )
+
+        testCompile (
+                "junit:junit:$junitVersion",
+                "org.assertj:assertj-core:$assertjVersion",
+                "org.mockito:mockito-core:$mockitoVersion",
+                "org.eclipse.jetty:jetty-servlet:$jettyVersion:tests",
+                "org.eclipse.jetty:jetty-http:$jettyVersion:tests"
+        )
+    }
+}
+
+project(':riff-networking') {
+    dependencies {
+        compile (
+                project(':riff-config'),
+                "com.wepay.zktools:zktools:$zkToolsVersion",
+                "io.netty:netty-all:$nettyVersion",
+                "org.slf4j:slf4j-api:$slf4jVersion"
+        )
+
+        testCompile (
+                "junit:junit:$junitVersion",
+                "org.assertj:assertj-core:$assertjVersion",
+                "org.mockito:mockito-core:$mockitoVersion"
+        )
+    }
+}
