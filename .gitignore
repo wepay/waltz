@@ -1,0 +1,27 @@
+.project
+.settings/
+.classpath
+.idea/
+*.ipr
+*.iws
+*.iml
+.gradle/
+build/
+target/
+out/
+logs/
+infer-out/
+.DS_Store
+*.*~
+dependency-reduced-pom.xml
+
+# Ignore Visual Studio Code, pyc, and results for ducktape tests
+**.pyc
+.vscode
+results
+.ducktape/metadata
+.vagrant
+
+# Website
+node_modules
+package-lock.json

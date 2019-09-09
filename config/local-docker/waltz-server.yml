@@ -1,0 +1,5 @@
+server.port: 55180
+server.jetty.port: 55182
+zookeeper.connectString: zk:2181
+zookeeper.sessionTimeout: 1000
+cluster.root: /waltz_cluster

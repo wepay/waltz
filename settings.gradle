@@ -1,0 +1,10 @@
+rootProject.name = "waltz"
+include 'waltz-server'
+include 'waltz-client'
+include 'waltz-common'
+include 'waltz-storage'
+include 'waltz-test'
+include 'waltz-uber'
+include 'waltz-tools'
+include 'waltz-demo'
+

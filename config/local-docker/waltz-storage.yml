@@ -1,0 +1,6 @@
+storage.port: 55280
+storage.admin.port: 55281
+storage.jetty.port: 55282
+storage.directory: /waltz_storage/
+cluster.numPartitions: 1
+cluster.key: <<clusterKey>>

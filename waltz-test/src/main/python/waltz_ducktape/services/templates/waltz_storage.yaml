@@ -1,0 +1,19 @@
+storage:
+    port: {{ port }}
+    admin.port: {{admin_port}}
+    jetty.port: {{ jetty_port }}
+    directory: {{ data_directory }}
+    segment.size.threshold: 268435456
+    ssl:
+        keyStore:
+            location: /etc/waltz-storage/keystore.jks
+            password: devops
+            type: JKS
+        trustStore:
+            location: /etc/waltz-storage/truststore.jks
+            password: devops
+            type: JKS
+
+cluster:
+    numPartitions: {{ cluster_num_partitions }}
+    key: {{ cluster_key }}

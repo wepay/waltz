@@ -1,0 +1,20 @@
+{
+  "docs": {
+    "Design": [
+      "introduction",
+      "terminology",
+      "application-programming-model",
+      "client-server-communication",
+      "server-storage-communication",
+      "on-disk-data-structures",
+      "concurrency-control-optimistic-locking",
+      "back-pressure",
+      "waltz-client",
+      "waltz-server",
+      "waltz-storage"
+    ],
+    "Administration": [
+      "waltz-setup"
+    ]
+  }
+}

@@ -1,0 +1,2 @@
+--exit-first
+--cluster=ducktape.cluster.vagrant.VagrantCluster
