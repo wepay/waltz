@@ -491,7 +491,11 @@ public class WaltzServer {
         // minFetchSize must be smaller than realtimeThreshold. Otherwise, the catchup feed task may be stalled.
         // The catch-up feed task uses FIFO queue to manage feed contexts. It assumes there is always a transaction to send.
         if (minFetchSize >= realtimeThreshold) {
-            throw new ConfigException("\"server.minFetchSize\" must be smaller than \"server.realtimeThreshold\"");
+            throw new ConfigException(
+                String.format("\"%s\" must be smaller than \"%s\"",
+                    WaltzServerConfig.MIN_FETCH_SIZE, WaltzServerConfig.REALTIME_THRESHOLD
+                )
+            );
         }
     }
 
