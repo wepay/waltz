@@ -1,5 +1,6 @@
 package com.wepay.waltz.server;
 
+import com.wepay.riff.config.ConfigException;
 import com.wepay.riff.metrics.core.Gauge;
 import com.wepay.riff.metrics.core.Meter;
 import com.wepay.riff.metrics.core.MetricGroup;
@@ -103,6 +104,7 @@ public class WaltzServer {
      */
     public WaltzServer(final int port, SslContext sslCtx, Store store, ClusterManager clusterManager, WaltzServerConfig config) throws Exception {
         logVersion();
+        checkConfig(config);
 
         this.port = port;
         this.config = config;
@@ -481,4 +483,20 @@ public class WaltzServer {
 
         logger.info("STARTING [name=" + title + " version=" + version + "]");
     }
+
+    private static void checkConfig(WaltzServerConfig config) {
+        int minFetchSize = (int) config.get(WaltzServerConfig.MIN_FETCH_SIZE);
+        int realtimeThreshold = (int) config.get(WaltzServerConfig.REALTIME_THRESHOLD);
+
+        // minFetchSize must be smaller than realtimeThreshold. Otherwise, the catchup feed task may be stalled.
+        // The catch-up feed task uses FIFO queue to manage feed contexts. It assumes there is always a transaction to send.
+        if (minFetchSize >= realtimeThreshold) {
+            throw new ConfigException(
+                String.format("\"%s\" must be smaller than \"%s\"",
+                    WaltzServerConfig.MIN_FETCH_SIZE, WaltzServerConfig.REALTIME_THRESHOLD
+                )
+            );
+        }
+    }
+
 }
