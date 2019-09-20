@@ -172,6 +172,9 @@ public class StoreSessionImpl implements StoreSession {
                     } catch (InterruptedException ex) {
                         Thread.interrupted();
                     }
+                    if (!running) {
+                        return;
+                    }
                 }
 
                 if (requestQueue.enqueue(request)) {
