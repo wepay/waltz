@@ -16,7 +16,7 @@ import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * Implements {@link StoreSession}.
@@ -34,7 +34,7 @@ public class StoreSessionImpl implements StoreSession {
     private final int quorum;
     private final ArrayList<ReplicaSession> replicaSessions;
     private final StoreSessionTask task;
-    private final RequestQueue<StoreAppendRequest> requestQueue = new RequestQueue<>(new ArrayBlockingQueue<>(BATCH_SIZE * 2));
+    private final RequestQueue<StoreAppendRequest> requestQueue = new RequestQueue<>(new LinkedBlockingDeque<>());
     private final Object requestQueueProcessingLock = new Object();
 
     private LatencyWeightedRouter<ReplicaSession> router = null;
@@ -163,6 +163,18 @@ public class StoreSessionImpl implements StoreSession {
             if (running) {
                 if (request.reqId.generation() != generation) {
                     throw new GenerationMismatchException();
+                }
+
+                // Wait until the queue has enough space.
+                while (requestQueue.size() > BATCH_SIZE * 2) {
+                    try {
+                        wait();
+                    } catch (InterruptedException ex) {
+                        Thread.interrupted();
+                    }
+                    if (!running) {
+                        return;
+                    }
                 }
 
                 if (requestQueue.enqueue(request)) {
