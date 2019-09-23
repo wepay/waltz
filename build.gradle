@@ -47,9 +47,6 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'checkstyle'
     apply plugin: 'findbugs'
-    apply plugin: 'com.jfrog.artifactory'
-    apply plugin: 'maven-publish'
-    apply plugin: "com.github.johnrengelman.shadow"
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
 
@@ -199,7 +196,6 @@ project(':waltz-tools') {
 }
 
 project(':waltz-server') {
-    apply plugin: 'com.jfrog.artifactory'
     apply plugin: 'application'
     apply plugin: 'docker'
 
@@ -239,7 +235,6 @@ project(':waltz-server') {
 }
 
 project(':waltz-storage') {
-    apply plugin: 'com.jfrog.artifactory'
     apply plugin: 'application'
     apply plugin: 'docker'
 
@@ -274,6 +269,8 @@ project(':waltz-storage') {
 }
 
 project(':waltz-uber') {
+    apply plugin: "com.github.johnrengelman.shadow"
+
     dependencies {
         compile(
             project(':waltz-server'),
@@ -289,15 +286,17 @@ project(':waltz-uber') {
         )
     }
 
-    shadowJar {
-        baseName = project.name
-        classifier = null
-        version = version
+    tasks.build.dependsOn tasks.shadowJar
+    tasks.publish.dependsOn tasks.shadowJar
+
+    publishing {
+        publications {
+            shadow(MavenPublication) { publication ->
+                project.shadow.component(publication)
+            }
+        }
     }
 }
-
-project(':waltz-uber').build.dependsOn project(':waltz-uber').shadowJar
-project(':waltz-uber').artifactoryPublish.dependsOn project(':waltz-uber').shadowJar
 
 project(':waltz-client') {
     dependencies {
@@ -366,6 +365,8 @@ project(':waltz-test') {
 }
 
 project(':waltz-demo') {
+    apply plugin: "com.github.johnrengelman.shadow"
+
     dependencies {
         compile (
             project(':waltz-server'),
@@ -382,13 +383,14 @@ project(':waltz-demo') {
         )
     }
 
-    shadowJar {
-        baseName = project.name
-        classifier = null
-        version = version
+    tasks.build.dependsOn tasks.shadowJar
+    tasks.publish.dependsOn tasks.shadowJar
+
+    publishing {
+        publications {
+            shadow(MavenPublication) { publication ->
+                project.shadow.component(publication)
+            }
+        }
     }
-
 }
-
-project(':waltz-demo').build.dependsOn project(':waltz-demo').shadowJar
-project(':waltz-demo').artifactoryPublish.dependsOn project(':waltz-demo').shadowJar
