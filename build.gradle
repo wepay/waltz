@@ -293,8 +293,35 @@ project(':waltz-uber') {
         publications {
             shadow(MavenPublication) { publication ->
                 project.shadow.component(publication)
+
+                pom {
+                    name = 'Waltz'
+                    description = 'Waltz is a distributed/replicated write ahead log for transactions.'
+                    url = 'https://www.github.com/wepay/waltz'
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'ymatsuda'
+                            name = 'Yasuhiro Matsuda'
+                        }
+                    }
+                    scm {
+                        connection = 'scm:git:git://github.com/wepay/waltz.git'
+                        developerConnection = 'scm:git:ssh://github.com/wepay/waltz.git'
+                        url = 'https://github.com/wepay/waltz'
+                    }
+                }
             }
         }
+    }
+
+    signing {
+        sign publishing.publications.shadow
     }
 }
 
@@ -390,7 +417,34 @@ project(':waltz-demo') {
         publications {
             shadow(MavenPublication) { publication ->
                 project.shadow.component(publication)
+
+                pom {
+                    name = 'Waltz'
+                    description = 'Waltz is a distributed/replicated write ahead log for transactions.'
+                    url = 'https://www.github.com/wepay/waltz'
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'ymatsuda'
+                            name = 'Yasuhiro Matsuda'
+                        }
+                    }
+                    scm {
+                        connection = 'scm:git:git://github.com/wepay/waltz.git'
+                        developerConnection = 'scm:git:ssh://github.com/wepay/waltz.git'
+                        url = 'https://github.com/wepay/waltz'
+                    }
+                }
             }
         }
+    }
+
+    signing {
+        sign publishing.publications.shadow
     }
 }
