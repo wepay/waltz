@@ -73,6 +73,11 @@ public class SmokeTest {
 
     private static final int FREEZE_AT = -1;
 
+    // IntegrationTestHelper allocates ZK port from the default range 10000-12000.
+    // To avoid port collision, we allocate ports for server/storage from a different range.
+    private static final int PORT_SEARCH_START = 12000;
+    private static final int PORT_SEARCH_END = 15000;
+
     private final ZNode root = new ZNode(ZNODE_PATH);
 
     private final IntegrationTestHelper helper;
@@ -130,7 +135,7 @@ public class SmokeTest {
             WaltzClientConfig.LONG_WAIT_THRESHOLD, String.valueOf(CLIENT_LONG_WAIT_THRESHOLD)
         ));
 
-        PortFinder portFinder = new PortFinder();
+        PortFinder portFinder = new PortFinder(PORT_SEARCH_START, PORT_SEARCH_END);
         this.storagePorts = Utils.map(
             1, portFinder.getPort(),
             2, portFinder.getPort(),
