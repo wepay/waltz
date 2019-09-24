@@ -232,7 +232,7 @@ public final class StorageCli extends SubcommandCli {
                 String storagePort = hostAndPortArray[1];
 
                 if (!partitionId.matches("^[0-9]+$")) {
-                    throw new IllegalArgumentException(String.format("Partition id '%s' is invalid.  Expected a non-negative integer", partitionId));
+                    throw new IllegalArgumentException(String.format("Partition id '%s' is invalid. Expected a non-negative integer", partitionId));
                 }
 
                 addPartition(storageHost, Integer.parseInt(storagePort), Integer.parseInt(partitionId), cliConfigPath);
@@ -816,36 +816,36 @@ public final class StorageCli extends SubcommandCli {
 
         private void validatePortConnectivity(Set<String> connections, SslContext sslContext, ZooKeeperClient zkClient, String zkRoot) throws Exception {
             StorageClient storageClient = null;
-            try {
-                for (String connection : connections) {
-                    String[] hostAndPortArray = connection.split(":");
-                    String host = hostAndPortArray[0];
-                    int port = Integer.parseInt(hostAndPortArray[1]);
+            for (String connection : connections) {
+                String[] hostAndPortArray = connection.split(":");
+                String host = hostAndPortArray[0];
+                int port = Integer.parseInt(hostAndPortArray[1]);
+                try {
                     storageClient = openStorageClient(host, port, sslContext, zkClient, zkRoot);
-                }
-            } catch (Exception e) {
-                throw new Exception(String.format("Invalid hostname or port: %s", e.getMessage()));
-            } finally {
-                if (storageClient != null) {
-                    storageClient.close();
+                } catch (Exception e) {
+                    throw new Exception(String.format("Invalid hostname or port: %s", e.getMessage()));
+                } finally {
+                    if (storageClient != null) {
+                        storageClient.close();
+                    }
                 }
             }
         }
 
         private void validateAdminPortConnectivity(Set<String> connections, SslContext sslContext, ZooKeeperClient zkClient, String zkRoot) throws Exception {
             StorageAdminClient storageAdminClient = null;
-            try {
-                for (String connection : connections) {
-                    String[] hostAndPortArray = connection.split(":");
-                    String host = hostAndPortArray[0];
-                    int port = Integer.parseInt(hostAndPortArray[1]);
+            for (String connection : connections) {
+                String[] hostAndPortArray = connection.split(":");
+                String host = hostAndPortArray[0];
+                int port = Integer.parseInt(hostAndPortArray[1]);
+                try {
                     storageAdminClient = openStorageAdminClient(host, port, sslContext, zkClient, zkRoot);
-                }
-            } catch (Exception e) {
-                throw new Exception(String.format("Invalid hostname or admin port: %s", e.getMessage()));
-            } finally {
-                if (storageAdminClient != null) {
-                    storageAdminClient.close();
+                } catch (Exception e) {
+                    throw new Exception(String.format("Invalid hostname or admin port: %s", e.getMessage()));
+                } finally {
+                    if (storageAdminClient != null) {
+                        storageAdminClient.close();
+                    }
                 }
             }
         }
