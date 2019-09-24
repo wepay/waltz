@@ -193,6 +193,11 @@ project(':waltz-tools') {
         into file("$projectDir/build/libs")
         from sourceSets.main.runtimeClasspath
     }
+
+    test {
+        maxHeapSize = "2G"
+        jvmArgs '-Xmx2G'
+    }
 }
 
 project(':waltz-server') {
@@ -205,11 +210,6 @@ project(':waltz-server') {
             project(':waltz-storage'),
 
             "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
-            "com.wepay.riff:riff-config:$riffVersion",
-            "com.wepay.riff:riff-metrics:$riffVersion",
-            "com.wepay.zktools:zktools:$zkToolsVersion",
-            "io.netty:netty-all:$nettyVersion",
-            "org.slf4j:slf4j-api:$slf4jVersion",
             "org.eclipse.jetty:jetty-server:$jettyVersion",
             "org.eclipse.jetty:jetty-servlet:$jettyVersion",
         )
@@ -217,7 +217,7 @@ project(':waltz-server') {
         testCompile (
             project(':waltz-client'),
             project(':waltz-test'),
-                
+
             "junit:junit:$junitVersion",
             "org.mockito:mockito-all:$mockitoVersion"
         )
@@ -243,11 +243,6 @@ project(':waltz-storage') {
             project(':waltz-common'),
 
             "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
-            "com.wepay.riff:riff-config:$riffVersion",
-            "com.wepay.riff:riff-metrics:$riffVersion",
-            "com.wepay.zktools:zktools:$zkToolsVersion",
-            "io.netty:netty-all:$nettyVersion",
-            "org.slf4j:slf4j-api:$slf4jVersion",
             "org.yaml:snakeyaml:$yamlVersion",
             "org.eclipse.jetty:jetty-server:$jettyVersion",
             "org.eclipse.jetty:jetty-servlet:$jettyVersion",
@@ -328,12 +323,7 @@ project(':waltz-uber') {
 project(':waltz-client') {
     dependencies {
         compile (
-            project(':waltz-common'),
-
-            "com.wepay.riff:riff-config:$riffVersion",
-            "com.wepay.zktools:zktools:$zkToolsVersion",
-            "io.netty:netty-all:$nettyVersion",
-            "org.slf4j:slf4j-api:$slf4jVersion"
+            project(':waltz-common')
         )
 
         testCompile (
@@ -374,10 +364,7 @@ project(':waltz-test') {
             project(':waltz-server'),
             project(':waltz-client'),
             project(':waltz-storage'),
-            project(':waltz-tools'),
-
-            "com.wepay.zktools:zktools:$zkToolsVersion",
-            "io.netty:netty-all:$nettyVersion"
+            project(':waltz-tools')
         )
 
         testCompile (
