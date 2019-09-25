@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -433,8 +434,8 @@ public class WaltzClientTest {
         Map<Object, Object> configParams = Collections.singletonMap(WaltzClientConfig.LONG_WAIT_THRESHOLD, 200);
         WaltzClientConfig config = new WaltzClientConfig(configParams);
         config.setObject(WaltzClientConfig.MOCK_DRIVER, mockDriver);
-        MockWaltzClientCallbacks callbacks1 = new MockWaltzClientCallbacks().setClientHighWaterMark(0, -1L);
-        WaltzClient client = new WaltzClient(callbacks1, config);
+        MockWaltzClientCallbacks callbacks = new MockWaltzClientCallbacks().setClientHighWaterMark(0, -1L);
+        WaltzClient client = new WaltzClient(callbacks, config);
 
         try {
             MockContext context = MockContext.builder().data("transaction1").retry(false).build();
@@ -442,7 +443,61 @@ public class WaltzClientTest {
             mockDriver.forceNextAppendFail();
             client.submit(context);
 
-            // Transaction1 should be failure
+            // Transaction should fail
+            assertFalse(context.future.get(10, TimeUnit.SECONDS));
+
+        } finally {
+            close(client);
+        }
+    }
+
+    @Test
+    public void testOnApplication() throws Exception {
+        Map<Integer, MockServerPartition> serverPartitions = MockServerPartition.create(1);
+
+        MockDriver mockDriver = new MockDriver(1, serverPartitions);
+        Map<Object, Object> configParams = Collections.singletonMap(WaltzClientConfig.LONG_WAIT_THRESHOLD, 200);
+        WaltzClientConfig config = new WaltzClientConfig(configParams);
+        config.setObject(WaltzClientConfig.MOCK_DRIVER, mockDriver);
+        MockWaltzClientCallbacks callbacks = new MockWaltzClientCallbacks().setClientHighWaterMark(0, -1L);
+        WaltzClient client = new WaltzClient(callbacks, config);
+
+        try {
+            MockContext context = MockContext.builder().data("transaction1").retry(false).build();
+            CompletableFuture<Long> future =
+                context.applicationFuture.thenApply(result -> callbacks.getClientHighWaterMark(0));
+
+            client.submit(context);
+
+            // Transaction should succeed. onApplication should be called after the high-water mark is updated.
+            assertTrue(context.future.get(10, TimeUnit.SECONDS));
+            assertEquals(Long.valueOf(0L), future.get(10, TimeUnit.SECONDS));
+
+        } finally {
+            close(client);
+        }
+    }
+
+
+    @Test
+    public void testOnLockFailure() throws Exception {
+        Map<Integer, MockServerPartition> serverPartitions = MockServerPartition.create(1);
+
+        MockDriver mockDriver = new MockDriver(1, serverPartitions);
+        Map<Object, Object> configParams = Collections.singletonMap(WaltzClientConfig.LONG_WAIT_THRESHOLD, 200);
+        WaltzClientConfig config = new WaltzClientConfig(configParams);
+        config.setObject(WaltzClientConfig.MOCK_DRIVER, mockDriver);
+        MockWaltzClientCallbacks callbacks = new MockWaltzClientCallbacks().setClientHighWaterMark(0, -1L);
+        WaltzClient client = new WaltzClient(callbacks, config);
+
+        try {
+            MockContext context = MockContext.builder().data("transaction1").retry(false).build();
+
+            mockDriver.forceNextLockFail();
+            client.submit(context);
+
+            // Transaction should fail with a lock failure.
+            assertTrue(context.lockFailureFuture.get(10, TimeUnit.SECONDS));
             assertFalse(context.future.get(10, TimeUnit.SECONDS));
 
         } finally {
@@ -545,7 +600,6 @@ public class WaltzClientTest {
         } finally {
             client.close();
         }
-
     }
 
     public static void close(WaltzClient... clients) {

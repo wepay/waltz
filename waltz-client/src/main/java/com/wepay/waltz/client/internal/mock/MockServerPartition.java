@@ -48,8 +48,8 @@ public class MockServerPartition {
         executor.shutdownNow();
     }
 
-    void append(AppendRequest request, boolean forceFailure) {
-        executor.submit(new Append(request, forceFailure));
+    void append(AppendRequest request, boolean forceFailure, boolean forceLockFailure) {
+        executor.submit(new Append(request, forceFailure, forceLockFailure));
     }
 
     MessageReader getMessageReader() {
@@ -78,10 +78,12 @@ public class MockServerPartition {
 
         final AppendRequest request;
         final boolean forceFailure;
+        final boolean forceLockFailure;
 
-        Append(AppendRequest request, boolean forceFailure) {
+        Append(AppendRequest request, boolean forceFailure, boolean forceLockFailure) {
             this.request = request;
             this.forceFailure = forceFailure;
+            this.forceLockFailure = forceLockFailure;
         }
 
         public void run() {
@@ -91,6 +93,11 @@ public class MockServerPartition {
                 boolean success = !forceFailure && (random.nextDouble() >= faultRate);
 
                 if (success) {
+                    if (forceLockFailure) {
+                        sendMessage(new LockFailure(request.reqId, -1));
+                        return;
+                    }
+
                     long hw = Math.max(
                         getLockHighWaterMark(request.writeLockRequest),
                         getLockHighWaterMark(request.readLockRequest)

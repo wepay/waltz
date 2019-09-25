@@ -37,8 +37,8 @@ class WaltzTestClient extends WaltzClient {
     }
 
     // Test only public method
-    public Future<Boolean> appendForTest(AppendRequest request) {
-        return streamClient.append(request);
+    public Future<Boolean> appendForTest(AppendRequest request, TransactionContext context) {
+        return streamClient.append(request, context);
     }
 
 }

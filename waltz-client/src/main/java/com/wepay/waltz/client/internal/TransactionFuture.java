@@ -1,5 +1,6 @@
 package com.wepay.waltz.client.internal;
 
+import com.wepay.waltz.client.TransactionContext;
 import com.wepay.waltz.common.message.ReqId;
 
 import java.util.concurrent.CompletableFuture;
@@ -10,6 +11,7 @@ import java.util.concurrent.CompletableFuture;
 public class TransactionFuture extends CompletableFuture<Boolean> {
 
     public final ReqId reqId;
+    public final TransactionContext transactionContext;
 
     private boolean flushed = false;
 
@@ -18,8 +20,9 @@ public class TransactionFuture extends CompletableFuture<Boolean> {
      *
      * @param reqId the id of the request.
      */
-    public TransactionFuture(ReqId reqId) {
+    public TransactionFuture(ReqId reqId, TransactionContext transactionContext) {
         this.reqId = reqId;
+        this.transactionContext = transactionContext;
     }
 
     /**

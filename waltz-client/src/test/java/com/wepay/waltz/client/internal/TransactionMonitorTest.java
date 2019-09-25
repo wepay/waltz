@@ -1,5 +1,7 @@
 package com.wepay.waltz.client.internal;
 
+import com.wepay.waltz.client.TransactionBuilder;
+import com.wepay.waltz.client.TransactionContext;
 import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.exception.ClientClosedException;
 import com.wepay.waltz.common.message.ReqId;
@@ -29,10 +31,22 @@ public class TransactionMonitorTest {
     private static final long timeout = 100;
 
     private TransactionMonitor monitor;
+    private TransactionContext context; // dummy
 
     @Before
     public void setup() {
         monitor = new TransactionMonitor(WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS);
+        context = new TransactionContext() {
+            @Override
+            public int partitionId(int numPartitions) {
+                return 0;
+            }
+
+            @Override
+            public boolean execute(TransactionBuilder builder) {
+                return true;
+            }
+        };
     }
 
     @After
@@ -49,21 +63,21 @@ public class TransactionMonitorTest {
         ReqId reqId3 = new ReqId(0, 3);
         ReqId reqId4 = new ReqId(0, 4);
 
-        TransactionFuture future1 = monitor.register(reqId1, timeout);
+        TransactionFuture future1 = monitor.register(reqId1, context, timeout);
         assertFalse(future1.isDone());
 
         // Duplicate reqId
-        TransactionFuture futureDup = monitor.register(reqId1, timeout);
+        TransactionFuture futureDup = monitor.register(reqId1, context, timeout);
         assertTrue(futureDup.isDone());
         assertFalse(futureDup.get());
 
-        TransactionFuture future2 = monitor.register(reqId2, timeout);
+        TransactionFuture future2 = monitor.register(reqId2, context, timeout);
         assertFalse(future2.isDone());
 
-        TransactionFuture future3 = monitor.register(reqId3, timeout);
+        TransactionFuture future3 = monitor.register(reqId3, context, timeout);
         assertFalse(future3.isDone());
 
-        TransactionFuture future4 = monitor.register(reqId4, timeout);
+        TransactionFuture future4 = monitor.register(reqId4, context, timeout);
         assertFalse(future3.isDone());
 
         monitor.committed(reqId1);
@@ -82,6 +96,18 @@ public class TransactionMonitorTest {
         assertFalse(future2.get());
         assertFalse(future3.get());
         assertTrue(future4.get());
+    }
+
+    @Test
+    public void testTransactionContext() {
+        monitor.start();
+
+        ReqId reqId = new ReqId(0, 1);
+
+        TransactionFuture future1 = monitor.register(reqId, context, timeout);
+        assertEquals(context, future1.transactionContext);
+        assertEquals(context, monitor.getTransactionContext(reqId));
+        assertEquals(context, monitor.committed(reqId));
     }
 
     @Test
@@ -104,7 +130,7 @@ public class TransactionMonitorTest {
         assertTrue(monitor.isStopped());
 
         // A stopped monitor should return an exceptionally completed future.
-        TransactionFuture future = monitor.register(reqId1, timeout);
+        TransactionFuture future = monitor.register(reqId1, context, timeout);
         assertTrue(future.isCompletedExceptionally());
 
         try {
@@ -116,10 +142,10 @@ public class TransactionMonitorTest {
 
         monitor.start();
 
-        TransactionFuture future1 = monitor.register(reqId1, timeout);
+        TransactionFuture future1 = monitor.register(reqId1, context, timeout);
         assertFalse(future1.isDone());
 
-        TransactionFuture future2 = monitor.register(reqId2, timeout);
+        TransactionFuture future2 = monitor.register(reqId2, context, timeout);
         assertFalse(future2.isDone());
 
         monitor.committed(reqId1);
@@ -140,13 +166,13 @@ public class TransactionMonitorTest {
         int capacity = monitor.maxCapacity();
 
         for (int i = 0; i < capacity; i++) {
-            TransactionFuture future = monitor.register(new ReqId(0, i), timeout);
+            TransactionFuture future = monitor.register(new ReqId(0, i), context, timeout);
             assertNotNull(future);
             assertFalse(future.isDone());
         }
 
         for (int i = 0; i < 3; i++) {
-            TransactionFuture future = monitor.register(new ReqId(0, capacity + i), timeout);
+            TransactionFuture future = monitor.register(new ReqId(0, capacity + i), context, timeout);
             assertNull(future);
         }
     }
@@ -161,7 +187,7 @@ public class TransactionMonitorTest {
 
         for (int i = 0; i < capacity; i++) {
             reqIds.add(new ReqId(0, i));
-            futures.put(new ReqId(0, i), monitor.register(new ReqId(0, i), timeout));
+            futures.put(new ReqId(0, i), monitor.register(new ReqId(0, i), context, timeout));
         }
 
         int remaining = capacity;
@@ -195,7 +221,7 @@ public class TransactionMonitorTest {
 
         for (int i = 0; i < capacity; i++) {
             reqIds.add(new ReqId(0, i));
-            futures.add(monitor.register(new ReqId(0, i), timeout));
+            futures.add(monitor.register(new ReqId(0, i), context, timeout));
         }
 
         int aborted = capacity / 2;
@@ -275,16 +301,16 @@ public class TransactionMonitorTest {
         ReqId reqId3 = new ReqId(2, 3);
         ReqId reqId4 = new ReqId(3, 4);
 
-        TransactionFuture future1 = monitor.register(reqId1, timeout);
+        TransactionFuture future1 = monitor.register(reqId1, context, timeout);
         assertFalse(future1.isDone());
 
-        TransactionFuture future2 = monitor.register(reqId2, timeout);
+        TransactionFuture future2 = monitor.register(reqId2, context, timeout);
         assertFalse(future2.isDone());
 
-        TransactionFuture future3 = monitor.register(reqId3, timeout);
+        TransactionFuture future3 = monitor.register(reqId3, context, timeout);
         assertFalse(future3.isDone());
 
-        TransactionFuture future4 = monitor.register(reqId4, timeout);
+        TransactionFuture future4 = monitor.register(reqId4, context, timeout);
         assertFalse(future4.isDone());
 
         monitor.committed(reqId1);
@@ -339,7 +365,7 @@ public class TransactionMonitorTest {
         Thread writer = new Thread(() -> {
             for (int i = 0; i < numReqIds; i++) {
                 ReqId reqId = new ReqId(0, i);
-                monitor.register(reqId, timeout);
+                monitor.register(reqId, context, timeout);
                 totalTransactions.set(i + 1);
             }
         });
@@ -389,7 +415,7 @@ public class TransactionMonitorTest {
         monitor.start();
 
         long req1Start = System.currentTimeMillis();
-        TransactionFuture req1Future = monitor.register(new ReqId(0, 1), timeout);
+        TransactionFuture req1Future = monitor.register(new ReqId(0, 1), context, timeout);
         long req1Done = System.currentTimeMillis();
 
         assertEquals(req1Future, monitor.lastEnqueued());
@@ -398,7 +424,7 @@ public class TransactionMonitorTest {
 
         Uninterruptibly.sleep(3);
         long req2Start = System.currentTimeMillis();
-        TransactionFuture req2Future = monitor.register(new ReqId(0, 2), timeout);
+        TransactionFuture req2Future = monitor.register(new ReqId(0, 2), context, timeout);
         long req2Done = System.currentTimeMillis();
 
         assertEquals(req2Future, monitor.lastEnqueued());
@@ -427,7 +453,7 @@ public class TransactionMonitorTest {
         Thread writer = new Thread(() -> {
             for (int i = 0; i < numReqIds; i++) {
                 ReqId reqId = new ReqId(0, i);
-                monitor.register(reqId, timeout);
+                monitor.register(reqId, context, timeout);
                 totalTransactions.set(i + 1);
             }
         });

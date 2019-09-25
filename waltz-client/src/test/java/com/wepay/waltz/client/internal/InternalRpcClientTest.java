@@ -33,7 +33,7 @@ public class InternalRpcClientTest extends InternalClientTestBase {
             TransactionBuilderImpl transactionBuilder = internalStreamClient.getTransactionBuilder(context);
             context.execute(transactionBuilder);
 
-            TransactionFuture future = internalStreamClient.append(transactionBuilder.buildRequest());
+            TransactionFuture future = internalStreamClient.append(transactionBuilder.buildRequest(), context);
 
             assertTrue(future.get());
         }

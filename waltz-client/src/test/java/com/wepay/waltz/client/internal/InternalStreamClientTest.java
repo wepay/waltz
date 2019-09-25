@@ -38,7 +38,7 @@ public class InternalStreamClientTest extends InternalClientTestBase {
             TransactionBuilderImpl transactionBuilder = internalStreamClient.getTransactionBuilder(context);
             context.execute(transactionBuilder);
 
-            TransactionFuture future = internalStreamClient.append(transactionBuilder.buildRequest());
+            TransactionFuture future = internalStreamClient.append(transactionBuilder.buildRequest(), context);
 
             assertTrue(future.get());
         }
@@ -123,7 +123,7 @@ public class InternalStreamClientTest extends InternalClientTestBase {
         TransactionBuilderImpl transactionBuilder = internalStreamClient.getTransactionBuilder(context);
         context.execute(transactionBuilder);
 
-        TransactionFuture future = internalStreamClient.append(transactionBuilder.buildRequest());
+        TransactionFuture future = internalStreamClient.append(transactionBuilder.buildRequest(), context);
 
         assertTrue(future.get());
     }
@@ -149,7 +149,7 @@ public class InternalStreamClientTest extends InternalClientTestBase {
                 while (future == null) {
                     TransactionBuilderImpl transactionBuilder = internalStreamClient.getTransactionBuilder(context);
                     context.execute(transactionBuilder);
-                    future = internalStreamClient.append(transactionBuilder.buildRequest());
+                    future = internalStreamClient.append(transactionBuilder.buildRequest(), context);
                 }
 
                 futures.add(future);

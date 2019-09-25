@@ -147,7 +147,7 @@ public class WaltzClient {
             AppendRequest request = build(context);
 
             if (request != null) {
-                streamClient.append(request)
+                streamClient.append(request, context)
                     .whenComplete(new TransactionResultHandlerImpl(context));
             } else {
                 // Completed with no append. There will be no retry.

@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MockContext extends TransactionContext {
 
     public final CompletableFuture<Boolean> future = new CompletableFuture<>();
+    public final CompletableFuture<Boolean> applicationFuture = new CompletableFuture<>();
+    public final CompletableFuture<Boolean> lockFailureFuture = new CompletableFuture<>();
     public final AtomicInteger execCount = new AtomicInteger(0);
 
     private final int partitionId;
@@ -61,6 +63,16 @@ public class MockContext extends TransactionContext {
     @Override
     public void onCompletion(boolean result) {
         future.complete(result);
+    }
+
+    @Override
+    public void onApplication() {
+        applicationFuture.complete(true);
+    }
+
+    @Override
+    public void onLockFailure() {
+        lockFailureFuture.complete(true);
     }
 
     public static PartitionLocalLock makeLock(int lock) {

@@ -2,6 +2,7 @@ package com.wepay.waltz.server;
 
 import com.wepay.riff.network.Message;
 import com.wepay.waltz.client.Transaction;
+import com.wepay.waltz.client.TransactionContext;
 import com.wepay.waltz.client.WaltzClient;
 import com.wepay.waltz.common.message.AbstractMessage;
 import com.wepay.waltz.common.message.AppendRequest;
@@ -220,7 +221,7 @@ public class WaltzServerTest extends WaltzTestBase {
             AppendRequest transaction2 = client2.buildForTest(paymentContext2);
             AppendRequest transaction3 = client2.buildForTest(paymentContext3);
 
-            Future<Boolean> future1 = client1.appendForTest(transaction1);
+            Future<Boolean> future1 = client1.appendForTest(transaction1, paymentContext1);
 
             // Wait for the first append request to reach the partition
             Message msg;
@@ -230,8 +231,8 @@ public class WaltzServerTest extends WaltzTestBase {
 
             assertNotNull(msg);
 
-            Future<Boolean> future2 = client2.appendForTest(transaction2);
-            Future<Boolean> future3 = client2.appendForTest(transaction3);
+            Future<Boolean> future2 = client2.appendForTest(transaction2, paymentContext2);
+            Future<Boolean> future3 = client2.appendForTest(transaction3, paymentContext3);
 
             // Transaction1 should be success
             assertTrue(future1.get(10, TimeUnit.SECONDS));
@@ -284,7 +285,7 @@ public class WaltzServerTest extends WaltzTestBase {
             AppendRequest transaction1 = client1.buildForTest(paymentContext1);
             AppendRequest transaction2 = client2.buildForTest(paymentContext2);
 
-            Future<Boolean> future1 = client1.appendForTest(transaction1);
+            Future<Boolean> future1 = client1.appendForTest(transaction1, paymentContext1);
 
             // Wait for the first append request to reach the partition
             Message msg;
@@ -294,7 +295,7 @@ public class WaltzServerTest extends WaltzTestBase {
 
             assertNotNull(msg);
 
-            Future<Boolean> future2 = client2.appendForTest(transaction2);
+            Future<Boolean> future2 = client2.appendForTest(transaction2, paymentContext2);
 
             // Transaction1 should be success
             assertTrue(future1.get(10, TimeUnit.SECONDS));
@@ -349,7 +350,7 @@ public class WaltzServerTest extends WaltzTestBase {
             AppendRequest transaction3 = client2.buildForTest(context3);
             AppendRequest transaction4 = client2.buildForTest(context4);
 
-            Future<Boolean> future1 = client1.appendForTest(transaction1);
+            Future<Boolean> future1 = client1.appendForTest(transaction1, context1);
 
             // Wait for the first append request to reach the partition
             Message msg;
@@ -359,9 +360,9 @@ public class WaltzServerTest extends WaltzTestBase {
 
             assertNotNull(msg);
 
-            Future<Boolean> future2 = client2.appendForTest(transaction2);
-            Future<Boolean> future3 = client2.appendForTest(transaction3);
-            Future<Boolean> future4 = client2.appendForTest(transaction4);
+            Future<Boolean> future2 = client2.appendForTest(transaction2, context2);
+            Future<Boolean> future3 = client2.appendForTest(transaction3, context3);
+            Future<Boolean> future4 = client2.appendForTest(transaction4, context4);
 
             // Transaction1 should be success
             assertTrue(future1.get(10, TimeUnit.SECONDS));
@@ -528,8 +529,9 @@ public class WaltzServerTest extends WaltzTestBase {
                 String data = "transaction" + i;
                 expected.add(Arrays.asList(header, data));
                 while (true) {
-                    transaction = client.buildForTest(MockContext.builder().header(header).data(data).build());
-                    future = client.appendForTest(transaction);
+                    TransactionContext context = MockContext.builder().header(header).data(data).build();
+                    transaction = client.buildForTest(context);
+                    future = client.appendForTest(transaction, context);
 
                     // Wait for transaction to be stored and retry.
                     if (future.isDone() && !future.get()) {

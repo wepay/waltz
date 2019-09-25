@@ -53,12 +53,25 @@ public abstract class TransactionContext {
     }
 
     /**
+     * A method that is called on application of transaction through
+     * {@link WaltzClientCallbacks#applyTransaction(Transaction)}.
+     */
+    public void onApplication() {
+    }
+
+    /**
      * A method that is called on exception.
      * After this call, no retry will be attempted by the Waltz client.
      *
      * @param ex The exception that was thrown.
      */
     public void onException(Throwable ex) {
+    }
+
+    /**
+     * A method that is call on failure of optimistic locking
+     */
+    public void onLockFailure() {
     }
 
 }

@@ -1,6 +1,7 @@
 package com.wepay.waltz.client.internal;
 
 import com.wepay.riff.util.Logging;
+import com.wepay.waltz.client.TransactionContext;
 import com.wepay.waltz.client.internal.network.WaltzNetworkClient;
 import com.wepay.waltz.client.internal.network.WaltzNetworkClientCallbacks;
 import com.wepay.waltz.common.message.AppendRequest;
@@ -305,12 +306,16 @@ public class Partition {
 
                 // Process the transaction only when it has the expected transaction id
                 if (expectedTransactionId == transactionId) {
-                    transactionMonitor.committed(reqId);
+                    TransactionContext context = transactionMonitor.committed(reqId);
 
                     networkClientCallbacks.onTransactionReceived(transactionId, header, reqId);
                     // The transaction is successfully applied to the application state
                     // Increment the client high-water mark
                     clientHighWaterMark.incrementAndGet();
+
+                    if (context != null) {
+                        context.onApplication();
+                    }
 
                 } else {
                     if (logger.isDebugEnabled()) {
@@ -330,7 +335,7 @@ public class Partition {
      * @param request the AppendRequest representing payload.
      * @return a {@link TransactionFuture} which completes when the append response is received.
      */
-    public TransactionFuture append(AppendRequest request) {
+    public TransactionFuture append(AppendRequest request, TransactionContext context) {
         ensureMounted();
 
         TransactionFuture future;
@@ -338,7 +343,7 @@ public class Partition {
         // Serialize transaction requests
         synchronized (transactionMonitor) {
             ReqId reqId = request.reqId;
-            future = transactionMonitor.register(reqId, 10000);
+            future = transactionMonitor.register(reqId, context, 10000);
 
             if (future == null) {
                 // Transaction registration timed out
@@ -523,6 +528,11 @@ public class Partition {
      * @param lockFailure a {@link LockFailure} object with the id of the transaction that made the lock request to fail.
      */
     public void lockFailed(LockFailure lockFailure) {
+        TransactionContext context = transactionMonitor.getTransactionContext(lockFailure.reqId);
+        if (context != null) {
+            context.onLockFailure();
+        }
+
         if (clientHighWaterMark.get() >= lockFailure.transactionId) {
             transactionMonitor.abort(lockFailure.reqId);
         } else {
