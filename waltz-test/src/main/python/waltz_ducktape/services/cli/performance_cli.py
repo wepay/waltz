@@ -13,47 +13,51 @@ class PerformanceCli(Cli):
         """
         super(PerformanceCli, self).__init__(cli_config_path)
 
-    def producer_test_cmd(self, txn_size, txn_per_thread, num_thread, interval, lock_pool_size=None):
+    def producer_test_cmd(self, txn_size, txn_per_thread, num_thread, interval, lock_pool_size=None, num_active_partitions=None):
         """
         Return producer performance test command:
 
         java com.wepay.waltz.tools.performance.PerformanceCli \
             test-producers \
-            <full_path_config_file> \
             --txn-size <size of each transaction> \
             --txn-per-thread <number of transactions per thread> \
             --num-thread <number of total threads> \
             --interval <average interval(millisecond) between transactions> \
-            --lock-pool-size <size of lock pool>
+            --cli-config-path <the path to cli config file> \
+            --lock-pool-size <size of lock pool> \
+            --num-active-partitions <number of partitions to interact with>
         """
         cmd_arr = [
-            "java", self.java_cli_class_name(),
+            "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
             "test-producers",
-            self.cli_config_path,
             "--txn-size", txn_size,
             "--txn-per-thread", txn_per_thread,
             "--num-thread", num_thread,
             "--interval", interval,
-            "--lock-pool-size {}".format(lock_pool_size) if lock_pool_size is not None else ""
+            "--cli-config-path", self.cli_config_path,
+            "--lock-pool-size {}".format(lock_pool_size) if lock_pool_size is not None else "",
+            "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else ""
         ]
         return self.build_cmd(cmd_arr)
 
-    def consumer_test_cmd(self, txn_size, num_txn):
+    def consumer_test_cmd(self, txn_size, num_txn, num_active_partitions=None):
         """
         Return consumer performance test command:
 
         java com.wepay.waltz.tools.performance.PerformanceCli \
             test-consumers \
-            <full_path_config_file> \
             --txn-size <size of each transaction> \
             --num-txn <number of transactions to send> \
+            --cli-config-path <the path to cli config file> \
+            --num-active-partitions <number of active partitions>
         """
         cmd_arr = [
-            "java", self.java_cli_class_name(),
+            "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
             "test-consumers",
-            self.cli_config_path,
             "--txn-size", txn_size,
-            "--num-txn", num_txn
+            "--num-txn", num_txn,
+            "--cli-config-path", self.cli_config_path,
+            "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else ""
         ]
         return self.build_cmd(cmd_arr)
 

@@ -35,7 +35,7 @@ Vagrant.configure("2") do |config|
 
         google.name = cfg['WaltzStorageInstanceName'] + "-#{i}"
         google.machine_type = cfg['WaltzStorageInstanceMachineType']
-        google.zone = JSON.parse(cfg['WaltzStorageInstanceZones'])[i]
+        google.zone = JSON.parse(cfg['WaltzStorageInstanceZones'])[i/3]
 
         # the instance needs to be on the poc network
         google.network = cfg['GoogleNetwork']

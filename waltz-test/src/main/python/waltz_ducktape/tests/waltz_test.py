@@ -1,3 +1,4 @@
+import json
 from configparser import ConfigParser
 from ducktape.tests.test import Test
 from ducktape.cluster.cluster_spec import ClusterSpec
@@ -33,8 +34,11 @@ class WaltzTest(Test):
         """
         cluster_num_partitions = cluster_num_partitions or int(self.zk_cfg['ClusterNumPartitions'])
         num_nodes = num_nodes or int(self.storage_cfg['NumNodes'])
-        node_type = self.storage_cfg['NodeType']
-        cluster_spec = ClusterSpec.from_dict({node_type: num_nodes})
+        cpu = int(self.storage_cfg['NumCpuCores'])
+        mem = self.storage_cfg['MemSize']
+        disk = self.storage_cfg['DiskSize']
+        additional_disks = json.loads(self.storage_cfg['AdditionalDisks'])
+        cluster_spec = ClusterSpec.from_dict({'cpu':cpu, 'mem':mem, 'disk':disk, 'num_nodes':num_nodes, 'additional_disks':additional_disks})
         zk = self.zk_cfg['ZkUrl']
         cluster_root = self.zk_cfg['ClusterRoot']
         port = int(self.storage_cfg['Port'])
@@ -54,8 +58,10 @@ class WaltzTest(Test):
         """
         cluster_num_partitions = cluster_num_partitions or int(self.zk_cfg['ClusterNumPartitions'])
         num_nodes = num_nodes or int(self.server_cfg['NumNodes'])
-        node_type = self.server_cfg['NodeType']
-        cluster_spec = ClusterSpec.from_dict({node_type: num_nodes})
+        cpu = int(self.server_cfg['NumCpuCores'])
+        mem = self.server_cfg['MemSize']
+        disk = self.server_cfg['DiskSize']
+        cluster_spec = ClusterSpec.from_dict({'cpu':cpu, 'mem':mem, 'disk':disk, 'num_nodes':num_nodes})
         zk = self.zk_cfg['ZkUrl']
         cluster_root = self.zk_cfg['ClusterRoot']
         cluster_name = self.zk_cfg['ClusterName']
@@ -77,8 +83,10 @@ class WaltzTest(Test):
         Optional arguments can be pass to override default settings.
         """
         num_nodes = num_nodes or int(self.client_cfg['NumNodes'])
-        node_type = self.client_cfg['NodeType']
-        cluster_spec = ClusterSpec.from_dict({node_type: num_nodes})
+        cpu = int(self.client_cfg['NumCpuCores'])
+        mem = self.client_cfg['MemSize']
+        disk = self.client_cfg['DiskSize']
+        cluster_spec = ClusterSpec.from_dict({'cpu':cpu, 'mem':mem, 'disk':disk, 'num_nodes':num_nodes})
         zk = self.zk_cfg['ZkUrl']
         cluster_root = self.zk_cfg['ClusterRoot']
         lib_dir = self.client_cfg['LibDir']

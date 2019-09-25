@@ -441,6 +441,8 @@ public final class PerformanceCli extends SubcommandCli {
                 allTxnRead.await();
 
                 printStatistic();
+
+                executor.shutdown();
             } catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Failed to run consumer performance test: %s", e.getMessage()));
             }
