@@ -15,14 +15,13 @@ class BenchmarkTest(ProduceConsumeValidateTest):
     @cluster(cluster_spec=ClusterSpec.from_list([{'cpu':1, 'mem':'1GB', 'disk':'25GB', 'additional_disks':{'/dev/sdb':'100GB'}, 'num_nodes':3},
                                                  {'cpu':1, 'mem':'3GB', 'disk':'15GB', 'num_nodes':2},
                                                  {'cpu':1, 'mem':'1GB', 'disk':'25GB', 'num_nodes':1}]))
-    @parametrize(txn_size=512, txn_per_thread=1000, num_thread=100, interval=10, lock_pool_size=0, num_active_partitions=4, timeout=360)
     @parametrize(txn_size=512, txn_per_thread=1000, num_thread=100, interval=10, lock_pool_size=0, num_active_partitions=1, timeout=360)
-    @parametrize(txn_size=512, txn_per_thread=1000, num_thread=100, interval=10, lock_pool_size=0, num_active_partitions=1, timeout=360)
-    @parametrize(txn_size=512, txn_per_thread=1000, num_thread=100, interval=10, lock_pool_size=2, num_active_partitions=1, timeout=360)
-    @parametrize(txn_size=512, txn_per_thread=1000, num_thread=100, interval=10, lock_pool_size=4, num_active_partitions=1, timeout=360)
     @parametrize(txn_size=512, txn_per_thread=1000, num_thread=100, interval=20, lock_pool_size=0, num_active_partitions=1, timeout=360)
     @parametrize(txn_size=512, txn_per_thread=2000, num_thread=50, interval=10, lock_pool_size=0, num_active_partitions=1, timeout=360)
     @parametrize(txn_size=1024, txn_per_thread=1000, num_thread=100, interval=10, lock_pool_size=0, num_active_partitions=1, timeout=360)
+    @parametrize(txn_size=512, txn_per_thread=100, num_thread=100, interval=10, lock_pool_size=64, num_active_partitions=1, timeout=360)
+    @parametrize(txn_size=512, txn_per_thread=100, num_thread=100, interval=10, lock_pool_size=128, num_active_partitions=1, timeout=360)
+    @parametrize(txn_size=512, txn_per_thread=100, num_thread=100, interval=10, lock_pool_size=128, num_active_partitions=2, timeout=360)
     def test_producer_performance(self, txn_size, txn_per_thread, num_thread, interval, lock_pool_size, num_active_partitions, timeout):
         test_cmd = self.performance_cli.producer_test_cmd(txn_size, txn_per_thread, num_thread, interval, lock_pool_size, num_active_partitions)
         test_output = self.run_produce_consume_validate(lambda: self.simple_validation_func(test_cmd, timeout))
