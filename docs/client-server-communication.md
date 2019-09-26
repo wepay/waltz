@@ -9,12 +9,12 @@ Client-Server communication uses persistent TCP connections. A client creates tw
 
 The request ID is a unique ID attached to a request message and corresponding response messages.
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Client ID | int | The unique ID of the client. The uniqueness is guaranteed by ZK.|
-| Generation | int | The generation number of the partition. |
-| Partition ID | int | The partition ID |
-| Sequence number | int | The sequence number. |
+| Field           | Data Type   | Description                                                      |
+| -------         | ----------- | -------------                                                    |
+| Client ID       | int         | The unique ID of the client. The uniqueness is guaranteed by ZK. |
+| Generation      | int         | The generation number of the partition.                          |
+| Partition ID    | int         | The partition ID                                                 |
+| Sequence number | int         | The sequence number.                                             |
 
 ## Mounting a partition
 
@@ -33,18 +33,18 @@ A client establishes a communication to servers in the following manner for each
 
 ### Mount Request
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Request ID | ReqId | Client generated unique request ID |
-| Client High-water Mark | long | The highest ID of transactions applied to the client application’s database |
-| sequence number | int | A sequential ID that identifies the network client sending this request. This is used to detect stale network clients. |
+| Field                  | Data Type   | Description                                                                                                            |
+| -------                | ----------- | -------------                                                                                                          |
+| Request ID             | ReqId       | Client generated unique request ID                                                                                     |
+| Client High-water Mark | long        | The highest ID of transactions applied to the client application’s database                                            |
+| sequence number        | int         | A sequential ID that identifies the network client sending this request. This is used to detect stale network clients. |
 
 ### Mount Response
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Request ID | ReqId | Client generated unique request ID stored in the corresponding mount request
-| Partition Ready | boolean | True if the partition is ready, otherwise false 
+| Field           | Data Type   | Description   |
+| -------         | ----------- | ------------- |
+| Request ID      | ReqId       | Client generated unique request ID stored in the corresponding mount request
+| Partition Ready | boolean     | True if the partition is ready, otherwise false
 
 ## Writing and Reading Transactions
 
@@ -52,60 +52,60 @@ A client establishes a communication to servers in the following manner for each
 
 The append request submits a transaction to Waltz.
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Request ID | ReqId | Client generated unique request ID |
-| Client High-water Mark | long | The highest ID of transactions applied to the client application’s database |
-| Write Lock Request Length | int | The length of the hash value array |
-| Write Lock Request Hash Values | int[] | Lock hash values |
-| Read Lock Request Length | int | The length of the hash value array |
-| Read Lock Request Hash Values | int[] | Lock hash values |
-| Transaction Header | int | Application defined 32-bit integer metadata |
-| Transaction Data Length | int | The length of transaction data byte array. |
-| Transaction Bytes | byte[] | A byte array |
-| Checksum | int | CRC-32 of the transaction data |
+| Field                          | Data Type   | Description                                                                 |
+| -------                        | ----------- | -------------                                                               |
+| Request ID                     | ReqId       | Client generated unique request ID                                          |
+| Client High-water Mark         | long        | The highest ID of transactions applied to the client application’s database |
+| Write Lock Request Length      | int         | The length of the hash value array                                          |
+| Write Lock Request Hash Values | int[]       | Lock hash values                                                            |
+| Read Lock Request Length       | int         | The length of the hash value array                                          |
+| Read Lock Request Hash Values  | int[]       | Lock hash values                                                            |
+| Transaction Header             | int         | Application defined 32-bit integer metadata                                 |
+| Transaction Data Length        | int         | The length of transaction data byte array.                                  |
+| Transaction Bytes              | byte[]      | A byte array                                                                |
+| Checksum                       | int         | CRC-32 of the transaction data                                              |
 
 ### Feed Request
 
-The feed request initiates the transaction feed from Waltz server. 
+The feed request initiates the transaction feed from Waltz server.
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Request ID | ReqId | Client generated unique request ID |
-| Client High-water Mark | long | The highest ID of transactions applied to the client application’s database |
+| Field                  | Data Type   | Description                                                                 |
+| -------                | ----------- | -------------                                                               |
+| Request ID             | ReqId       | Client generated unique request ID                                          |
+| Client High-water Mark | long        | The highest ID of transactions applied to the client application’s database |
 
 ### Feed Data
 
 The feed data is stream to a client in response to the feed request.
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Request ID | ReqId | Client generated unique request ID stored in the corresponding Feed Request. |
-| Transaction ID | long | The ID of the transaction |
-| Transaction Header | int | Application defined 32-bit integer metadata |
+| Field              | Data Type   | Description                                                                  |
+| -------            | ----------- | -------------                                                                |
+| Request ID         | ReqId       | Client generated unique request ID stored in the corresponding Feed Request. |
+| Transaction ID     | long        | The ID of the transaction                                                    |
+| Transaction Header | int         | Application defined 32-bit integer metadata                                  |
 
 ### Transaction Data Request
 
 A transaction data request is sent through as a RPC request.
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Request ID | ReqId | Client generated unique request ID
-| Transaction ID | long | The ID of the transaction to fetch
+| Field          | Data Type   | Description   |
+| -------        | ----------- | ------------- |
+| Request ID     | ReqId       | Client generated unique request ID
+| Transaction ID | long        | The ID of the transaction to fetch
 
 ### Transaction Data Response
 
 A transaction data response is sent through as a RPC response.
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Request ID | ReqId | Client generated unique request ID stored in the corresponding Feed Request. |
-| Transaction ID | long | The ID of the transaction fetched |
-| Success Flag | boolean | True if the fetch is successful, otherwise false. |
-| Transaction Data Length | int | The length of transaction data. (exists only when the success flag is true) |
-| Transaction Data Bytes | byte[] | A byte array (exists only when the success flag is true) |
-| Checksum | int | CRC-32 of the transaction data (exists only when the success flag is true) |
-| Error Message | String | Error message (exists only when the success flag is false) |
+| Field                   | Data Type   | Description                                                                  |
+| -------                 | ----------- | -------------                                                                |
+| Request ID              | ReqId       | Client generated unique request ID stored in the corresponding Feed Request. |
+| Transaction ID          | long        | The ID of the transaction fetched                                            |
+| Success Flag            | boolean     | True if the fetch is successful, otherwise false.                            |
+| Transaction Data Length | int         | The length of transaction data. (exists only when the success flag is true)  |
+| Transaction Data Bytes  | byte[]      | A byte array (exists only when the success flag is true)                     |
+| Checksum                | int         | CRC-32 of the transaction data (exists only when the success flag is true)   |
+| Error Message           | String      | Error message (exists only when the success flag is false)                   |
 
 ## Other Messages
 
@@ -113,25 +113,25 @@ A transaction data response is sent through as a RPC response.
 
 A client sends a flush request to wait for all pending transaction to complete regardless of successfully or not. A flush response will be sent back to the client when all append requests reached to the server before this request were completed.
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Request ID | ReqId | Client generated unique request ID |
+| Field      | Data Type   | Description                        |
+| -------    | ----------- | -------------                      |
+| Request ID | ReqId       | Client generated unique request ID |
 
 ### Flush Response
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Request ID | ReqId | Client generated unique request ID stored in the corresponding Flush Request. |
-| Transaction ID | long | The high-water mark after pending transactions are processed. |
+| Field          | Data Type   | Description                                                                   |
+| -------        | ----------- | -------------                                                                 |
+| Request ID     | ReqId       | Client generated unique request ID stored in the corresponding Flush Request. |
+| Transaction ID | long        | The high-water mark after pending transactions are processed.                 |
 
 ### Lock Failure
 
 A lock failure message is sent back to a client when a lock request failed.
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Request ID | ReqId | Client generated unique request ID stored in the corresponding Append Request |
-| Transaction ID | long | The ID of the transaction that made the lock request fail. |
+| Field          | Data Type   | Description                                                                   |
+| -------        | ----------- | -------------                                                                 |
+| Request ID     | ReqId       | Client generated unique request ID stored in the corresponding Append Request |
+| Transaction ID | long        | The ID of the transaction that made the lock request fail.                    |
 
 ## Generation Number
 

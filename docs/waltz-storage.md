@@ -18,35 +18,35 @@ Waltz Storage is a storage server which provides persistency to Waltz. Its funct
 
 ## Open Request
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Session ID | long | -1 |
-| Sequence number | long | -1 |
-| Partition ID | int  | -1 |
-| Cluster key | UUID | A unique ID of the cluster |
-| Number of partitions | int | The number of partitions |
+| Field                | Data Type   | Description                |
+| -------              | ----------- | -------------              |
+| Session ID           | long        | -1                         |
+| Sequence number      | long        | -1                         |
+| Partition ID         | int         | -1                         |
+| Cluster key          | UUID        | A unique ID of the cluster |
+| Number of partitions | int         | The number of partitions   |
 
 Open request is the first request a Waltz server makes after a connection to a storage server is opened. A Waltz server sends a cluster key which is UUID assigned to a cluster when a cluster is created by an admin tool. The storage server compares it with the one in the control file. If they don’t match, it indicates there is a configuration error.
 
 ## Last Session Info Request
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Session ID | long | The store session ID |
-| Sequence number | long | The message sequence number |
-| Partition ID | int | The partition ID |
+| Field           | Data Type   | Description                 |
+| -------         | ----------- | -------------               |
+| Session ID      | long        | The store session ID        |
+| Sequence number | long        | The message sequence number |
+| Partition ID    | int         | The partition ID            |
 
-Last Session Info request is sent by the recovery manager when a replica connection is opened. It requests the information of the last store session of the storage partition on this storage server. It comes from Partition Info on the control file. The low-water mark is the high-water mark of the partition when the store session started. 
+Last Session Info request is sent by the recovery manager when a replica connection is opened. It requests the information of the last store session of the storage partition on this storage server. It comes from Partition Info on the control file. The low-water mark is the high-water mark of the partition when the store session started.
 
 ## Last Session Info Response
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Session ID | long | The store session ID |
-| Sequence number | long | The message sequence number |
-| Partition ID | int | The partition ID |
-| Session ID | long | The last store session ID |
-| Low-water Mark | long | The low-water mark of the last session |
+| Field           | Data Type   | Description                            |
+| -------         | ----------- | -------------                          |
+| Session ID      | long        | The store session ID                   |
+| Sequence number | long        | The message sequence number            |
+| Partition ID    | int         | The partition ID                       |
+| Session ID      | long        | The last store session ID              |
+| Low-water Mark  | long        | The low-water mark of the last session |
 
 ## Max Transaction ID Request
 
