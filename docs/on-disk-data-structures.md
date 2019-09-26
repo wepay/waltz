@@ -65,16 +65,16 @@ Two partition info structs are updated alternately when a new storage session is
 
 ### Data File Header
 
-| Field | Data Type |
-|-------|-----------|
-| format version number | int |
-| creation time | long |
-| cluster key | UUID |
-| partition id | int |
-| first transaction ID | long |
-| reserved for future use | 88 bytes |
+| Field                   |   Data Type  | Size (bits) |
+|-------------------------|--------------|-------------|
+| format version number   |   int        |      32     |
+| creation time           |   long       |      64     |
+| cluster key             |   UUID       |     128     |
+| partition id            |   int        |      32     |
+| first transaction ID    |   long       |      64     |
+| reserved for future use |    -         |     704     |
 
-The header size of 128 bytes. The cluster key is a UUID assigned to a cluster.
+The header size is 128 bytes. The cluster key is a UUID assigned to a cluster.
 
 The first transaction ID is the ID of the first transaction in the segment.
 The data file body is a list of transaction records. Each transaction record contains the following information.
