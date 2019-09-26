@@ -195,7 +195,7 @@ public class TransactionMonitor {
         synchronized (this) {
             TransactionFuture future = registered.get(reqId);
             if (future != null) {
-                return future.transactionContext;
+                return future.getTransactionContext();
             }
             return null;
         }
@@ -210,15 +210,20 @@ public class TransactionMonitor {
     public TransactionContext committed(ReqId reqId) {
         synchronized (this) {
             TransactionFuture future = registered.get(reqId);
+            TransactionContext context = null;
             if (state != State.CLOSED) {
                 if (future != null) {
                     // This is own transaction
+                    context = future.getTransactionContext();
+                    if (context == null) {
+                        logger.error("missing transaction context");
+                    }
                     complete(reqId, true);
                     notifyAll();
                 }
             }
 
-            return future == null ? null : future.transactionContext;
+            return context;
         }
     }
 

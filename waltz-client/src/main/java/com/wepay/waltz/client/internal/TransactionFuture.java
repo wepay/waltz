@@ -11,8 +11,8 @@ import java.util.concurrent.CompletableFuture;
 public class TransactionFuture extends CompletableFuture<Boolean> {
 
     public final ReqId reqId;
-    public final TransactionContext transactionContext;
 
+    private TransactionContext transactionContext;
     private boolean flushed = false;
 
     /**
@@ -23,6 +23,16 @@ public class TransactionFuture extends CompletableFuture<Boolean> {
     public TransactionFuture(ReqId reqId, TransactionContext transactionContext) {
         this.reqId = reqId;
         this.transactionContext = transactionContext;
+    }
+
+    /**
+     * Returns the TransactionContext associate with this TransactionFuture.
+     * This returns null after the TransactionFuture is completed.
+     */
+    TransactionContext getTransactionContext() {
+        synchronized (this) {
+            return transactionContext;
+        }
     }
 
     /**
@@ -56,6 +66,22 @@ public class TransactionFuture extends CompletableFuture<Boolean> {
                     Thread.interrupted();
                 }
             }
+        }
+    }
+
+    @Override
+    public boolean complete(Boolean value) {
+        synchronized (this) {
+            transactionContext = null;
+            return super.complete(value);
+        }
+    }
+
+    @Override
+    public boolean completeExceptionally(Throwable exception) {
+        synchronized (this) {
+            transactionContext = null;
+            return super.completeExceptionally(exception);
         }
     }
 

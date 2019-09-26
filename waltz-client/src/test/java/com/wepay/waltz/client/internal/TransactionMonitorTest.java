@@ -36,17 +36,7 @@ public class TransactionMonitorTest {
     @Before
     public void setup() {
         monitor = new TransactionMonitor(WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS);
-        context = new TransactionContext() {
-            @Override
-            public int partitionId(int numPartitions) {
-                return 0;
-            }
-
-            @Override
-            public boolean execute(TransactionBuilder builder) {
-                return true;
-            }
-        };
+        context = new DummyTransactionContext();
     }
 
     @After
@@ -102,12 +92,29 @@ public class TransactionMonitorTest {
     public void testTransactionContext() {
         monitor.start();
 
-        ReqId reqId = new ReqId(0, 1);
+        ReqId reqId1 = new ReqId(0, 1);
+        ReqId reqId2 = new ReqId(0, 2);
 
-        TransactionFuture future1 = monitor.register(reqId, context, timeout);
-        assertEquals(context, future1.transactionContext);
-        assertEquals(context, monitor.getTransactionContext(reqId));
-        assertEquals(context, monitor.committed(reqId));
+        TransactionContext context1 = context;
+        TransactionContext context2 = new DummyTransactionContext();
+
+        TransactionFuture future1 = monitor.register(reqId1, context1, timeout);
+        TransactionFuture future2 = monitor.register(reqId2, context2, timeout);
+
+        assertEquals(context1, future1.getTransactionContext());
+        assertEquals(context2, future2.getTransactionContext());
+
+        assertEquals(context1, monitor.getTransactionContext(reqId1));
+        assertEquals(context2, monitor.getTransactionContext(reqId2));
+
+        assertEquals(context1, monitor.committed(reqId1));
+        monitor.abort(reqId2);
+
+        assertNull(future1.getTransactionContext());
+        assertNull(future2.getTransactionContext());
+
+        assertNull(monitor.getTransactionContext(reqId1));
+        assertNull(monitor.getTransactionContext(reqId2));
     }
 
     @Test
@@ -501,7 +508,7 @@ public class TransactionMonitorTest {
                     StateChangeFuture<Integer> future = totalTransactions.watch();
                     index = future.currentState;
 
-                    if (index  > i) {
+                    if (index > i) {
                         break;
                     }
 
@@ -521,6 +528,18 @@ public class TransactionMonitorTest {
         Uninterruptibly.join(10000, writer, reader, cleaner);
 
         assertEquals(0, monitor.registeredCount());
+    }
+
+    private static class DummyTransactionContext extends TransactionContext {
+        @Override
+        public int partitionId(int numPartitions) {
+            return 0;
+        }
+
+        @Override
+        public boolean execute(TransactionBuilder builder) {
+            return true;
+        }
     }
 
 }
