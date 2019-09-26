@@ -27,15 +27,15 @@ Waltz Storage stores transaction data in the local file system. The root directo
 
 The control file begins with the header which contains the following information.
 
-| Field | Data Type |
-|-------|-----------|
-| format version number | int |
-| creation time | long |
-| key | UUID |
-| the number of partitions | int |
-| reserved for future use | 96 bytes |
+| Field                    | Data Type | Size (bits)|
+|--------------------------|-----------|------------|
+| format version number    | int       |    32      |
+| creation time            | long      |    64      |
+| key                      | UUID      |   128      |
+| the number of partitions | int       |    32      |
+| reserved for future use  | -         |   768      |
 
-The header size is 128 bytes.
+The total header size is 128 bytes (1024 bits).
 
 The key is UUID which is generated when the cluster is configured by CreateCluster utility. The key identifies the cluster to which the cluster it belongs. If an open request comes from a Waltz Server whose key does not match the key in the control file, Waltz Storage rejects the request.
 
