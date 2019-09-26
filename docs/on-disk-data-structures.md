@@ -43,21 +43,23 @@ The key is UUID which is generated when the cluster is configured by CreateClust
 
 After the header follows the actual body of control data. It is a list of _Partition Info_. The number of _Partition Infos_ is the number of partitions recorded in the header.
 
-| Field | Data Type |
-|-------|-----------|
-| partition id | int |
-| partition info struct 1 session id | long |
-| partition info struct 1 low-water mark | long |
-| partition info struct 1 local low-water mark | long |
-| partition info struct 1 checksum | int |
-| partition info struct 2 session id | long |
-| partition info struct 2 low-water mark | long |
-| partition info struct 2 local low-water mark | long |
-| partition info struct 2 checksum | int |
+|       Field                                  |    Data Type      | size(bits) |
+|----------------------------------------------|-------------------|------------|
+| partition id                                 |      int          |    32      |
+| partition info struct 1 session id           |      long         |    64      |
+| partition info struct 1 low-water mark       |      long         |    64      |
+| partition info struct 1 local low-water mark |      long         |    64      |
+| partition info struct 1 checksum             |      int          |    32      |
+| partition info struct 2 session id           |      long         |    64      |
+| partition info struct 2 low-water mark       |      long         |    64      |
+| partition info struct 2 local low-water mark |      long         |    64      |
+| partition info struct 2 checksum             |      int          |    32      |
+
+Each _Partition Info_ record is 60 bytes (480 bits)
 
 A partition info struct records the session ID, the low-water mark, the local low-water mark, and the checksum of the struct itself. The low-water mark is the high-water mark of the partition in the cluster when the session is successfully started. The local low-water mark is the highest valid transaction ID of the partition in the storage when the session is successfully started. The local low-water mark can be smaller than the low-water mark when the storage is falling behind.
 
-Two partition info structs are updated alternately when a new storage session started, and the update is immediately flushed to the disk. The checksum is checked when a partition of opened. Since the atomicity of I/O is not guaranteed, it is possible that an update is not completely written to the file when a fault occurs during I/O. If one of the structs has a checksum error, we ignore it and use the other struct, which means we rollback the partition. We assume at least one of them is always valid. If neither of structs is valid, we fail to open the partition.
+Two partition info structs are updated alternately when a new storage session is started, and the update is immediately flushed to the disk. The checksum is checked when a partition of opened. Since the atomicity of I/O is not guaranteed, it is possible that an update is not completely written to the file when a fault occurs during I/O. If one of the structs has a checksum error, we ignore it and use the other struct, which means we rollback the partition. We assume at least one of them is always valid. If neither of structs is valid, we fail to open the partition.
 
 ## Segment Data File
 
