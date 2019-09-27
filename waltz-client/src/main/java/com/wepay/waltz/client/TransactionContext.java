@@ -53,12 +53,30 @@ public abstract class TransactionContext {
     }
 
     /**
+     * A method that is called on application of transaction through
+     * {@link WaltzClientCallbacks#applyTransaction(Transaction)}.
+     */
+    public void onApplication() {
+    }
+
+    /**
      * A method that is called on exception.
      * After this call, no retry will be attempted by the Waltz client.
      *
      * @param ex The exception that was thrown.
      */
     public void onException(Throwable ex) {
+    }
+
+    /**
+     * A method that is called on failure of optimistic locking.
+     * There can be a spurious lock failure with a very small probability.
+     * A spurious lock failure is the case that the lock has failed even though the locks high-water mark has not been changed.
+     * So, this callback should treated as an informational notification.
+     * Waltz client will automatically invoke the execute method again after the client consumed a transaction that
+     * caused the lock failure. And the execute method should decide whether the transaction should be retried or aborted.
+     */
+    public void onLockFailure() {
     }
 
 }

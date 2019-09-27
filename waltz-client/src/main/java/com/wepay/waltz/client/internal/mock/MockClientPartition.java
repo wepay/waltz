@@ -2,6 +2,7 @@ package com.wepay.waltz.client.internal.mock;
 
 import com.wepay.riff.util.RepeatingTask;
 import com.wepay.waltz.client.Transaction;
+import com.wepay.waltz.client.TransactionContext;
 import com.wepay.waltz.client.WaltzClientCallbacks;
 import com.wepay.waltz.client.internal.RpcClient;
 import com.wepay.waltz.client.internal.TransactionFuture;
@@ -114,13 +115,13 @@ final class MockClientPartition {
         }
     }
 
-    TransactionFuture append(AppendRequest request, boolean forceFailure) {
+    TransactionFuture append(AppendRequest request, TransactionContext context, boolean forceFailure, boolean forceLockFailure) {
         TransactionFuture future;
 
         // Serialize transaction requests
         synchronized (transactionMonitor) {
             ReqId reqId = request.reqId;
-            future = transactionMonitor.register(reqId, 10000);
+            future = transactionMonitor.register(reqId, context, 10000);
 
             if (future == null) {
                 // Transaction registration timed out
@@ -130,7 +131,7 @@ final class MockClientPartition {
             // If the future is completed before sending the request, don't send the request. It means a reqId collision.
             if (!future.isDone()) {
                 if (task.isRunning()) {
-                    serverPartition.append(request, forceFailure);
+                    serverPartition.append(request, forceFailure, forceLockFailure);
                 } else {
                     // Failed to send the message. Abort the transaction.
                     transactionMonitor.abort(reqId);
@@ -236,7 +237,7 @@ final class MockClientPartition {
                     FeedData feedData = (FeedData) message;
 
                     if (feedData.transactionId == clientHighWaterMark.get() + 1) {
-                        transactionMonitor.committed(feedData.reqId);
+                        TransactionContext context = transactionMonitor.committed(feedData.reqId);
 
                         Transaction transaction = new Transaction(
                             feedData.transactionId,
@@ -248,6 +249,11 @@ final class MockClientPartition {
                         try {
                             callbacks.applyTransaction(transaction);
                             clientHighWaterMark.incrementAndGet();
+
+                            if (context != null) {
+                                context.onApplication();
+                            }
+
                         } catch (Exception ex) {
                             callbacks.uncaughtException(transaction.reqId.partitionId(), transaction.transactionId, ex);
                         }
@@ -264,6 +270,11 @@ final class MockClientPartition {
 
                 } else if (message instanceof LockFailure) {
                     LockFailure lockFailure = (LockFailure) message;
+
+                    TransactionContext context = transactionMonitor.getTransactionContext(lockFailure.reqId);
+                    if (context != null) {
+                        context.onLockFailure();
+                    }
 
                     if (lockFailure.transactionId <= clientHighWaterMark.get()) {
                         transactionMonitor.abort(lockFailure.reqId);

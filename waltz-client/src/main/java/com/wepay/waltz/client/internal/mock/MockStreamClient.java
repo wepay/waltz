@@ -30,6 +30,7 @@ class MockStreamClient implements StreamClient {
     private int numPendingTransactions = 0;
 
     private final AtomicBoolean forceNextAppendFail = new AtomicBoolean(false);
+    private final AtomicBoolean forceNextLockFail = new AtomicBoolean(false);
 
     MockStreamClient(int clientId,
                      String clusterName,
@@ -78,7 +79,7 @@ class MockStreamClient implements StreamClient {
     }
 
     @Override
-    public TransactionFuture append(AppendRequest request) {
+    public TransactionFuture append(AppendRequest request, TransactionContext context) {
         int partitionId = request.reqId.partitionId();
 
         synchronized (lock) {
@@ -90,7 +91,8 @@ class MockStreamClient implements StreamClient {
         try {
             MockClientPartition partition = clientPartitions.get(partitionId);
             while (true) {
-                future = partition.append(request, forceNextAppendFail.compareAndSet(true, false));
+                future = partition.append(request, context,
+                    forceNextAppendFail.compareAndSet(true, false), forceNextLockFail.compareAndSet(true, false));
 
                 if (future == null) {
                     // Transaction registration timed out. Flush pending transactions and retry.
@@ -100,7 +102,7 @@ class MockStreamClient implements StreamClient {
                 }
             }
         } catch (Exception ex) {
-            future = new TransactionFuture(request.reqId);
+            future = new TransactionFuture(request.reqId, context);
             future.completeExceptionally(ex);
         }
 
@@ -182,4 +184,9 @@ class MockStreamClient implements StreamClient {
     void forceNextAppendFail() {
         forceNextAppendFail.set(true);
     }
+
+    void forceNextLockFail() {
+        forceNextLockFail.set(true);
+    }
+
 }

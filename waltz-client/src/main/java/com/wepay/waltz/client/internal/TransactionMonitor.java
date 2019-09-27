@@ -1,6 +1,7 @@
 package com.wepay.waltz.client.internal;
 
 import com.wepay.riff.util.Logging;
+import com.wepay.waltz.client.TransactionContext;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.exception.ClientClosedException;
 import com.wepay.waltz.exception.PartitionInactiveException;
@@ -138,7 +139,7 @@ public class TransactionMonitor {
      * @return a {@link TransactionFuture} which will complete when the corresponding transaction is {@link #committed(ReqId)}.
      *         Or, a {@code null}, if {@code registrationTimeout} has passed before registration.
      */
-    public TransactionFuture register(ReqId reqId, long registrationTimeout) {
+    public TransactionFuture register(ReqId reqId, TransactionContext context, long registrationTimeout) {
         synchronized (this) {
             final long due = System.currentTimeMillis() + registrationTimeout;
             while (state == State.STARTED && (numRegistered >= maxConcurrentTransactions)) {
@@ -155,7 +156,7 @@ public class TransactionMonitor {
                 }
             }
 
-            TransactionFuture future = new TransactionFuture(reqId);
+            TransactionFuture future = new TransactionFuture(reqId, context);
 
             if (state == State.STARTED) {
                 if (!registered.containsKey(reqId)) {
@@ -185,20 +186,45 @@ public class TransactionMonitor {
     }
 
     /**
+     * Returns the {@link TransactionContext} associated the specified {@code reqId}.
+     *
+     * @param reqId the {@code ReqId} of the transaction
+     * @return the transaction context associated with this reqId, null if not found
+     */
+    public TransactionContext getTransactionContext(ReqId reqId) {
+        synchronized (this) {
+            TransactionFuture future = registered.get(reqId);
+            if (future != null) {
+                return future.getTransactionContext();
+            }
+            return null;
+        }
+    }
+
+    /**
      * If the transaction monitor is not closed,
      * the corresponding {@link TransactionFuture} of the {@code reqId} is completed with {@code true}.
      *
      * @param reqId the {@code ReqId} of the transaction that was committed to a Waltz server.
+     * @return the transaction context associated with this reqId, null if not found.
      */
-    public void committed(ReqId reqId) {
+    public TransactionContext committed(ReqId reqId) {
         synchronized (this) {
+            TransactionFuture future = registered.get(reqId);
+            TransactionContext context = null;
             if (state != State.CLOSED) {
-                if (registered.containsKey(reqId)) {
+                if (future != null) {
                     // This is own transaction
+                    context = future.getTransactionContext();
+                    if (context == null) {
+                        logger.error("missing transaction context");
+                    }
                     complete(reqId, true);
                     notifyAll();
                 }
             }
+
+            return context;
         }
     }
 

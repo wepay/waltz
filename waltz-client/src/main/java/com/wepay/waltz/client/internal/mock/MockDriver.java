@@ -131,6 +131,13 @@ public class MockDriver implements WaltzClientDriver {
     }
 
     /**
+     * Forces the next lock fail.
+     */
+    public void forceNextLockFail() {
+        streamClient.forceNextLockFail();
+    }
+
+    /**
      * Suspends the feed.
      */
     public void suspendFeed() {

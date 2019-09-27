@@ -101,11 +101,11 @@ public class InternalStreamClient extends InternalBaseClient implements StreamCl
      * @return a {@link TransactionFuture} which completes when the append response is processed.
      */
     @Override
-    public TransactionFuture append(AppendRequest request) {
+    public TransactionFuture append(AppendRequest request, TransactionContext context) {
         Partition partition = getPartition(request.reqId.partitionId());
 
         while (true) {
-            TransactionFuture future = partition.append(request);
+            TransactionFuture future = partition.append(request, context);
 
             if (future != null) {
                 return future;

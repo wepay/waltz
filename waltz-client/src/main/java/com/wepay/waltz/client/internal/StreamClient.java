@@ -18,7 +18,7 @@ public interface StreamClient {
 
     TransactionBuilderImpl getTransactionBuilder(TransactionContext context);
 
-    TransactionFuture append(AppendRequest request);
+    TransactionFuture append(AppendRequest request, TransactionContext context);
 
     void flushTransactions();
 

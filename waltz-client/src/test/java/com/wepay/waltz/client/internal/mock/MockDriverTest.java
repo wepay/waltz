@@ -71,7 +71,7 @@ public class MockDriverTest {
             AppendRequest transaction = builder.buildRequest();
             reqIds.add(transaction.reqId);
 
-            futures.add(streamClient.append(transaction));
+            futures.add(streamClient.append(transaction, context));
 
             callbacks.awaitHighWaterMark(0, (long) i, 1000);
         }
@@ -126,7 +126,7 @@ public class MockDriverTest {
                 reqIds2.add(transaction.reqId);
             }
 
-            streamClient1.append(transaction);
+            streamClient1.append(transaction, context);
 
             callbacks1.awaitHighWaterMark(0, (long) i, 1000);
         }
@@ -152,7 +152,7 @@ public class MockDriverTest {
         AppendRequest transaction = builder.buildRequest();
         reqIds2.add(transaction.reqId);
 
-        streamClient2.append(transaction);
+        streamClient2.append(transaction, context);
         streamClient2.flushTransactions();
 
         callbacks2.awaitHighWaterMark(0, (long) numTransactions, 1000);
@@ -190,8 +190,8 @@ public class MockDriverTest {
         AppendRequest transaction1 = builder1.buildRequest();
         AppendRequest transaction2 = builder2.buildRequest();
 
-        TransactionFuture future1 = streamClient1.append(transaction1);
-        TransactionFuture future2 = streamClient2.append(transaction2);
+        TransactionFuture future1 = streamClient1.append(transaction1, context1);
+        TransactionFuture future2 = streamClient2.append(transaction2, context2);
 
         streamClient1.flushTransactions();
         streamClient2.flushTransactions();
@@ -227,7 +227,7 @@ public class MockDriverTest {
 
             AppendRequest request = builder.buildRequest();
 
-            TransactionFuture future = streamClient.append(request);
+            TransactionFuture future = streamClient.append(request, context);
             streamClient.flushTransactions();
 
             if (!future.get(1000, TimeUnit.MILLISECONDS)) {
@@ -268,7 +268,7 @@ public class MockDriverTest {
                 driver.forceNextAppendFail();
             }
 
-            TransactionFuture future = streamClient.append(transaction);
+            TransactionFuture future = streamClient.append(transaction, context);
             streamClient.flushTransactions();
 
             if (forceNextFail) {
@@ -313,7 +313,7 @@ public class MockDriverTest {
 
             AppendRequest transaction = builder.buildRequest();
 
-            futures.add(streamClient1.append(transaction));
+            futures.add(streamClient1.append(transaction, context));
         }
 
         streamClient1.flushTransactions();
@@ -341,7 +341,7 @@ public class MockDriverTest {
         context.execute(builder);
 
         AppendRequest request = builder.buildRequest();
-        streamClient2.append(request);
+        streamClient2.append(request, context);
         streamClient2.flushTransactions();
 
         callbacks2.awaitHighWaterMark(0, (long) numTransactions, 1000);
