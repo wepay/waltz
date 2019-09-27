@@ -206,6 +206,7 @@ public class TransactionMonitor {
      * the corresponding {@link TransactionFuture} of the {@code reqId} is completed with {@code true}.
      *
      * @param reqId the {@code ReqId} of the transaction that was committed to a Waltz server.
+     * @return the transaction context associated with this reqId, null if not found.
      */
     public TransactionContext committed(ReqId reqId) {
         synchronized (this) {
