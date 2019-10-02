@@ -27,15 +27,15 @@ Waltz Storage stores transaction data in the local file system. The root directo
 
 The control file begins with the header which contains the following information.
 
-| Field | Data Type |
-|-------|-----------|
-| format version number | int |
-| creation time | long |
-| key | UUID |
-| the number of partitions | int |
-| reserved for future use | 96 bytes |
+| Field                    | Data Type | Size (bits)|
+|--------------------------|-----------|------------|
+| format version number    | int       |    32      |
+| creation time            | long      |    64      |
+| key                      | UUID      |   128      |
+| the number of partitions | int       |    32      |
+| reserved for future use  | -         |   768      |
 
-The header size is 128 bytes.
+The total header size is 128 bytes (1024 bits).
 
 The key is UUID which is generated when the cluster is configured by CreateCluster utility. The key identifies the cluster to which the cluster it belongs. If an open request comes from a Waltz Server whose key does not match the key in the control file, Waltz Storage rejects the request.
 
@@ -43,36 +43,38 @@ The key is UUID which is generated when the cluster is configured by CreateClust
 
 After the header follows the actual body of control data. It is a list of _Partition Info_. The number of _Partition Infos_ is the number of partitions recorded in the header.
 
-| Field | Data Type |
-|-------|-----------|
-| partition id | int |
-| partition info struct 1 session id | long |
-| partition info struct 1 low-water mark | long |
-| partition info struct 1 local low-water mark | long |
-| partition info struct 1 checksum | int |
-| partition info struct 2 session id | long |
-| partition info struct 2 low-water mark | long |
-| partition info struct 2 local low-water mark | long |
-| partition info struct 2 checksum | int |
+|       Field                                  |    Data Type      | size(bits) |
+|----------------------------------------------|-------------------|------------|
+| partition id                                 |      int          |    32      |
+| partition info struct 1 session id           |      long         |    64      |
+| partition info struct 1 low-water mark       |      long         |    64      |
+| partition info struct 1 local low-water mark |      long         |    64      |
+| partition info struct 1 checksum             |      int          |    32      |
+| partition info struct 2 session id           |      long         |    64      |
+| partition info struct 2 low-water mark       |      long         |    64      |
+| partition info struct 2 local low-water mark |      long         |    64      |
+| partition info struct 2 checksum             |      int          |    32      |
+
+Each _Partition Info_ record is 60 bytes (480 bits)
 
 A partition info struct records the session ID, the low-water mark, the local low-water mark, and the checksum of the struct itself. The low-water mark is the high-water mark of the partition in the cluster when the session is successfully started. The local low-water mark is the highest valid transaction ID of the partition in the storage when the session is successfully started. The local low-water mark can be smaller than the low-water mark when the storage is falling behind.
 
-Two partition info structs are updated alternately when a new storage session started, and the update is immediately flushed to the disk. The checksum is checked when a partition of opened. Since the atomicity of I/O is not guaranteed, it is possible that an update is not completely written to the file when a fault occurs during I/O. If one of the structs has a checksum error, we ignore it and use the other struct, which means we rollback the partition. We assume at least one of them is always valid. If neither of structs is valid, we fail to open the partition.
+Two partition info structs are updated alternately when a new storage session is started, and the update is immediately flushed to the disk. The checksum is checked when a partition of opened. Since the atomicity of I/O is not guaranteed, it is possible that an update is not completely written to the file when a fault occurs during I/O. If one of the structs has a checksum error, we ignore it and use the other struct, which means we rollback the partition. We assume at least one of them is always valid. If neither of structs is valid, we fail to open the partition.
 
 ## Segment Data File
 
 ### Data File Header
 
-| Field | Data Type |
-|-------|-----------|
-| format version number | int |
-| creation time | long |
-| cluster key | UUID |
-| partition id | int |
-| first transaction ID | long |
-| reserved for future use | 88 bytes |
+| Field                   |   Data Type  | Size (bits) |
+|-------------------------|--------------|-------------|
+| format version number   |   int        |      32     |
+| creation time           |   long       |      64     |
+| cluster key             |   UUID       |     128     |
+| partition id            |   int        |      32     |
+| first transaction ID    |   long       |      64     |
+| reserved for future use |    -         |     704     |
 
-The header size of 128 bytes. The cluster key is a UUID assigned to a cluster.
+The header size is 128 bytes. The cluster key is a UUID assigned to a cluster.
 
 The first transaction ID is the ID of the first transaction in the segment.
 The data file body is a list of transaction records. Each transaction record contains the following information.
