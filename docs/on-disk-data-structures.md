@@ -13,7 +13,7 @@ Waltz Storage stores transaction data in the local file system. The root directo
 <storage directory>/                # the root directory of the storage (configurable)
     waltz-storage.ctl               # the control file
     0/                              # the directory for partition 0
-        0000000000000000000.seg     # the segment data file. The file name is 
+        0000000000000000000.seg     # the segment data file. The file name is
                                     # <first transaction id in the segment>.seq
         0000000000000000000.idx     # the segment's index file
         ....
@@ -34,7 +34,7 @@ The control file begins with the header which contains the following information
 | key | UUID |
 | the number of partitions | int |
 | reserved for future use | 96 bytes |
- 
+
 The header size is 128 bytes.
 
 The key is UUID which is generated when the cluster is configured by CreateCluster utility. The key identifies the cluster to which the cluster it belongs. If an open request comes from a Waltz Server whose key does not match the key in the control file, Waltz Storage rejects the request.
@@ -42,7 +42,7 @@ The key is UUID which is generated when the cluster is configured by CreateClust
 ### Control File Body
 
 After the header follows the actual body of control data. It is a list of _Partition Info_. The number of _Partition Infos_ is the number of partitions recorded in the header.
- 
+
 | Field | Data Type |
 |-------|-----------|
 | partition id | int |
@@ -88,9 +88,9 @@ The data file body is a list of transaction records. Each transaction record con
 | transaction data checksum | int |
 | transaction data | byte[] |
 | checksum | int |
- 
+
 When new records are written, Waltz Storage flushes the file channel to guarantee the record persistence before responding to Waltz Server. The index file is also updated, but flush is delayed to reduce physical I/Os until checkpoint. The checkpoint interval is 1000 transactions (hardcoded). When a checkpoint is reached, Waltz Storage flushes the index file before adding a new record. This means, if a fault occurs between checkpoints, we are not sure if the index is valid. So, the index file recovery is necessary every time Waltz Storage starts up. Waltz Storage scans the records from the last checkpoint and rebuild index for record after the last checkpoint.
- 
+
 ## Segment Index File
 
 ### Index File Header
@@ -104,9 +104,9 @@ Index File Body is an array of transaction record offsets.
 | Field | Data Type |
 |-------|-----------|
 | transaction record offset | long |
- 
+
 Each element corresponds to a transaction in the segment. The array index is _&lt;transaction id&gt;_ - _&lt;first transaction id&gt;_. Each element is byte offsets of the transaction record in the data file.
- 
+
 ## Checkpoint Interval
 
 In the recovery process described above, the last known clean transaction ID is updated more often than a stable environment since it is updated during the recovery process. A drawback is that the number of transactions after the last known clean transaction ID can become large when no fault occurs for a long period of time. This is bad when a recovery requires a truncation to the last known clean transaction ID. So, Waltz provides a configuration parameter "storage.checkpointInterval" which is an interval in transactions for forced initiation of a new session.

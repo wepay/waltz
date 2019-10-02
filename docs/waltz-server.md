@@ -33,28 +33,28 @@ Waltz Server stores the metadata of partitions in Zookeeper for recovery. The ZN
 
 ### Partition Metadata
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Generation | int | The generation number |
-| Session ID | long | The current store session ID |
-| **Map of Replica ID to Replica State (repeated)** |  |
-| Replica ID | ReplicaID | The replica ID
-| Replica State | ReplicaState | The replica state |
+| Field                                             | Data Type    | Description                  |
+| -------                                           | -----------  | -------------                |
+| Generation                                        | int          | The generation number        |
+| Session ID                                        | long         | The current store session ID |
+| **Map of Replica ID to Replica State (repeated)** |              |
+| Replica ID                                        | ReplicaID    | The replica ID
+| Replica State                                     | ReplicaState | The replica state            |
 
 ### ReplicaId
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Partition ID | int | The partition ID |
-| Storage Node Connect String | String | The storage node connect string |
+| Field                       | Data Type   | Description                     |
+| -------                     | ----------- | -------------                   |
+| Partition ID                | int         | The partition ID                |
+| Storage Node Connect String | String      | The storage node connect string |
 
 ### ReplicaState
 
-| Field | Data Type | Description |
-|-------|-----------|-------------|
-| Replica ID | ReplicaID | The replica ID |
-| Session ID | long | The ID of the store session that this replica is currently engaged. |
-| Closing High-water mark | long | The high-water mark when this store session closed. It is ReplicaState.UNRESOLVED when the session starts. This field is set by Recovery Manager when the closing high-water mark of the session is resolved. |
+| Field                   | Data Type   | Description                                                                                                                                                                                                   |
+| -------                 | ----------- | -------------                                                                                                                                                                                                 |
+| Replica ID              | ReplicaID   | The replica ID                                                                                                                                                                                                |
+| Session ID              | long        | The ID of the store session that this replica is currently engaged.                                                                                                                                           |
+| Closing High-water mark | long        | The high-water mark when this store session closed. It is ReplicaState.UNRESOLVED when the session starts. This field is set by Recovery Manager when the closing high-water mark of the session is resolved. |
 
 ## Recovery Procedure
 
@@ -64,7 +64,7 @@ A recovery procedure is applied whenever Store Session Manager creates a new sto
 2. Create new Replica Sessions
 3. Create a new Store Session with the new session ID and the new Replica Sessions.
 4. Open the Store Session
-    1. Open each Replica Sessions and start Replica Session Task 
+    1. Open each Replica Sessions and start Replica Session Task
 5. In each Replica Session Task,
     1. Wait for a connection to establish
     2. After connected,
@@ -78,7 +78,7 @@ A recovery procedure is applied whenever Store Session Manager creates a new sto
                 1. If the max transaction ID is greater than the low-water mark, propose its max transaction ID as the closing high-water mark.
         4. Start catch-up to any replica ahead of itself
             1. Check if the closing high-water mark is resolved (a quorum is established)
-            2. If yes, 
+            2. If yes,
                 1. Set the low-water mark
                 2. If the replica has fully caught up,
                     1. Truncate any dirty transactions
@@ -88,7 +88,7 @@ A recovery procedure is applied whenever Store Session Manager creates a new sto
     1. For each Replica State,
         1. If the replica is clean,
             1. Set the session id to the new store session id
-            2. Set the closing high-water mark to ReplicaState.UNRESOLVED 
+            2. Set the closing high-water mark to ReplicaState.UNRESOLVED
         2. Else if the closing high-water mark is ReplicaState.UNRESOLVED,
             1. Set the closing high-water mark to the resolved closing high-water mark leaving the session id unchanged
         3. Otherwise,

@@ -22,7 +22,7 @@ There are 3 steps to setup a Waltz cluster.
 
 (Note: The cli_config_path file should contain information about other config parameters such as "zookeeper.connectString", "cluster.root", "zookeeper.sessionTimeout" and ssl config prefix i.e. "ssl." (wherever required).
 
-Step 1: Use `create` command to create a cluster 
+Step 1: Use `create` command to create a cluster
 
 ```
 waltz_uber=/path/to/waltz-uber-X.Y.Z.jar
@@ -157,12 +157,12 @@ A:
 The following is the minimum required configuration parameters.
 
 
-| Parameter Name | Description | Default Value |
-|----------------|-------------|---------------|
-| zookeeper.connectString | zookeeper connect string | |
-| zookeeper.sessionTimeout | zookeeper session timeout | |
-| cluster.root | cluster root path in Zookeeper | |
-| server.port | server port number | |
+| Parameter Name           | Description                    | Default Value   |
+| ----------------         | -------------                  | --------------- |
+| zookeeper.connectString  | zookeeper connect string       |                 |
+| zookeeper.sessionTimeout | zookeeper session timeout      |                 |
+| cluster.root             | cluster root path in Zookeeper |                 |
+| server.port              | server port number             |                 |
 
 ### Parameters for Metrics
 
@@ -173,9 +173,9 @@ This setting enables the following endpoints.
 * /metrics
 * /health
 
-| Parameter Name | Description | Default Value |
-|----------------|-------------|---------------|
-| server.jetty.port | server jetty port number | |
+| Parameter Name    | Description              | Default Value   |
+| ----------------  | -------------            | --------------- |
+| server.jetty.port | server jetty port number |                 |
 
 ### Security Configuration Parameters
 
@@ -183,33 +183,33 @@ It is strongly recommended to set security configuration parameters in productio
 
 #### Configuration parameters for the client-server communication
 
-| Parameter Name | Description | Default Value |
-|----------------|-------------|---------------|
-| server.ssl.keyStore.location | key store location path | |
-| server.ssl.keyStore.password | key store password | |
-| server.ssl.keyStore.type | key store type | JKS |
-| server.ssl.trustStore.location | trust store location path | |
-| server.ssl.trustStore.password | trust store password | |
-| server.ssl.trustStore.type | trust store type | JKS |
-| server.ssl.keyManager.algorithm | algorithm used when creating a KeyManagerFactory | SunX509 |
-| server.ssl.trustManager.algorithm | algorithm used when creating a TrustManagerFactory | SunX509 |
+| Parameter Name                    | Description                                        | Default Value   |
+| ----------------                  | -------------                                      | --------------- |
+| server.ssl.keyStore.location      | key store location path                            |                 |
+| server.ssl.keyStore.password      | key store password                                 |                 |
+| server.ssl.keyStore.type          | key store type                                     | JKS             |
+| server.ssl.trustStore.location    | trust store location path                          |                 |
+| server.ssl.trustStore.password    | trust store password                               |                 |
+| server.ssl.trustStore.type        | trust store type                                   | JKS             |
+| server.ssl.keyManager.algorithm   | algorithm used when creating a KeyManagerFactory   | SunX509         |
+| server.ssl.trustManager.algorithm | algorithm used when creating a TrustManagerFactory | SunX509         |
 
 #### Configuration parameters for the server-storage communication
 
-| Parameter Name | Description | Default Value |
-|----------------|-------------|---------------|
-| storage.ssl.keyStore.location | key store location path | |
-| storage.ssl.keyStore.password | key store password | |
-| storage.ssl.keyStore.type | key store type | JKS |
-| storage.ssl.trustStore.location | trust store location path | |
-| storage.ssl.trustStore.password | trust store password | |
-| storage.ssl.trustStore.type | trust store type | JKS |
-| storage.ssl.keyManager.algorithm | algorithm used when creating a KeyManagerFactory | SunX509 |
-| storage.ssl.trustManager.algorithm | algorithm used when creating a TrustManagerFactory | SunX509 |
+| Parameter Name                     | Description                                        | Default Value   |
+| ----------------                   | -------------                                      | --------------- |
+| storage.ssl.keyStore.location      | key store location path                            |                 |
+| storage.ssl.keyStore.password      | key store password                                 |                 |
+| storage.ssl.keyStore.type          | key store type                                     | JKS             |
+| storage.ssl.trustStore.location    | trust store location path                          |                 |
+| storage.ssl.trustStore.password    | trust store password                               |                 |
+| storage.ssl.trustStore.type        | trust store type                                   | JKS             |
+| storage.ssl.keyManager.algorithm   | algorithm used when creating a KeyManagerFactory   | SunX509         |
+| storage.ssl.trustManager.algorithm | algorithm used when creating a TrustManagerFactory | SunX509         |
 
 ### More Server Configuration Parameters
 
-See _com.wepay.waltz.server.WaltzServerConfig_ for more configuration parameters. 
+See _com.wepay.waltz.server.WaltzServerConfig_ for more configuration parameters.
 
 ## Starting a WaltzServer instance
 
@@ -225,14 +225,14 @@ Create a property file as a configuration file.
 
 The following is the minimum required configuration parameters.
 
-| Parameter Name | Description | Default Value |
-|----------------|-------------|---------------|
-| storage.port | storage port number | |
-| storage.admin | port	storage admin port number | |
-| storage.directory | path to data directory | |
-| storage.segment | size.threshold	threshold of segment size (a new segment is created when a segment size exceed this value) | 1000000000 |
-| cluster.key | cluster key (which is a unique identifier for the cluster) | |
-| cluster.numPartitions | total number of partitions in the cluster | |
+| Parameter Name        | Description                                                                                                | Default Value    |
+| ----------------      | -------------                                                                                              | ---------------  |
+| storage.port          | storage port number                                                                                        |                  |
+| storage.admin         | port	storage admin port number                                                                          |                    |
+| storage.directory     | path to data directory                                                                                     |                  |
+| storage.segment       | size.threshold	threshold of segment size (a new segment is created when a segment size exceed this value) | 1000000000 |
+| cluster.key           | cluster key (which is a unique identifier for the cluster)                                                 |                  |
+| cluster.numPartitions | total number of partitions in the cluster                                                                  |                  |
 
 ### Parameters for Metrics
 
@@ -243,9 +243,9 @@ This setting enables the following endpoints.
 * /metrics
 * /health
 
-| Parameter Name | Description | Default Value |
-|----------------|-------------|---------------|
-| storage.jetty.port | storage jetty port number | |
+| Parameter Name     | Description               | Default Value   |
+| ----------------   | -------------             | --------------- |
+| storage.jetty.port | storage jetty port number |                 |
 
 ## Security Configuration Parameters
 
@@ -253,16 +253,16 @@ It is strongly recommended to set security configuration parameters in productio
 
 ### Configuration parameters for the server-storage communication
 
-| Parameter Name | Description | Default Value |
-|----------------|-------------|---------------|
-| storage.ssl.keyStore.location | key store location path
-| storage.ssl.keyStore.password | key store password
-| storage.ssl.keyStore.type | key store type | JKS |
-| storage.ssl.trustStore.location | trust store location path | |
-| storage.ssl.trustStore.password | trust store password | |
-| storage.ssl.trustStore.type | trust store type | JKS |
-| storage.ssl.keyManager.algorithm | algorithm used when creating a KeyManagerFactory | SunX509 |
-| storage.ssl.trustManager.algorithm | algorithm used when creating a TrustManagerFactory | SunX509 |
+| Parameter Name                     | Description                                        | Default Value   |
+| ----------------                   | -------------                                      | --------------- |
+| storage.ssl.keyStore.location      | key store location path
+| storage.ssl.keyStore.password      | key store password
+| storage.ssl.keyStore.type          | key store type                                     | JKS             |
+| storage.ssl.trustStore.location    | trust store location path                          |                 |
+| storage.ssl.trustStore.password    | trust store password                               |                 |
+| storage.ssl.trustStore.type        | trust store type                                   | JKS             |
+| storage.ssl.keyManager.algorithm   | algorithm used when creating a KeyManagerFactory   | SunX509         |
+| storage.ssl.trustManager.algorithm | algorithm used when creating a TrustManagerFactory | SunX509         |
 
 ## Starting a WaltzStorage instance
 
@@ -287,11 +287,11 @@ WaltzClient client = new WaltzClient(callback, new WaltzClientConfig(config));
 
 The following is the minimum required configuration parameters.
 
-| Parameter Name | Description | Default Value |
-|----------------|-------------|---------------|
-|zookeeper.connectString | zookeeper connect string | |
-|zookeeper.sessionTimeout | zookeeper session timeout | |
-|cluster.root | cluster root path in Zookeeper | |
+| Parameter Name           | Description                    | Default Value   |
+| ----------------         | -------------                  | --------------- |
+| zookeeper.connectString  | zookeeper connect string       |                 |
+| zookeeper.sessionTimeout | zookeeper session timeout      |                 |
+| cluster.root             | cluster root path in Zookeeper |                 |
 
 ### Security Configuration Parameters
 
@@ -299,19 +299,19 @@ It is strongly recommended to set security configuration parameters in productio
 
 #### Configuration parameters for the client-server communication
 
-| Parameter Name | Description | Default Value |
-|----------------|-------------|---------------|
-| client.ssl.keyStore.location | key store location path | |
-| client.ssl.keyStore.password | key store password | |
-| client.ssl.keyStore.type | key store type	| JKS |
-| client.ssl.trustStore.location | trust store location path | |
-| client.ssl.trustStore.password | trust store password | |
-| client.ssl.trustStore.type | trust store type | JKS |
-| client.ssl.keyManager.algorithm | algorithm used when creating a KeyManagerFactory | SunX509 |
-| client.ssl.trustManager.algorithm | algorithm used when creating a TrustManagerFactory | SunX509 |
+| Parameter Name                    | Description                                        | Default Value   |
+| ----------------                  | -------------                                      | --------------- |
+| client.ssl.keyStore.location      | key store location path                            |                 |
+| client.ssl.keyStore.password      | key store password                                 |                 |
+| client.ssl.keyStore.type          | key store type                                     | JKS             |
+| client.ssl.trustStore.location    | trust store location path                          |                 |
+| client.ssl.trustStore.password    | trust store password                               |                 |
+| client.ssl.trustStore.type        | trust store type                                   | JKS             |
+| client.ssl.keyManager.algorithm   | algorithm used when creating a KeyManagerFactory   | SunX509         |
+| client.ssl.trustManager.algorithm | algorithm used when creating a TrustManagerFactory | SunX509         |
 
 ### Other Configuration Parameters
 
-| Parameter Name | Description | Default Value |
-|----------------|-------------|---------------|
-| client.numTransactionRetryThreads | number of threads used for retries of transactions | 1 |
+| Parameter Name                    | Description                                        | Default Value   |
+| ----------------                  | -------------                                      | --------------- |
+| client.numTransactionRetryThreads | number of threads used for retries of transactions | 1               |

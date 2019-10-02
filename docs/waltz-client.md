@@ -19,7 +19,7 @@ An application must define a subclass of TransactionContext to send a transactio
 6. The Waltz client sends a append request to a Waltz server to write the transaction data.
 7. The control returns to the application.
 8. In the background, the Waltz client is monitoring the status of the append request.
-    1. If the append request was not successful, the Waltz client puts the transaction context into the retry queue. This means that the commit order may be different from the order that transactions are submitted. 
+    1. If the append request was not successful, the Waltz client puts the transaction context into the retry queue. This means that the commit order may be different from the order that transactions are submitted.
     2. The Waltz client executes the failed transaction context asynchronously.
 
 Transaction data successfully appended to the log will be streamed back to the application eventually.
@@ -28,7 +28,7 @@ Transaction data successfully appended to the log will be streamed back to the a
 2. The Walz client invokes the `applyTransaction` callback
 3. The application code (the `applyTransaction` callback) process the transaction and updates the client high-water mark.
 
-TransactionContext also gets notifications through callbacks. 
+TransactionContext also gets notifications through callbacks.
 
 * onCompletion(true) is called when the transaction if committed
 * onCompletion(false) is called when the transaction failed, and no retry is scheduled.
@@ -38,7 +38,7 @@ Although Waltz client does not provide a blocking behavior that is to block an a
 
 ## Client-Server Interactions
 
-There are two kinds of interaction with servers, streaming and RPC. Streaming guarantees ordering of requests and responses (including transaction feeds). RPC does not guarantee or ordering. RPC is used for retrieving transaction data for a particular transaction ID. Everything else uses streaming. 
+There are two kinds of interaction with servers, streaming and RPC. Streaming guarantees ordering of requests and responses (including transaction feeds). RPC does not guarantee or ordering. RPC is used for retrieving transaction data for a particular transaction ID. Everything else uses streaming.
 
 `WaltzClient` has two internal clients, `StreamClient` (the implementation class is `InternalStreamClient`) and `RpcClient` (the implementation class is `InternalRpcClient`). They manages streaming connections and RPC connections, respectively. They have similar structures. Actually their implementation classes extend the common superclass `InternalBaseClient`.
 
