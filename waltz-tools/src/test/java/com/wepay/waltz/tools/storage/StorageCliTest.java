@@ -502,6 +502,9 @@ public final class StorageCliTest {
             maxTransactionId = (Long) destinationClient.getMaxTransactionId(-1, partitionId).get();
             assertNotNull(maxTransactionId);
             assertEquals(9, maxTransactionId.longValue());
+
+            sourceClient.close();
+            destinationClient.close();
         } finally {
             helper.closeAll();
         }

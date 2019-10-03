@@ -210,6 +210,11 @@ project(':waltz-server') {
             project(':waltz-storage'),
 
             "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
+            "com.wepay.riff:riff-config:$riffVersion",
+            "com.wepay.riff:riff-metrics:$riffVersion",
+            "com.wepay.zktools:zktools:$zkToolsVersion",
+            "io.netty:netty-all:$nettyVersion",
+            "org.slf4j:slf4j-api:$slf4jVersion",
             "org.eclipse.jetty:jetty-server:$jettyVersion",
             "org.eclipse.jetty:jetty-servlet:$jettyVersion",
         )
@@ -243,6 +248,11 @@ project(':waltz-storage') {
             project(':waltz-common'),
 
             "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion",
+            "com.wepay.riff:riff-config:$riffVersion",
+            "com.wepay.riff:riff-metrics:$riffVersion",
+            "com.wepay.zktools:zktools:$zkToolsVersion",
+            "io.netty:netty-all:$nettyVersion",
+            "org.slf4j:slf4j-api:$slf4jVersion",
             "org.yaml:snakeyaml:$yamlVersion",
             "org.eclipse.jetty:jetty-server:$jettyVersion",
             "org.eclipse.jetty:jetty-servlet:$jettyVersion",
@@ -323,7 +333,12 @@ project(':waltz-uber') {
 project(':waltz-client') {
     dependencies {
         compile (
-            project(':waltz-common')
+            project(':waltz-common'),
+
+            "com.wepay.riff:riff-config:$riffVersion",
+            "com.wepay.zktools:zktools:$zkToolsVersion",
+            "io.netty:netty-all:$nettyVersion",
+            "org.slf4j:slf4j-api:$slf4jVersion"
         )
 
         testCompile (
@@ -364,7 +379,10 @@ project(':waltz-test') {
             project(':waltz-server'),
             project(':waltz-client'),
             project(':waltz-storage'),
-            project(':waltz-tools')
+            project(':waltz-tools'),
+
+            "com.wepay.zktools:zktools:$zkToolsVersion",
+            "io.netty:netty-all:$nettyVersion"
         )
 
         testCompile (
