@@ -59,7 +59,6 @@ public class PerformanceCliTest {
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
         String[] args = {
                 "test-producers",
-                configFilePath,
                 "--txn-size",
                 "128",
                 "--txn-per-thread",
@@ -68,8 +67,12 @@ public class PerformanceCliTest {
                 "2",
                 "--interval",
                 "10",
+                "--cli-config-path",
+                configFilePath,
                 "--lock-pool-size",
-                "2"
+                "2",
+                "--num-active-partitions",
+                "1"
         };
         try {
             helper.startZooKeeperServer();
@@ -99,11 +102,14 @@ public class PerformanceCliTest {
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
         String[] args = {
                 "test-consumers",
-                configFilePath,
                 "--txn-size",
                 "128",
                 "--num-txn",
-                "10"
+                "10",
+                "--cli-config-path",
+                configFilePath,
+                "--num-active-partitions",
+                "1"
         };
 
         try {

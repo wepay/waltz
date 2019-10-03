@@ -17,11 +17,9 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -36,11 +34,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class PerformanceCli extends SubcommandCli {
 
-    private static final int PARTITION_ID = 0;
-    private static final Random RANDOM_LOCK_GENERATOR = new Random();
-    private static final String FULL_PATH_CONFIG_FILE = "full_path_config_file";
     private static final int MILLISECONDS_IN_SECOND = 1000;
     private static final int BYTES_IN_MEGABYTE = 1024 * 1024;
+    private static final Random RANDOM = new Random();
 
     private PerformanceCli(String[] args, boolean useByTest) {
         super(args, useByTest, Arrays.asList(
@@ -51,19 +47,28 @@ public final class PerformanceCli extends SubcommandCli {
 
     private static final class RunProducers extends PerformanceBase {
         private static final String NAME = "test-producers";
-        private static final String DESCRIPTION = "Runs a producer performance test";
+        private static final String DESCRIPTION = "Test and analyze performance of Waltz producer";
 
         private static final int LAMBDA = 1;
         private static final int EXTRA_TRANSACTION_PER_THREAD = 1;
+        private static final int DEFAULT_LOCK_POOL_SIZE = 0;
+
+        private final AtomicLong totalResponseTimeMilli;
+        private final Set<Integer> toMountClients;
 
         private int txnPerThread;
         private int numThread;
         private int avgInterval;
+        private int lockPoolSize;
+        private int totalRetry;
         private CountDownLatch allClientsReady;
         private CountDownLatch allMountComplete;
 
         private RunProducers(String[] args) {
             super(args);
+            this.totalResponseTimeMilli = new AtomicLong(0);
+            this.lockPoolSize = DEFAULT_LOCK_POOL_SIZE;
+            this.toMountClients = new HashSet<>();
         }
 
         @Override
@@ -88,9 +93,21 @@ public final class PerformanceCli extends SubcommandCli {
                     .desc("Specify average interval(millisecond) between transactions")
                     .hasArg()
                     .build();
+            Option cliCfgOption = Option.builder("c")
+                    .longOpt("cli-config-path")
+                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config")
+                    .hasArg()
+                    .build();
+            Option numActivePartitionOption = Option.builder("ap")
+                    .longOpt("num-active-partitions")
+                    .desc("Specify number of partitions to interact with. For example, if set to 3, transactions will be evenly"
+                            + "distributed among partition 0, 1 and 2. Default to 1")
+                    .hasArg()
+                    .build();
             Option lockPoolSizeOption = Option.builder("l")
                     .longOpt("lock-pool-size")
-                    .desc("Specify size of lock pool")
+                    .desc("Specify size of lock pool. Greater the size, less likely transactions get rejected."
+                            + "No transaction gets rejected when size is 0. Default to 0")
                     .hasArg()
                     .build();
 
@@ -98,30 +115,28 @@ public final class PerformanceCli extends SubcommandCli {
             txnPerThreadOption.setRequired(true);
             numThreadOption.setRequired(true);
             intervalOption.setRequired(true);
+            cliCfgOption.setRequired(true);
+            numActivePartitionOption.setRequired(false);
             lockPoolSizeOption.setRequired(false);
 
             options.addOption(txnSizeOption);
             options.addOption(txnPerThreadOption);
             options.addOption(numThreadOption);
             options.addOption(intervalOption);
+            options.addOption(cliCfgOption);
+            options.addOption(numActivePartitionOption);
             options.addOption(lockPoolSizeOption);
         }
 
         @Override
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             try {
-                // check if full path config file provided
-                if (cmd.getArgList().size() == 0) {
-                    throw new IllegalArgumentException("Missing required argument: <full_path_config_file>");
-                }
-                this.clientConfig = getWaltzClientConfig(cmd.getArgList().get(0));
+                // check required arguments
                 txnSize = Integer.parseInt(cmd.getOptionValue("txn-size"));
                 if (txnSize < 0) {
                     throw new IllegalArgumentException("Found negative: txn-size must be equal or greater than 0");
                 }
                 data = new byte[txnSize];
-
-                // check required arguments
                 txnPerThread = Integer.parseInt(cmd.getOptionValue("txn-per-thread"));
                 if (txnPerThread < 0) {
                     throw new IllegalArgumentException("Found negative: txn-per-thread must be greater or equals to 0");
@@ -134,8 +149,15 @@ public final class PerformanceCli extends SubcommandCli {
                 if (avgInterval < 0) {
                     throw new IllegalArgumentException("Found negative: interval must be greater or equals to 0");
                 }
+                waltzClientConfig = getWaltzClientConfig(cmd.getOptionValue("cli-config-path"));
 
                 // check optional argument
+                if (cmd.hasOption("num-active-partitions")) {
+                    numActivePartitions = Integer.parseInt(cmd.getOptionValue("num-active-partitions"));
+                    if (numActivePartitions < 1) {
+                        throw new IllegalArgumentException("Number of active partitions must be greater of equals to 1");
+                    }
+                }
                 if (cmd.hasOption("lock-pool-size")) {
                     lockPoolSize = Integer.parseInt(cmd.getOptionValue("lock-pool-size"));
                     if (lockPoolSize < 0) {
@@ -151,7 +173,7 @@ public final class PerformanceCli extends SubcommandCli {
                 ExecutorService executor = Executors.newFixedThreadPool(numThread);
                 for (int i = 0; i < numThread; i++) {
                     DummyCallbacks callbacks = new DummyCallbacks();
-                    WaltzClient client = new WaltzClient(callbacks, clientConfig);
+                    WaltzClient client = new WaltzClient(callbacks, waltzClientConfig);
                     toMountClients.add(client.clientId());
 
                     // all thread start, but transactions won't be fired until all clients are ready
@@ -169,17 +191,8 @@ public final class PerformanceCli extends SubcommandCli {
             }
         }
 
-        @Override
         protected String getUsage() {
-            List<String> descriptions = new ArrayList<>();
-            descriptions.add("This is a CLI tool designed to analysis performance of Waltz producer. "
-                    + "Each printout \"+\" represent a transaction success. "
-                    + "Each printout \"_\" represent a transaction rejection.");
-            descriptions.add("As a result, statistic will be collected and printed including Transaction/sec, MB/sec, "
-                    + "Retry/Transaction, milliSec/Transaction and etc.");
-            descriptions.add("lockPoolSize is optional. If not provide or equals to 0, no transaction will be rejected."
-                    + "Otherwise, greater the lockPoolSize, less likely transactions get rejected.");
-            return buildUsage(descriptions, getOptions(), FULL_PATH_CONFIG_FILE);
+            return buildUsage(NAME, DESCRIPTION, getOptions());
         }
 
         /**
@@ -199,12 +212,70 @@ public final class PerformanceCli extends SubcommandCli {
             double duration = 1.0 * (System.currentTimeMillis() - startTime.get()) / MILLISECONDS_IN_SECOND;
 
             StringBuilder sb = new StringBuilder();
-            sb.append(String.format("%nAppended %d transactions, with total %.4f MB, in %.2f secs%n", totalTxnSent, (1.0 * totalBytesSent / BYTES_IN_MEGABYTE), duration));
+            sb.append(String.format("Appended %d transactions, with total %.4f MB, in %.2f secs%n", totalTxnSent, (1.0 * totalBytesSent / BYTES_IN_MEGABYTE), duration));
             sb.append(String.format("Transaction/sec: %.4f%n", (1.0 * totalTxnSent / duration)));
             sb.append(String.format("MB/sec: %.4f%n", totalBytesSent / duration / BYTES_IN_MEGABYTE));
-            sb.append(String.format("%nRetry/Transaction: %.4f%n", (1.0 * totalRetry / totalTxnSent)));
-            sb.append(String.format("milliSec/Transaction: %.4f%n", (1.0 * totalElapseMilliSecs / totalTxnSent)));
+            sb.append(String.format("Retry/Transaction: %.4f%n", (1.0 * totalRetry / totalTxnSent)));
+            sb.append(String.format("MilliSec/Transaction(client side congestion excluded): %.4f", (1.0 * totalElapseMilliSecs / totalTxnSent)));
             System.out.println(sb.toString());
+        }
+
+        /**
+         * This class extends {@link TransactionContext}, which encapsulates code to build a dummy transaction
+         * with specific size of data. Latency will be calculated each {@code onCompletion()} callback.
+         */
+        protected final class DummyTxnContext extends TransactionContext {
+
+            private static final String LOCK_NAME = "performance_analysis_lock";
+            private final byte[] data;
+            private final boolean ignoreLatency;
+            private Long timestampMilliSec;
+            private int execCount;
+            private int partitionId;
+
+            DummyTxnContext(byte[] data) {
+                this(data, false);
+            }
+
+            DummyTxnContext(byte[] data, boolean ignoreLatency) {
+                this.data = data;
+                this.ignoreLatency = ignoreLatency;
+                this.timestampMilliSec = null;
+                this.execCount = 0;
+                this.partitionId = RANDOM.nextInt(numActivePartitions);
+            }
+
+            public int partitionId(int numPartitions) {
+                return partitionId;
+            }
+
+            @Override
+            public boolean execute(TransactionBuilder builder) {
+                if (execCount++ > 0) {
+                    totalRetry++;
+                }
+                // Write dummy data
+                builder.setTransactionData(data, DummySerializer.INSTANCE);
+                if (lockPoolSize != 0) {
+                    int lockId = RANDOM.nextInt(lockPoolSize);
+                    builder.setWriteLocks(Collections.singletonList(new PartitionLocalLock(LOCK_NAME, lockId)));
+                }
+                return true;
+            }
+
+            @Override
+            public void onCompletion(boolean result) {
+                if (!ignoreLatency && timestampMilliSec != null) {
+                    long latency = System.currentTimeMillis() - timestampMilliSec;
+                    totalResponseTimeMilli.addAndGet(latency);
+                }
+                allTxnReceived.countDown();
+            }
+
+            @Override
+            public void onException(Throwable ex) {
+                System.out.println(ex);
+            }
         }
 
         /**
@@ -256,7 +327,9 @@ public final class PerformanceCli extends SubcommandCli {
 
                     // fire all transactions
                     for (int j = 0; j < txnPerThread; j++) {
-                        client.submit(new DummyTxnContext(data, false));
+                        DummyTxnContext txnContext = new DummyTxnContext(data);
+                        client.submit(txnContext);
+                        txnContext.timestampMilliSec = System.currentTimeMillis();
 
                         // By adjusting the distribution parameter of the random sleep,
                         // we can test various congestion scenarios.
@@ -280,10 +353,10 @@ public final class PerformanceCli extends SubcommandCli {
 
     private static final class RunConsumers extends PerformanceBase {
         private static final String NAME = "test-consumers";
-        private static final String DESCRIPTION = "Runs a consumer performance test";
+        private static final String DESCRIPTION = "Test and analyze performance of Waltz consumer";
+        private static final int DEFAULT_NUM_PRODUCERS = 100;
 
         private int numTxn;
-        private int producerClientId;
         private CountDownLatch allTxnRead;
 
         private RunConsumers(String[] args) {
@@ -302,70 +375,162 @@ public final class PerformanceCli extends SubcommandCli {
                     .desc("Specify the number of transactions to send")
                     .hasArg()
                     .build();
-
+            Option cliCfgOption = Option.builder("c")
+                    .longOpt("cli-config-path")
+                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config")
+                    .hasArg()
+                    .build();
+            Option numActivePartitionOption = Option.builder("ap")
+                    .longOpt("num-active-partitions")
+                    .desc("Specify number of active partitions to interact with. For example, if set to 3, transactions will be evenly"
+                            + "distributed among partition 0, 1 and 2. Default to 1")
+                    .hasArg()
+                    .build();
             txnSizeOption.setRequired(true);
             numTxnOption.setRequired(true);
+            cliCfgOption.setRequired(true);
+            numActivePartitionOption.setRequired(false);
 
             options.addOption(txnSizeOption);
             options.addOption(numTxnOption);
+            options.addOption(cliCfgOption);
+            options.addOption(numActivePartitionOption);
         }
 
         @Override
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             try {
-                // check if full path config file provided
-                if (cmd.getArgList().size() == 0) {
-                    throw new IllegalArgumentException("Missing required argument: <" + FULL_PATH_CONFIG_FILE + ">");
-                }
-                this.clientConfig = getWaltzClientConfig(cmd.getArgList().get(0));
+                // check required argument
                 txnSize = Integer.parseInt(cmd.getOptionValue("txn-size"));
                 if (txnSize < 0) {
                     throw new IllegalArgumentException("Found negative: txn-size must be equal or greater than 0");
                 }
                 data = new byte[txnSize];
-
-                // check required argument
                 numTxn = Integer.parseInt(cmd.getOptionValue("num-txn"));
                 if (numTxn < 0) {
                     throw new IllegalArgumentException("Found negative: num-txn must be greater or equal to 0");
                 }
-
                 allTxnReceived = new CountDownLatch(numTxn);
                 allTxnRead = new CountDownLatch(numTxn);
+                waltzClientConfig = getWaltzClientConfig(cmd.getOptionValue("cli-config-path"));
 
-                // start thread
-                new ConsumerThread(clientConfig).run();
+                // check optional argument
+                if (cmd.hasOption("num-active-partitions")) {
+                    numActivePartitions = Integer.parseInt(cmd.getOptionValue("num-active-partitions"));
+                    if (numActivePartitions < 1) {
+                        throw new IllegalArgumentException("Number of active partitions must be greater of equals to 1");
+                    }
+                }
+
+                // produce transactions to consume
+                // since we only care about consumer performance, we can create
+                // transactions with multiple producer to expedite the test
+                int numThread = numTxn > DEFAULT_NUM_PRODUCERS ? DEFAULT_NUM_PRODUCERS : numTxn;
+                int txnPerThread = numTxn / numThread;
+                ExecutorService executor = Executors.newFixedThreadPool(numThread);
+                for (int i = 0; i < numThread; i++) {
+                    ProducerCallbacks callbacks = new ProducerCallbacks();
+                    WaltzClient client = new WaltzClient(callbacks, waltzClientConfig);
+                    executor.execute(new ProducerThread(txnPerThread, client));
+                }
+
+                // consume transactions when all committed
+                new ConsumerThread(waltzClientConfig).run();
 
                 // wait until all transaction consumed
                 allTxnRead.await();
 
                 printStatistic();
+
+                executor.shutdown();
             } catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Failed to run consumer performance test: %s", e.getMessage()));
             }
         }
 
-        @Override
         protected String getUsage() {
-            List<String> descriptions = new ArrayList<>();
-            descriptions.add("This is a CLI tool designed to analysis performance of Waltz consumer. "
-                    + "Each printout \"+\" represent a transaction success.");
-            descriptions.add("As a result, statistic will be collected and print including Transaction/sec, MB/sec, "
-                    + "milliSec/Transaction and etc.");
-            return buildUsage(descriptions, getOptions());
+            return buildUsage(NAME, DESCRIPTION, getOptions());
         }
 
         private void printStatistic() {
-            long totalElapseMilliSecs = totalResponseTimeMilli.get();
             long totalBytesRead = numTxn * txnSize;
             double duration = 1.0 * (System.currentTimeMillis() - startTime.get()) / MILLISECONDS_IN_SECOND;
 
             StringBuilder sb = new StringBuilder();
-            sb.append(String.format("%n%nRead %d transactions, with total %.4f MB, in %.2f secs%n", numTxn, (1.0 * totalBytesRead / BYTES_IN_MEGABYTE), duration));
+            sb.append(String.format("Read %d transactions, with total %.4f MB, in %.2f secs%n", numTxn, (1.0 * totalBytesRead / BYTES_IN_MEGABYTE), duration));
             sb.append(String.format("Transaction/sec: %.4f%n", (1.0 * numTxn / duration)));
-            sb.append(String.format("MB/sec: %.4f%n", totalBytesRead / duration / BYTES_IN_MEGABYTE));
-            sb.append(String.format("milliSec/Transaction: %.4f%n", (1.0 * totalElapseMilliSecs / numTxn)));
+            sb.append(String.format("MB/sec: %.4f", totalBytesRead / duration / BYTES_IN_MEGABYTE));
             System.out.println(sb.toString());
+        }
+
+        /**
+         * This class extends {@link TransactionContext}, which encapsulates code to build a dummy transaction
+         * with specific size of data.
+         */
+        protected final class DummyTxnContext extends TransactionContext {
+
+            private final byte[] data;
+
+            DummyTxnContext(byte[] data) {
+                this.data = data;
+            }
+
+            public int partitionId(int numPartitions) {
+                return RANDOM.nextInt(numActivePartitions);
+            }
+
+            @Override
+            public boolean execute(TransactionBuilder builder) {
+                // Write dummy data
+                builder.setTransactionData(data, DummySerializer.INSTANCE);
+                return true;
+            }
+
+            @Override
+            public void onCompletion(boolean result) {
+                allTxnReceived.countDown();
+            }
+
+            @Override
+            public void onException(Throwable ex) {
+                System.out.println(ex);
+            }
+        }
+
+        /**
+         * This class implements {@link Runnable}, which iteratively fires transactions.
+         */
+        private final class ProducerThread implements Runnable {
+
+            private int txnPerThread;
+            private WaltzClient client;
+
+            ProducerThread(int txnPerThread, WaltzClient client) {
+                this.txnPerThread = txnPerThread;
+                this.client = client;
+            }
+
+            @Override
+            public void run() {
+                try {
+                    // fire all transactions
+                    for (int j = 0; j < txnPerThread; j++) {
+                        DummyTxnContext txnContext = new DummyTxnContext(data);
+                        client.submit(txnContext);
+                    }
+                } catch (Exception ex) {
+                    throw new SubCommandFailedException(ex);
+                } finally {
+                    try {
+                        allTxnReceived.await();
+                    } catch (Exception ex) {
+                        client.close();
+                        throw new SubCommandFailedException(ex);
+                    } finally {
+                        client.close();
+                    }
+                }
+            }
         }
 
         /**
@@ -378,7 +543,6 @@ public final class PerformanceCli extends SubcommandCli {
          */
         private final class ConsumerThread implements Runnable {
 
-            private WaltzClient producer;
             private WaltzClient consumer;
             private WaltzClientConfig config;
 
@@ -389,12 +553,6 @@ public final class PerformanceCli extends SubcommandCli {
             @Override
             public void run() {
                 try {
-                    producer = new WaltzClient(new ProducerCallbacks(), config);
-                    producerClientId = producer.clientId();
-                    for (int j = 0; j < numTxn; j++) {
-                        producer.submit(new DummyTxnContext(data, false));
-                    }
-
                     // wait until all transactions received before read transaction
                     allTxnReceived.await();
 
@@ -408,11 +566,9 @@ public final class PerformanceCli extends SubcommandCli {
                     try {
                         allTxnRead.await();
                     } catch (Exception ex) {
-                        producer.close();
                         consumer.close();
                         throw new SubCommandFailedException(ex);
                     } finally {
-                        producer.close();
                         consumer.close();
                     }
                 }
@@ -427,14 +583,12 @@ public final class PerformanceCli extends SubcommandCli {
 
             @Override
             public void applyTransaction(Transaction transaction) {
-                if (transaction.reqId.clientId() == producerClientId) {
-                    // start timer when first callback from producer client is received
-                    startTime.compareAndSet(0, System.currentTimeMillis());
+                // start timer when first callback from producer client is received
+                startTime.compareAndSet(0, System.currentTimeMillis());
 
-                    // read transaction data
-                    transaction.getTransactionData(DummySerializer.INSTANCE);
-                    allTxnRead.countDown();
-                }
+                // read transaction data
+                transaction.getTransactionData(DummySerializer.INSTANCE);
+                allTxnRead.countDown();
             }
         }
 
@@ -455,74 +609,21 @@ public final class PerformanceCli extends SubcommandCli {
     }
 
     private abstract static class PerformanceBase extends Cli {
-        protected final AtomicLong startTime;
-        protected final AtomicLong totalResponseTimeMilli;
-        protected final Set<Integer> toMountClients;
 
-        protected int lockPoolSize;
+        private static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
+
+        protected final AtomicLong startTime;
+
+        protected int numActivePartitions;
         protected int txnSize;
-        protected int totalRetry;
         protected byte[] data;
         protected CountDownLatch allTxnReceived;
-        protected WaltzClientConfig clientConfig;
+        protected WaltzClientConfig waltzClientConfig;
 
         private PerformanceBase(String[] args) {
             super(args);
+            numActivePartitions = DEFAULT_NUMBER_ACTIVE_PARTITIONS;
             startTime = new AtomicLong(0);
-            totalResponseTimeMilli = new AtomicLong(0);
-            toMountClients = new HashSet<>();
-        }
-
-        /**
-         * This class extends {@link TransactionContext}, which encapsulates code to build a dummy transaction
-         * with specific size of data.
-         */
-        protected final class DummyTxnContext extends TransactionContext {
-
-            private static final String LOCK_NAME = "performance_analysis_lock";
-            private final long timestampMilliSec;
-            private final byte[] data;
-            private final boolean ignoreLatency;
-            private int execCount = 0;
-
-            DummyTxnContext(byte[] data, boolean ignoreLatency) {
-                this.timestampMilliSec = System.currentTimeMillis();
-                this.data = data;
-                this.ignoreLatency = ignoreLatency;
-            }
-
-            @Override
-            public int partitionId(int numPartitions) {
-                return PARTITION_ID;
-            }
-
-            @Override
-            public boolean execute(TransactionBuilder builder) {
-                if (execCount++ > 0) {
-                    totalRetry++;
-                }
-                // Write dummy data
-                builder.setTransactionData(data, DummySerializer.INSTANCE);
-                if (lockPoolSize != 0) {
-                    int lockId = RANDOM_LOCK_GENERATOR.nextInt(lockPoolSize);
-                    builder.setWriteLocks(Collections.singletonList(new PartitionLocalLock(LOCK_NAME, lockId)));
-                }
-                return true;
-            }
-
-            @Override
-            public void onCompletion(boolean result) {
-                if (!ignoreLatency) {
-                    long latency = System.currentTimeMillis() - timestampMilliSec;
-                    totalResponseTimeMilli.addAndGet(latency);
-                }
-                allTxnReceived.countDown();
-            }
-
-            @Override
-            public void onException(Throwable ex) {
-                System.out.println(ex);
-            }
         }
 
         /**

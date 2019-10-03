@@ -506,8 +506,7 @@ public final class StorageCliTest {
             sourceClient.close();
             destinationClient.close();
         } finally {
-            sourceStorageRunner.stop();
-            destinationStorageRunner.stop();
+            helper.closeAll();
         }
     }
 

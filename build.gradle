@@ -193,6 +193,11 @@ project(':waltz-tools') {
         into file("$projectDir/build/libs")
         from sourceSets.main.runtimeClasspath
     }
+
+    test {
+        maxHeapSize = "2G"
+        jvmArgs '-Xmx2G'
+    }
 }
 
 project(':waltz-server') {
@@ -217,7 +222,7 @@ project(':waltz-server') {
         testCompile (
             project(':waltz-client'),
             project(':waltz-test'),
-                
+
             "junit:junit:$junitVersion",
             "org.mockito:mockito-all:$mockitoVersion"
         )
