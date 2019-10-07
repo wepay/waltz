@@ -2,6 +2,11 @@
 
 Waltz is a distributed/replicated write ahead log for transactions.
 
+## Documentation
+
+We have the design document and the setup manual.
+See website/README.md for how to build and browse the document.
+
 ## Building
 
 To build Waltz:
