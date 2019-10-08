@@ -116,6 +116,12 @@ public class WaltzClientTest {
             // Transaction2 should be success
             assertTrue(context2.future.get(10, TimeUnit.SECONDS));
 
+            // Wait for both transactions to be applied
+            assertTrue(context1.applicationFuture.get(10, TimeUnit.SECONDS));
+            assertTrue(context2.applicationFuture.get(10, TimeUnit.SECONDS));
+
+            // Wait for client1 to catch up
+            callbacks1.awaitHighWaterMark(0, callbacks2.getClientHighWaterMark(0), 10000);
 
             // Write Lock then Read Lock
 
@@ -138,6 +144,12 @@ public class WaltzClientTest {
 
             // Transaction2 should be failure
             assertFalse(context2.future.get(10, TimeUnit.SECONDS));
+
+            // Wait for transaction1 to be applied
+            assertTrue(context1.applicationFuture.get(10, TimeUnit.SECONDS));
+
+            // Wait for client2 to catch up
+            callbacks2.awaitHighWaterMark(0, callbacks1.getClientHighWaterMark(0), 10000);
 
             // Read Lock then Write Lock
 
