@@ -109,6 +109,7 @@ public class StorageMessageCodecV0Test {
         assertEquals(maxTransactionIdRequest1.usedByOfflineRecovery, maxTransactionIdRequest2.usedByOfflineRecovery);
     }
 
+    @SuppressWarnings("unchecked")
     private <T extends Message> T encodeThenDecode(T message) {
         ByteArrayMessageAttributeWriter writer = new ByteArrayMessageAttributeWriter();
         codec.encode(message, writer);
