@@ -183,8 +183,9 @@ class ProduceConsumeValidateTest(WaltzTest):
         """
         self.logger.info("Retrieving local low-water mark of storage {}".format(storage))
         partition_info = self.storage_cli.list_partition(storage)
-        regex = "Partition Info for id:\s*{}(.|\n)+localLowWaterMark:\s*(-?\d+)".format(partition)
-        return int(search(regex, partition_info).group(2))
+        filter_regex = "Partition Info for id:\s*{}(.|\n)+".format(partition)
+        filtered_partition_info = search(filter_regex, partition_info).group()
+        return int(search("localLowWaterMark:\s*(-?\d+)|$", filtered_partition_info).group(1))
 
     def get_storage_session_id(self, storage, partition):
         """
@@ -192,8 +193,9 @@ class ProduceConsumeValidateTest(WaltzTest):
         """
         self.logger.info("Retrieving session id of storage {}".format(storage))
         partition_info = self.storage_cli.list_partition(storage)
-        regex = "Partition Info for id:\s*{}(.|\n)+SessionId:\s*(-?\d+)".format(partition)
-        return int(search(regex, partition_info).group(2))
+        filter_regex = "Partition Info for id:\s*{}(.|\n)+".format(partition)
+        filtered_partition_info = search(filter_regex, partition_info).group()
+        return int(search("sessionId:\s*(-?\d+)|$", filtered_partition_info).group(1))
 
     def get_cluster_key(self):
         self.logger.info("Retrieving cluster key from zookeeper")
