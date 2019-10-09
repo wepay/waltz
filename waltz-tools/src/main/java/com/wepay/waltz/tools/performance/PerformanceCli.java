@@ -36,6 +36,7 @@ public final class PerformanceCli extends SubcommandCli {
 
     private static final int MILLISECONDS_IN_SECOND = 1000;
     private static final int BYTES_IN_MEGABYTE = 1024 * 1024;
+    private static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
     private static final Random RANDOM = new Random();
 
     private PerformanceCli(String[] args, boolean useByTest) {
@@ -100,14 +101,14 @@ public final class PerformanceCli extends SubcommandCli {
                     .build();
             Option numActivePartitionOption = Option.builder("ap")
                     .longOpt("num-active-partitions")
-                    .desc("Specify number of partitions to interact with. For example, if set to 3, transactions will be evenly"
-                            + "distributed among partition 0, 1 and 2. Default to 1")
+                    .desc(String.format("Specify number of partitions to interact with. For example, if set to 3, transactions will be"
+                            + "evenly distributed among partition 0, 1 and 2. Default to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
                     .hasArg()
                     .build();
             Option lockPoolSizeOption = Option.builder("l")
                     .longOpt("lock-pool-size")
-                    .desc("Specify size of lock pool. Greater the size, less likely transactions get rejected."
-                            + "No transaction gets rejected when size is 0. Default to 0")
+                    .desc(String.format("Specify size of lock pool. Greater the size, less likely transactions get rejected."
+                            + "No transaction gets rejected when size is 0. Default to %d", DEFAULT_LOCK_POOL_SIZE))
                     .hasArg()
                     .build();
 
@@ -155,7 +156,7 @@ public final class PerformanceCli extends SubcommandCli {
                 if (cmd.hasOption("num-active-partitions")) {
                     numActivePartitions = Integer.parseInt(cmd.getOptionValue("num-active-partitions"));
                     if (numActivePartitions < 1) {
-                        throw new IllegalArgumentException("Number of active partitions must be greater of equals to 1");
+                        throw new IllegalArgumentException("Number of active partitions must be greater or equals to 1");
                     }
                 }
                 if (cmd.hasOption("lock-pool-size")) {
@@ -382,8 +383,8 @@ public final class PerformanceCli extends SubcommandCli {
                     .build();
             Option numActivePartitionOption = Option.builder("ap")
                     .longOpt("num-active-partitions")
-                    .desc("Specify number of active partitions to interact with. For example, if set to 3, transactions will be evenly"
-                            + "distributed among partition 0, 1 and 2. Default to 1")
+                    .desc(String.format("Specify number of active partitions to interact with. For example, if set to 3, transactions will be evenly"
+                            + "distributed among partition 0, 1 and 2. Default to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
                     .hasArg()
                     .build();
             txnSizeOption.setRequired(true);
@@ -610,8 +611,6 @@ public final class PerformanceCli extends SubcommandCli {
 
     private abstract static class PerformanceBase extends Cli {
 
-        private static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
-
         protected final AtomicLong startTime;
 
         protected int numActivePartitions;
@@ -622,7 +621,6 @@ public final class PerformanceCli extends SubcommandCli {
 
         private PerformanceBase(String[] args) {
             super(args);
-            numActivePartitions = DEFAULT_NUMBER_ACTIVE_PARTITIONS;
             startTime = new AtomicLong(0);
         }
 

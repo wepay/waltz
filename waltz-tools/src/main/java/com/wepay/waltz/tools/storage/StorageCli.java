@@ -164,8 +164,8 @@ public final class StorageCli extends SubcommandCli {
                 int partitionId = entry.getKey();
                 PartitionInfoSnapshot snapshot = entry.getValue();
                 sb.append(String.format("Partition Info for id: %d%n", partitionId));
-                sb.append(String.format("\t SessionId: %d%n", snapshot.sessionId));
-                sb.append(String.format("\t LowWaterMark: %d%n", snapshot.lowWaterMark));
+                sb.append(String.format("\t sessionId: %d%n", snapshot.sessionId));
+                sb.append(String.format("\t lowWaterMark: %d%n", snapshot.lowWaterMark));
                 sb.append(String.format("\t localLowWaterMark: %d%n", snapshot.localLowWaterMark));
                 sb.append(String.format("\t isAssigned: %b%n", snapshot.isAssigned));
                 sb.append(String.format("\t isAvailable: %b%n", snapshot.isAvailable));
@@ -604,7 +604,7 @@ public final class StorageCli extends SubcommandCli {
                                  Integer.parseInt(destinationStoragePort), Integer.parseInt(partitionId), Integer.parseInt(batchSize), cliConfigPath,
                                  sourceSslConfigPath, destinationSslConfigPath);
            } catch (Exception e) {
-                throw new SubCommandFailedException(String.format("Partition %s not recover. %n%s", partitionId, e.getMessage()));
+                throw new SubCommandFailedException(String.format("Partition %s failed to recover. %n%s", partitionId, e.getMessage()));
             }
         }
 
