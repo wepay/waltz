@@ -68,7 +68,7 @@ Transaction Header: Transaction header is a 32-bit integer value. Its semantics 
 <li><strong>Zookeeper</strong>: We use Zookeeper to monitor participating servers. We also store some cluster wide configuration parameters (the number of partitions, the number of replicas) and metadata of storage state. The storage metadata is updated/access only when faults occur, thus the load on Zookeeper is small.</li>
 </ul>
 <p>The system consists of four kinds of processes, application processes, Waltz Server processes, Waltz Storage processes, and Zookeeper server processes.</p>
-<p><img src="/img/docs/architecture.png" alt="Waltz architecture diagram"></p>
+<p><img src="/waltz/img/docs/architecture.png" alt="Waltz architecture diagram"></p>
 <p>An application process serves application specific services. It generates transaction data and sends them to Waltz Server using Waltz Client running inside the application. The application receives all committed transactions in the commit order from Waltz Server and updates application’s database.</p>
 <p>Waltz Server works as a proxy to Waltz Storage. Servers receive read/write requests from clients and forward them to storages. It also works as a lock manager and a cache of transaction data.</p>
 <p>Waltz Storage manages the log storage files. A log is segmented into multiple files. For each segment there is an index file which gives mapping from transaction IDs to transaction records.
