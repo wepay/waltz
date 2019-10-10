@@ -11,11 +11,11 @@
 // List of projects/orgs using your project for the users page.
 const users = [
   {
-    caption: 'User1',
+    caption: 'WePay',
     // You will need to prepend the image path with your baseUrl
     // if it is not '/', like: '/test-site/img/image.jpg'.
-    image: '/img/undraw_open_source.svg',
-    infoLink: 'https://www.facebook.com',
+    image: '/waltz/img/we-pay-logo-color.svg',
+    infoLink: 'https://go.wepay.com/about-wepay/',
     pinned: true,
   },
 ];
@@ -23,8 +23,8 @@ const users = [
 const siteConfig = {
   title: 'Waltz', // Title for your website.
   tagline: 'An open source quorum-based distributed write-ahead log',
-  url: 'https://your-docusaurus-test-site.com', // Your website URL
-  baseUrl: '/', // Base URL for your project */
+  url: 'https:wepay.github.io', // Your website URL
+  baseUrl: '/waltz/', // Base URL for your project */
   // For github.io type URLs, you would set the url and baseUrl like:
   //   url: 'https://facebook.github.io',
   //   baseUrl: '/test-site/',
