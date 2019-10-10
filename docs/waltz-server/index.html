@@ -1,0 +1,193 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Waltz Server · Waltz</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="![Waltz server](/img/docs/waltz-server.png)"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Waltz Server · Waltz"/><meta property="og:type" content="website"/><meta property="og:url" content="https:wepay.github.io///waltz/"/><meta property="og:description" content="![Waltz server](/img/docs/waltz-server.png)"/><meta property="og:image" content="https:wepay.github.io///waltz/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https:wepay.github.io///waltz/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/waltz/img/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script src="/waltz/js/scrollSpy.js"></script><link rel="stylesheet" href="/waltz/css/main.css"/><script src="/waltz/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/waltz/"><img class="logo" src="/waltz/img/favicon.ico" alt="Waltz"/><h2 class="headerTitleWithLogo">Waltz</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/waltz/docs/introduction" target="_self">Docs</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Design</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Design</h3><ul class=""><li class="navListItem"><a class="navItem" href="/waltz/docs/introduction">Introduction</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/terminology">Terminology and Components</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/application-programming-model">Application Programming Model</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/client-server-communication">Client-Server Communication</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/server-storage-communication">Server-Storage Communication</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/on-disk-data-structures">On-Disk Data Structures</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/concurrency-control-optimistic-locking">Concurrency Control (Optimistic Locking)</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/back-pressure">Back Pressure</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-client">Waltz Client</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/waltz/docs/waltz-server">Waltz Server</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-storage">Waltz Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Administration</h3><ul class=""><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-setup">Waltz Setup</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle">Waltz Server</h1></header><article><div><span><p><img src="/img/docs/waltz-server.png" alt="Waltz server"></p>
+<p>Waltz Server receives messages from the clients. We implemented the networking layer on Netty. Netty calls <code>WaltzServerHandler</code> for each message. Messages are enqueued into the message queue and dispatched to partition by the message handler thread running in <code>WaltzServerHandler</code>.</p>
+<p>A partition object represents a Waltz log partition. The persistent log data are replicated and stored in multiple storage servers. Actual interaction with storages are done by a store partition object. A partition object and a store partition object are created when the partition is assigned to the server.</p>
+<h2><a class="anchor" aria-hidden="true" id="partition-object"></a><a href="#partition-object" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Partition Object</h2>
+<p><img src="/img/docs/waltz-server-partition-object.png" alt="Waltz server partition object"></p>
+<p>Each partition object has three tasks (threads), Append task, Realtime Feed task, and Catch-up Feed Task.</p>
+<p>An append request is immediately place in the append request queue in the append task object. The thread of the append task polls a request from the queue and tries to acquire locks if the append request contains any lock request. If locking fails, the task sends a lock failure message to the client. If there is no lock failure, the transaction information is passed to the corresponding store partition. A store partition works as a proxy to storage servers. When the success of append operation is acknowledged, the transaction information is stashed into the feed cache and the transaction record cache.</p>
+<h2><a class="anchor" aria-hidden="true" id="store-partition-object"></a><a href="#store-partition-object" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Store Partition Object</h2>
+<p><img src="/img/docs/waltz-server-store-partition-object.png" alt="Waltz server partition object"></p>
+<p>A Store Partition object manages read/write to storage servers. A store partition represents a partition which is replicated to multiple storage servers. Read/write operations are performed in a context of a session called a store session. Actual read/write operations to a partition on each storage server is also performed in a session called a replica session.</p>
+<p>When a store session is created, replica sessions are created for all known storage servers. Then, a recovery manager is created and starts a recovery to resolve any unresolved write operations and truncate any dirty data on storage servers.</p>
+<p>An append request are first placed in the request queue. The store session task polls requests from the queue, batch them up, and sends to all available storage servers through replica sessions. When the number of successful writes reach the quorum, the notification is propagated to the requester through a callback. If a storage is falling behind, the append request to that storage is discarded, and the replica session task starts catch-up process which transfers transaction data from other storages to this storage.</p>
+<h2><a class="anchor" aria-hidden="true" id="partition-metadata"></a><a href="#partition-metadata" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Partition Metadata</h2>
+<p>Waltz Server stores the metadata of partitions in Zookeeper for recovery. The ZNode path is <code>&lt;cluster root&gt;/store/partition/&lt;partition id&gt;</code>. They include the generation numbers, the store session ID, and the states of replicas (the replicated partitions on storage servers). They are written when a new store session is created.</p>
+<h3><a class="anchor" aria-hidden="true" id="partition-metadata-1"></a><a href="#partition-metadata-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Partition Metadata</h3>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Generation</td><td>int</td><td>The generation number</td></tr>
+<tr><td>Session ID</td><td>long</td><td>The current store session ID</td></tr>
+<tr><td><strong>Map of Replica ID to Replica State (repeated)</strong></td><td></td></tr>
+<tr><td>Replica ID</td><td>ReplicaID</td><td>The replica ID</td></tr>
+<tr><td>Replica State</td><td>ReplicaState</td><td>The replica state</td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="replicaid"></a><a href="#replicaid" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>ReplicaId</h3>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Partition ID</td><td>int</td><td>The partition ID</td></tr>
+<tr><td>Storage Node Connect String</td><td>String</td><td>The storage node connect string</td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="replicastate"></a><a href="#replicastate" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>ReplicaState</h3>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Replica ID</td><td>ReplicaID</td><td>The replica ID</td></tr>
+<tr><td>Session ID</td><td>long</td><td>The ID of the store session that this replica is currently engaged.</td></tr>
+<tr><td>Closing High-water mark</td><td>long</td><td>The high-water mark when this store session closed. It is ReplicaState.UNRESOLVED when the session starts. This field is set by Recovery Manager when the closing high-water mark of the session is resolved.</td></tr>
+</tbody>
+</table>
+<h2><a class="anchor" aria-hidden="true" id="recovery-procedure"></a><a href="#recovery-procedure" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Recovery Procedure</h2>
+<p>A recovery procedure is applied whenever Store Session Manager creates a new store session. The followings are the steps of the recovery.</p>
+<ol>
+<li>Get new store session ID by updating Partition Metadata in Zookeeper. CAS is used to avoid race conditions.</li>
+<li>Create new Replica Sessions</li>
+<li>Create a new Store Session with the new session ID and the new Replica Sessions.</li>
+<li>Open the Store Session
+<ol>
+<li>Open each Replica Sessions and start Replica Session Task</li>
+</ol></li>
+<li>In each Replica Session Task,
+<ol>
+<li>Wait for a connection to establish</li>
+<li>After connected,
+<ol>
+<li>Get the Replica State from Partition Metadata</li>
+<li>If the Replica State and the actual storage is inconsistent,
+<ol>
+<li>Truncate the transaction log to the low-water mark saved in the storage</li>
+</ol></li>
+<li>Otherwise,
+<ol>
+<li>If the closing high-water mark is already set,
+<ol>
+<li>Truncate the log to it.</li>
+</ol></li>
+<li>Otherwise,
+<ol>
+<li>If the max transaction ID is greater than the low-water mark, propose its max transaction ID as the closing high-water mark.</li>
+</ol></li>
+</ol></li>
+<li>Start catch-up to any replica ahead of itself
+<ol>
+<li>Check if the closing high-water mark is resolved (a quorum is established)</li>
+<li>If yes,
+<ol>
+<li>Set the low-water mark</li>
+<li>If the replica has fully caught up,
+<ol>
+<li>Truncate any dirty transactions</li>
+</ol></li>
+<li>Otherwise,
+<ol>
+<li>Continue catching-up</li>
+</ol></li>
+</ol></li>
+</ol></li>
+</ol></li>
+</ol></li>
+<li>Update Partition Metadata
+<ol>
+<li>For each Replica State,
+<ol>
+<li>If the replica is clean,
+<ol>
+<li>Set the session id to the new store session id</li>
+<li>Set the closing high-water mark to ReplicaState.UNRESOLVED</li>
+</ol></li>
+<li>Else if the closing high-water mark is ReplicaState.UNRESOLVED,
+<ol>
+<li>Set the closing high-water mark to the resolved closing high-water mark leaving the session id unchanged</li>
+</ol></li>
+<li>Otherwise,
+<ol>
+<li>Leave the replica state unchanged.</li>
+</ol></li>
+</ol></li>
+</ol></li>
+</ol>
+<p><strong>Example 1 (Adding single replica)</strong></p>
+<p><img src="/img/docs/adding-single-replica.png" alt="Adding a single replica image"></p>
+<p><strong>Example 2 (Adding multiple replicas)</strong></p>
+<p><img src="/img/docs/adding-multiple-replicas.png" alt="Adding multiple replicas image"></p>
+<p><strong>Example 3 (Removing single replica)</strong></p>
+<p><img src="/img/docs/removing-single-replica.png" alt="Removing a single replica image"></p>
+<p><strong>Example 4 (Removing multiple replicas)</strong></p>
+<p><img src="/img/docs/removing-multiple-replicas.png" alt="Removing multiple replicas image"></p>
+<h2><a class="anchor" aria-hidden="true" id="quorum-checking-in-the-recovery-process"></a><a href="#quorum-checking-in-the-recovery-process" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Quorum Checking in the Recovery Process</h2>
+<p>Quorum checking in the recovery process has a subtle difference from quorum checking in the write operation. We need to find out the highest high-water mark that majority of replicas agree on. In the following figure, the high-water marks of Replica A, B, and C are HA, HB, and HC, respectively. The highest high-water mark that a majority of replicas agree is HA.</p>
+<p><img src="/img/docs/quorum-check-healthy.png" alt="Quorum check"></p>
+<p>We do the selection by having replicas vote on high-water marks. A replica with the high-water mark X votes for any high-water mark H that is equal to or less than X. So, Replica A votes for { HA, HC }, Replica B votes for { HA, HB, HC }, and Replica C votes for { HC }. Clearly HA is the highest high-water mark that a majority replicas vote. This is correct since all transactions above HA have no chance of getting the write quorum, thus they are uncommitted. All transactions at HA or below have the write quorum, thus it is safe to declare they are committed.</p>
+<p>This works fine when all replicas are participating. However, we cannot expect all replicas are available all the time. There may be inaccessible storage servers during the recovery process which may have caused the recovery process in the first place. So, the quorum checking must take that into consideration.</p>
+<p><img src="/img/docs/quorum-check-b-offline.png" alt="Quorum check"></p>
+<p>If Replica B is inaccessible, only Replica A and C vote. The highest high-water mark with majority vote is HC, but this is wrong. The high-water mark is undecidable in this situation.</p>
+<p>The solution is to detect the undecidable situation by counting inaccessible replicas and wait until it becomes decidable. It becomes decidable when enough (not necessarily all) replicas come online. In the above case, it becomes decidable when Replica B comes back. Another situation that it becomes decidable is Replica C catches up with Replica A.</p>
+<p><img src="/img/docs/quorum-check-c-catch-up.png" alt="Quorum check"></p>
+<p>Undecidability is detected as follows. We examine voted high-water marks in descending order. If the number of votes is not reaching the quorum, the number of votes + the number of offline storages is tested. If it is equal to or greater than the quorum, the high-water mark is not decidable. In the above example, the quorum is two votes. HA is examined first. It doesn't have enough votes (only 1 vote). But, # of votes (1) + # of offline storage (1) is two. This is equal to the quorum, thus the true high-water mark is undecidable.</p>
+<p>Every time the situation changes, the recovery process re-evaluate the quorum.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/waltz/docs/waltz-client"><span class="arrow-prev">← </span><span>Waltz Client</span></a><a class="docs-next button" href="/waltz/docs/waltz-storage"><span>Waltz Storage</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#partition-object">Partition Object</a></li><li><a href="#store-partition-object">Store Partition Object</a></li><li><a href="#partition-metadata">Partition Metadata</a><ul class="toc-headings"><li><a href="#partition-metadata-1">Partition Metadata</a></li><li><a href="#replicaid">ReplicaId</a></li><li><a href="#replicastate">ReplicaState</a></li></ul></li><li><a href="#recovery-procedure">Recovery Procedure</a></li><li><a href="#quorum-checking-in-the-recovery-process">Quorum Checking in the Recovery Process</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/waltz/" class="nav-home"><img src="/waltz/img/favicon.ico" alt="Waltz" width="66" height="58"/></a><div><h5>Docs</h5><a href="/waltz/docs/introduction">Design</a><a href="/waltz/docs/waltz-setup">Administration</a><a href="/waltz/docs/application-programming-model">API Reference</a></div><div><h5>Community</h5><a href="https://stackoverflow.com/questions/tagged/" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://twitter.com/WePay" target="_blank" rel="noreferrer noopener">Twitter</a></div><div><h5>More</h5><a href="https://wecode.wepay.com">Blog</a><a href="https://github.com/wepay/waltz">GitHub</a></div></section><section class="copyright">Copyright © 2019 WePay Inc.</section></footer></div></body></html>

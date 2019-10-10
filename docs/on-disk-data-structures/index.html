@@ -1,0 +1,161 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>On-Disk Data Structures · Waltz</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Waltz Storage provides persistency of data. It stores transaction data in its local disk."/><meta name="docsearch:language" content="en"/><meta property="og:title" content="On-Disk Data Structures · Waltz"/><meta property="og:type" content="website"/><meta property="og:url" content="https:wepay.github.io///waltz/"/><meta property="og:description" content="Waltz Storage provides persistency of data. It stores transaction data in its local disk."/><meta property="og:image" content="https:wepay.github.io///waltz/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https:wepay.github.io///waltz/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/waltz/img/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script src="/waltz/js/scrollSpy.js"></script><link rel="stylesheet" href="/waltz/css/main.css"/><script src="/waltz/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/waltz/"><img class="logo" src="/waltz/img/favicon.ico" alt="Waltz"/><h2 class="headerTitleWithLogo">Waltz</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/waltz/docs/introduction" target="_self">Docs</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Design</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Design</h3><ul class=""><li class="navListItem"><a class="navItem" href="/waltz/docs/introduction">Introduction</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/terminology">Terminology and Components</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/application-programming-model">Application Programming Model</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/client-server-communication">Client-Server Communication</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/server-storage-communication">Server-Storage Communication</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/waltz/docs/on-disk-data-structures">On-Disk Data Structures</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/concurrency-control-optimistic-locking">Concurrency Control (Optimistic Locking)</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/back-pressure">Back Pressure</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-client">Waltz Client</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-server">Waltz Server</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-storage">Waltz Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Administration</h3><ul class=""><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-setup">Waltz Setup</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle">On-Disk Data Structures</h1></header><article><div><span><p>Waltz Storage provides persistency of data. It stores transaction data in its local disk.</p>
+<h2><a class="anchor" aria-hidden="true" id="directory-structure"></a><a href="#directory-structure" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Directory Structure</h2>
+<p>Waltz Storage stores transaction data in the local file system. The root directory is called the storage directory which is configured using a configuration file. The storage directory contains the control file (waltz-storage.ctl) which contains a version information, creation timestamp and partition information. Under the storage directory, there are partition directories. Each partition directory contains data files and index files. For each partition, transaction data are split into segments chronologically. A new segment is created when the current segment grow beyond the configured size. Each segment consists of a data file and an index file.</p>
+<pre><code class="hljs">&lt;storage directory&gt;/                <span class="hljs-comment"># the root directory of the storage (configurable)</span>
+    waltz-storage.ctl               <span class="hljs-comment"># the control file</span>
+    0/                              <span class="hljs-comment"># the directory for partition 0</span>
+        0000000000000000000.seg     <span class="hljs-comment"># the segment data file. The file name is</span>
+                                    <span class="hljs-comment"># &lt;first transaction id in the segment&gt;.seq</span>
+        0000000000000000000.idx     <span class="hljs-comment"># the segment's index file</span>
+        <span class="hljs-string">....</span>
+    1/
+        <span class="hljs-string">....</span>
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="control-file"></a><a href="#control-file" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Control File</h2>
+<h3><a class="anchor" aria-hidden="true" id="control-file-header"></a><a href="#control-file-header" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Control File Header</h3>
+<p>The control file begins with the header which contains the following information.</p>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Size (bits)</th></tr>
+</thead>
+<tbody>
+<tr><td>format version number</td><td>int</td><td>32</td></tr>
+<tr><td>creation time</td><td>long</td><td>64</td></tr>
+<tr><td>key</td><td>UUID</td><td>128</td></tr>
+<tr><td>the number of partitions</td><td>int</td><td>32</td></tr>
+<tr><td>reserved for future use</td><td>-</td><td>768</td></tr>
+</tbody>
+</table>
+<p>The total header size is 128 bytes (1024 bits).</p>
+<p>The key is UUID which is generated when the cluster is configured by CreateCluster utility. The key identifies the cluster to which the cluster it belongs. If an open request comes from a Waltz Server whose key does not match the key in the control file, Waltz Storage rejects the request.</p>
+<h3><a class="anchor" aria-hidden="true" id="control-file-body"></a><a href="#control-file-body" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Control File Body</h3>
+<p>After the header follows the actual body of control data. It is a list of <em>Partition Info</em>. The number of <em>Partition Infos</em> is the number of partitions recorded in the header.</p>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>size(bits)</th></tr>
+</thead>
+<tbody>
+<tr><td>partition id</td><td>int</td><td>32</td></tr>
+<tr><td>partition info struct 1 session id</td><td>long</td><td>64</td></tr>
+<tr><td>partition info struct 1 low-water mark</td><td>long</td><td>64</td></tr>
+<tr><td>partition info struct 1 local low-water mark</td><td>long</td><td>64</td></tr>
+<tr><td>partition info struct 1 checksum</td><td>int</td><td>32</td></tr>
+<tr><td>partition info struct 2 session id</td><td>long</td><td>64</td></tr>
+<tr><td>partition info struct 2 low-water mark</td><td>long</td><td>64</td></tr>
+<tr><td>partition info struct 2 local low-water mark</td><td>long</td><td>64</td></tr>
+<tr><td>partition info struct 2 checksum</td><td>int</td><td>32</td></tr>
+</tbody>
+</table>
+<p>Each <em>Partition Info</em> record is 60 bytes (480 bits)</p>
+<p>A partition info struct records the session ID, the low-water mark, the local low-water mark, and the checksum of the struct itself. The low-water mark is the high-water mark of the partition in the cluster when the session is successfully started. The local low-water mark is the highest valid transaction ID of the partition in the storage when the session is successfully started. The local low-water mark can be smaller than the low-water mark when the storage is falling behind.</p>
+<p>Two partition info structs are updated alternately when a new storage session is started, and the update is immediately flushed to the disk. The checksum is checked when a partition of opened. Since the atomicity of I/O is not guaranteed, it is possible that an update is not completely written to the file when a fault occurs during I/O. If one of the structs has a checksum error, we ignore it and use the other struct, which means we rollback the partition. We assume at least one of them is always valid. If neither of structs is valid, we fail to open the partition.</p>
+<h2><a class="anchor" aria-hidden="true" id="segment-data-file"></a><a href="#segment-data-file" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Segment Data File</h2>
+<h3><a class="anchor" aria-hidden="true" id="data-file-header"></a><a href="#data-file-header" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Data File Header</h3>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Size (bits)</th></tr>
+</thead>
+<tbody>
+<tr><td>format version number</td><td>int</td><td>32</td></tr>
+<tr><td>creation time</td><td>long</td><td>64</td></tr>
+<tr><td>cluster key</td><td>UUID</td><td>128</td></tr>
+<tr><td>partition id</td><td>int</td><td>32</td></tr>
+<tr><td>first transaction ID</td><td>long</td><td>64</td></tr>
+<tr><td>reserved for future use</td><td>-</td><td>704</td></tr>
+</tbody>
+</table>
+<p>The header size is 128 bytes. The cluster key is a UUID assigned to a cluster.</p>
+<p>The first transaction ID is the ID of the first transaction in the segment.
+The data file body is a list of transaction records. Each transaction record contains the following information.</p>
+<h3><a class="anchor" aria-hidden="true" id="transaction-record"></a><a href="#transaction-record" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Transaction Record</h3>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th></tr>
+</thead>
+<tbody>
+<tr><td>transaction ID</td><td>long</td></tr>
+<tr><td>request id</td><td>ReqId</td></tr>
+<tr><td>transaction header</td><td>int</td></tr>
+<tr><td>transaction data length</td><td>int</td></tr>
+<tr><td>transaction data checksum</td><td>int</td></tr>
+<tr><td>transaction data</td><td>byte[]</td></tr>
+<tr><td>checksum</td><td>int</td></tr>
+</tbody>
+</table>
+<p>When new records are written, Waltz Storage flushes the file channel to guarantee the record persistence before responding to Waltz Server. The index file is also updated, but flush is delayed to reduce physical I/Os until checkpoint. The checkpoint interval is 1000 transactions (hardcoded). When a checkpoint is reached, Waltz Storage flushes the index file before adding a new record. This means, if a fault occurs between checkpoints, we are not sure if the index is valid. So, the index file recovery is necessary every time Waltz Storage starts up. Waltz Storage scans the records from the last checkpoint and rebuild index for record after the last checkpoint.</p>
+<h2><a class="anchor" aria-hidden="true" id="segment-index-file"></a><a href="#segment-index-file" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Segment Index File</h2>
+<h3><a class="anchor" aria-hidden="true" id="index-file-header"></a><a href="#index-file-header" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Index File Header</h3>
+<p>Exactly same as the data file header.</p>
+<h3><a class="anchor" aria-hidden="true" id="index-file-body"></a><a href="#index-file-body" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Index File Body</h3>
+<p>Index File Body is an array of transaction record offsets.</p>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th></tr>
+</thead>
+<tbody>
+<tr><td>transaction record offset</td><td>long</td></tr>
+</tbody>
+</table>
+<p>Each element corresponds to a transaction in the segment. The array index is <em>&lt;transaction id&gt;</em> - <em>&lt;first transaction id&gt;</em>. Each element is byte offsets of the transaction record in the data file.</p>
+<h2><a class="anchor" aria-hidden="true" id="checkpoint-interval"></a><a href="#checkpoint-interval" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Checkpoint Interval</h2>
+<p>In the recovery process described above, the last known clean transaction ID is updated more often than a stable environment since it is updated during the recovery process. A drawback is that the number of transactions after the last known clean transaction ID can become large when no fault occurs for a long period of time. This is bad when a recovery requires a truncation to the last known clean transaction ID. So, Waltz provides a configuration parameter &quot;storage.checkpointInterval&quot; which is an interval in transactions for forced initiation of a new session.</p>
+<h2><a class="anchor" aria-hidden="true" id="handling-snapshot-or-backup"></a><a href="#handling-snapshot-or-backup" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Handling Snapshot or Backup</h2>
+<p>Waltz does not provide a snapshot or backup making functionality. It is not a high priority at this moment since Waltz storage is fault tolerant. If necessary, use of a journaling file system like ZFS is a possible solution to this for now.</p>
+<p>Let’s assume a snapshot is available somehow. We may restore stale storage files from a snapshot when storage files on a storage node is damaged by a disk failure or mistake. The issue is that the state information in Zookeeper and the state information storage becomes inconsistent. Waltz already handle this case. The storage is simply truncated to the last known clean transaction ID (recorded in the storage) to remove any possibly dirty transaction, then the catch-up process will be started and bring the storage up-to-date.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/waltz/docs/server-storage-communication"><span class="arrow-prev">← </span><span>Server-Storage Communication</span></a><a class="docs-next button" href="/waltz/docs/concurrency-control-optimistic-locking"><span>Concurrency Control (Optimistic Locking)</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#directory-structure">Directory Structure</a></li><li><a href="#control-file">Control File</a><ul class="toc-headings"><li><a href="#control-file-header">Control File Header</a></li><li><a href="#control-file-body">Control File Body</a></li></ul></li><li><a href="#segment-data-file">Segment Data File</a><ul class="toc-headings"><li><a href="#data-file-header">Data File Header</a></li><li><a href="#transaction-record">Transaction Record</a></li></ul></li><li><a href="#segment-index-file">Segment Index File</a><ul class="toc-headings"><li><a href="#index-file-header">Index File Header</a></li><li><a href="#index-file-body">Index File Body</a></li></ul></li><li><a href="#checkpoint-interval">Checkpoint Interval</a></li><li><a href="#handling-snapshot-or-backup">Handling Snapshot or Backup</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/waltz/" class="nav-home"><img src="/waltz/img/favicon.ico" alt="Waltz" width="66" height="58"/></a><div><h5>Docs</h5><a href="/waltz/docs/introduction">Design</a><a href="/waltz/docs/waltz-setup">Administration</a><a href="/waltz/docs/application-programming-model">API Reference</a></div><div><h5>Community</h5><a href="https://stackoverflow.com/questions/tagged/" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://twitter.com/WePay" target="_blank" rel="noreferrer noopener">Twitter</a></div><div><h5>More</h5><a href="https://wecode.wepay.com">Blog</a><a href="https://github.com/wepay/waltz">GitHub</a></div></section><section class="copyright">Copyright © 2019 WePay Inc.</section></footer></div></body></html>

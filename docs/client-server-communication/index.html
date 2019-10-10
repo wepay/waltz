@@ -1,0 +1,238 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Client-Server Communication · Waltz</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Client-Server communication uses persistent TCP connections. A client creates two connections per-server. One is for streaming, and the other for RPC. The networking module is built on top of Netty."/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Client-Server Communication · Waltz"/><meta property="og:type" content="website"/><meta property="og:url" content="https:wepay.github.io///waltz/"/><meta property="og:description" content="Client-Server communication uses persistent TCP connections. A client creates two connections per-server. One is for streaming, and the other for RPC. The networking module is built on top of Netty."/><meta property="og:image" content="https:wepay.github.io///waltz/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https:wepay.github.io///waltz/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/waltz/img/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script src="/waltz/js/scrollSpy.js"></script><link rel="stylesheet" href="/waltz/css/main.css"/><script src="/waltz/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/waltz/"><img class="logo" src="/waltz/img/favicon.ico" alt="Waltz"/><h2 class="headerTitleWithLogo">Waltz</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/waltz/docs/introduction" target="_self">Docs</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Design</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Design</h3><ul class=""><li class="navListItem"><a class="navItem" href="/waltz/docs/introduction">Introduction</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/terminology">Terminology and Components</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/application-programming-model">Application Programming Model</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/waltz/docs/client-server-communication">Client-Server Communication</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/server-storage-communication">Server-Storage Communication</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/on-disk-data-structures">On-Disk Data Structures</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/concurrency-control-optimistic-locking">Concurrency Control (Optimistic Locking)</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/back-pressure">Back Pressure</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-client">Waltz Client</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-server">Waltz Server</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-storage">Waltz Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Administration</h3><ul class=""><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-setup">Waltz Setup</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle">Client-Server Communication</h1></header><article><div><span><p>Client-Server communication uses persistent TCP connections. A client creates two connections per-server. One is for streaming, and the other for RPC. The networking module is built on top of Netty.</p>
+<h2><a class="anchor" aria-hidden="true" id="request-id-reqid"></a><a href="#request-id-reqid" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Request ID (ReqId)</h2>
+<p>The request ID is a unique ID attached to a request message and corresponding response messages.</p>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Client ID</td><td>int</td><td>The unique ID of the client. The uniqueness is guaranteed by ZK.</td></tr>
+<tr><td>Generation</td><td>int</td><td>The generation number of the partition.</td></tr>
+<tr><td>Partition ID</td><td>int</td><td>The partition ID</td></tr>
+<tr><td>Sequence number</td><td>int</td><td>The sequence number.</td></tr>
+</tbody>
+</table>
+<h2><a class="anchor" aria-hidden="true" id="mounting-a-partition"></a><a href="#mounting-a-partition" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Mounting a partition</h2>
+<p>A client establishes a communication to servers in the following manner for each partition.</p>
+<ol>
+<li>The client finds a server to which the partition is assigned.</li>
+<li>The client sends a mount request to the server.</li>
+<li>If the server has the partition,
+<ol>
+<li>The server starts the transaction feed. The client accepts the feed data.</li>
+<li>If the feed reached the client high water mark, it sends the mount response with  partitionReady = true.</li>
+<li>The client receives the mount response and completes the mounting process.</li>
+</ol></li>
+<li>Otherwise,
+<ol>
+<li>The server sends the mount response with partitionReady = false.</li>
+<li>The client receives the mount response and find that the partition is not ready.</li>
+<li>Repeat from 1.</li>
+</ol></li>
+</ol>
+<h3><a class="anchor" aria-hidden="true" id="mount-request"></a><a href="#mount-request" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Mount Request</h3>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Request ID</td><td>ReqId</td><td>Client generated unique request ID</td></tr>
+<tr><td>Client High-water Mark</td><td>long</td><td>The highest ID of transactions applied to the client application’s database</td></tr>
+<tr><td>sequence number</td><td>int</td><td>A sequential ID that identifies the network client sending this request. This is used to detect stale network clients.</td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="mount-response"></a><a href="#mount-response" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Mount Response</h3>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Request ID</td><td>ReqId</td><td>Client generated unique request ID stored in the corresponding mount request</td></tr>
+<tr><td>Partition Ready</td><td>boolean</td><td>True if the partition is ready, otherwise false</td></tr>
+</tbody>
+</table>
+<h2><a class="anchor" aria-hidden="true" id="writing-and-reading-transactions"></a><a href="#writing-and-reading-transactions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Writing and Reading Transactions</h2>
+<h3><a class="anchor" aria-hidden="true" id="append-request"></a><a href="#append-request" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Append Request</h3>
+<p>The append request submits a transaction to Waltz.</p>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Request ID</td><td>ReqId</td><td>Client generated unique request ID</td></tr>
+<tr><td>Client High-water Mark</td><td>long</td><td>The highest ID of transactions applied to the client application’s database</td></tr>
+<tr><td>Write Lock Request Length</td><td>int</td><td>The length of the hash value array</td></tr>
+<tr><td>Write Lock Request Hash Values</td><td>int[]</td><td>Lock hash values</td></tr>
+<tr><td>Read Lock Request Length</td><td>int</td><td>The length of the hash value array</td></tr>
+<tr><td>Read Lock Request Hash Values</td><td>int[]</td><td>Lock hash values</td></tr>
+<tr><td>Transaction Header</td><td>int</td><td>Application defined 32-bit integer metadata</td></tr>
+<tr><td>Transaction Data Length</td><td>int</td><td>The length of transaction data byte array.</td></tr>
+<tr><td>Transaction Bytes</td><td>byte[]</td><td>A byte array</td></tr>
+<tr><td>Checksum</td><td>int</td><td>CRC-32 of the transaction data</td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="feed-request"></a><a href="#feed-request" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Feed Request</h3>
+<p>The feed request initiates the transaction feed from Waltz server.</p>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Request ID</td><td>ReqId</td><td>Client generated unique request ID</td></tr>
+<tr><td>Client High-water Mark</td><td>long</td><td>The highest ID of transactions applied to the client application’s database</td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="feed-data"></a><a href="#feed-data" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Feed Data</h3>
+<p>The feed data is stream to a client in response to the feed request.</p>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Request ID</td><td>ReqId</td><td>Client generated unique request ID stored in the corresponding Feed Request.</td></tr>
+<tr><td>Transaction ID</td><td>long</td><td>The ID of the transaction</td></tr>
+<tr><td>Transaction Header</td><td>int</td><td>Application defined 32-bit integer metadata</td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="transaction-data-request"></a><a href="#transaction-data-request" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Transaction Data Request</h3>
+<p>A transaction data request is sent through as a RPC request.</p>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Request ID</td><td>ReqId</td><td>Client generated unique request ID</td></tr>
+<tr><td>Transaction ID</td><td>long</td><td>The ID of the transaction to fetch</td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="transaction-data-response"></a><a href="#transaction-data-response" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Transaction Data Response</h3>
+<p>A transaction data response is sent through as a RPC response.</p>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Request ID</td><td>ReqId</td><td>Client generated unique request ID stored in the corresponding Feed Request.</td></tr>
+<tr><td>Transaction ID</td><td>long</td><td>The ID of the transaction fetched</td></tr>
+<tr><td>Success Flag</td><td>boolean</td><td>True if the fetch is successful, otherwise false.</td></tr>
+<tr><td>Transaction Data Length</td><td>int</td><td>The length of transaction data. (exists only when the success flag is true)</td></tr>
+<tr><td>Transaction Data Bytes</td><td>byte[]</td><td>A byte array (exists only when the success flag is true)</td></tr>
+<tr><td>Checksum</td><td>int</td><td>CRC-32 of the transaction data (exists only when the success flag is true)</td></tr>
+<tr><td>Error Message</td><td>String</td><td>Error message (exists only when the success flag is false)</td></tr>
+</tbody>
+</table>
+<h2><a class="anchor" aria-hidden="true" id="other-messages"></a><a href="#other-messages" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Other Messages</h2>
+<h3><a class="anchor" aria-hidden="true" id="flush-request"></a><a href="#flush-request" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Flush Request</h3>
+<p>A client sends a flush request to wait for all pending transaction to complete regardless of successfully or not. A flush response will be sent back to the client when all append requests reached to the server before this request were completed.</p>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Request ID</td><td>ReqId</td><td>Client generated unique request ID</td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="flush-response"></a><a href="#flush-response" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Flush Response</h3>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Request ID</td><td>ReqId</td><td>Client generated unique request ID stored in the corresponding Flush Request.</td></tr>
+<tr><td>Transaction ID</td><td>long</td><td>The high-water mark after pending transactions are processed.</td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="lock-failure"></a><a href="#lock-failure" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Lock Failure</h3>
+<p>A lock failure message is sent back to a client when a lock request failed.</p>
+<table>
+<thead>
+<tr><th>Field</th><th>Data Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Request ID</td><td>ReqId</td><td>Client generated unique request ID stored in the corresponding Append Request</td></tr>
+<tr><td>Transaction ID</td><td>long</td><td>The ID of the transaction that made the lock request fail.</td></tr>
+</tbody>
+</table>
+<h2><a class="anchor" aria-hidden="true" id="generation-number"></a><a href="#generation-number" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Generation Number</h2>
+<p>The generation number is used to ensure that Waltz server instances and clients work consistently in the dynamically changing environment.</p>
+<p>Waltz Server cluster consists one or more Waltz server instances. A partition is assigned to a single server instance at any moment. The cluster manager is responsible for the assignments. When a new instance comes up, or an old instance goes down, the cluster manager detects it and reassign partitions to make certain that there is one and only one instance for each partition. Everytime this happens, the cluster manager bumps up the partition’s generation number. Waltz servers ignores any append request when the generation number does not match.</p>
+<h2><a class="anchor" aria-hidden="true" id="detection-of-failed-append-requests"></a><a href="#detection-of-failed-append-requests" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Detection of Failed Append Requests</h2>
+<p>Each client has a registry of append requests called the transaction monitor. The transaction monitor determines a state (success/failure) of each append request using the transaction feed.</p>
+<p>For each transaction in the feed,</p>
+<ol>
+<li>The client checks if its transaction monitor contains the ReqId in the feed data.</li>
+<li>If the transaction monitor has the ReqId, the transaction was issued by this client and successful, so,
+<ol>
+<li>The transaction monitor marks the transaction as success.</li>
+<li>The transaction monitor marks any pending transactions older than this transaction as failure.</li>
+<li>The transaction monitor clears the entries of completed (either success or failure) transaction in the registry</li>
+</ol></li>
+<li>Otherwise, ignore</li>
+</ol>
+<p>A client automatically reconnects to Waltz servers after a network failure or a Waltz server failure. When a reconnect happens, it is possible that the server may have lost some requests. It may take a while for the client to recognize it especially for a service generating append requests in a slow pace. To ensure a quicker detection, the following reconnect procedure has designed.</p>
+<ol>
+<li>The client blocks append requests</li>
+<li>The client establishes a connection to the server</li>
+<li>The client send a mount request</li>
+<li>The client starts receiving transaction feed and apply the regular failure detection</li>
+<li>The client makes all pending requests fail when the mount response is received</li>
+<li>The client unblocks append requests</li>
+</ol>
+<p>The completion of a mount request ensures that the server does not have any pending request from this client. The client can safely get rid of pending requests as failures.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/waltz/docs/application-programming-model"><span class="arrow-prev">← </span><span>Application Programming Model</span></a><a class="docs-next button" href="/waltz/docs/server-storage-communication"><span>Server-Storage Communication</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#request-id-reqid">Request ID (ReqId)</a></li><li><a href="#mounting-a-partition">Mounting a partition</a><ul class="toc-headings"><li><a href="#mount-request">Mount Request</a></li><li><a href="#mount-response">Mount Response</a></li></ul></li><li><a href="#writing-and-reading-transactions">Writing and Reading Transactions</a><ul class="toc-headings"><li><a href="#append-request">Append Request</a></li><li><a href="#feed-request">Feed Request</a></li><li><a href="#feed-data">Feed Data</a></li><li><a href="#transaction-data-request">Transaction Data Request</a></li><li><a href="#transaction-data-response">Transaction Data Response</a></li></ul></li><li><a href="#other-messages">Other Messages</a><ul class="toc-headings"><li><a href="#flush-request">Flush Request</a></li><li><a href="#flush-response">Flush Response</a></li><li><a href="#lock-failure">Lock Failure</a></li></ul></li><li><a href="#generation-number">Generation Number</a></li><li><a href="#detection-of-failed-append-requests">Detection of Failed Append Requests</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/waltz/" class="nav-home"><img src="/waltz/img/favicon.ico" alt="Waltz" width="66" height="58"/></a><div><h5>Docs</h5><a href="/waltz/docs/introduction">Design</a><a href="/waltz/docs/waltz-setup">Administration</a><a href="/waltz/docs/application-programming-model">API Reference</a></div><div><h5>Community</h5><a href="https://stackoverflow.com/questions/tagged/" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://twitter.com/WePay" target="_blank" rel="noreferrer noopener">Twitter</a></div><div><h5>More</h5><a href="https://wecode.wepay.com">Blog</a><a href="https://github.com/wepay/waltz">GitHub</a></div></section><section class="copyright">Copyright © 2019 WePay Inc.</section></footer></div></body></html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Waltz Setup · Waltz</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="## Dependency"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Waltz Setup · Waltz"/><meta property="og:type" content="website"/><meta property="og:url" content="https:wepay.github.io///waltz/"/><meta property="og:description" content="## Dependency"/><meta property="og:image" content="https:wepay.github.io///waltz/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https:wepay.github.io///waltz/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/waltz/img/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script src="/waltz/js/scrollSpy.js"></script><link rel="stylesheet" href="/waltz/css/main.css"/><script src="/waltz/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/waltz/"><img class="logo" src="/waltz/img/favicon.ico" alt="Waltz"/><h2 class="headerTitleWithLogo">Waltz</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/waltz/docs/introduction" target="_self">Docs</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Administration</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Design</h3><ul class=""><li class="navListItem"><a class="navItem" href="/waltz/docs/introduction">Introduction</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/terminology">Terminology and Components</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/application-programming-model">Application Programming Model</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/client-server-communication">Client-Server Communication</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/server-storage-communication">Server-Storage Communication</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/on-disk-data-structures">On-Disk Data Structures</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/concurrency-control-optimistic-locking">Concurrency Control (Optimistic Locking)</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/back-pressure">Back Pressure</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-client">Waltz Client</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-server">Waltz Server</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-storage">Waltz Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Administration</h3><ul class=""><li class="navListItem navListItemActive"><a class="navItem" href="/waltz/docs/waltz-setup">Waltz Setup</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle">Waltz Setup</h1></header><article><div><span><h2><a class="anchor" aria-hidden="true" id="dependency"></a><a href="#dependency" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Dependency</h2>
+<ul>
+<li>ZooKeeper</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="things-to-decide-before-setup"></a><a href="#things-to-decide-before-setup" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Things to decide before setup</h2>
+<ul>
+<li>the cluster name</li>
+<li>the cluster root path (the path to the znode that represents the cluster)</li>
+<li>the number of partitions</li>
+<li>the number of replicas</li>
+<li>the placement of storage nodes (zone/region)
+** the size of disks (persistent disks in which storage nodes store data)</li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="creating-a-waltz-cluster"></a><a href="#creating-a-waltz-cluster" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Creating a Waltz Cluster</h2>
+<p>There are 3 steps to setup a Waltz cluster.</p>
+<p>(Note: The cli_config_path file should contain information about other config parameters such as &quot;zookeeper.connectString&quot;, &quot;cluster.root&quot;, &quot;zookeeper.sessionTimeout&quot; and ssl config prefix i.e. &quot;ssl.&quot; (wherever required).</p>
+<p>Step 1: Use <code>create</code> command to create a cluster</p>
+<pre><code class="hljs"><span class="hljs-attr">waltz_uber</span>=<span class="hljs-string">/path/to/waltz-uber-X.Y.Z.jar</span>
+<span class="hljs-attr">java</span> <span class="hljs-string">${waltz_uber+-cp ${waltz_uber}} \
+    com.wepay.waltz.tools.zk.ZooKeeperCli \
+    create \
+    --name ${cluster_name?} \
+    --partitions ${partition_count?} \
+    --cli-config-path ${cli_config_path?}</span>
+</code></pre>
+<p>Step 2: Use <code>add-storage-node</code> command to add storage node(s)</p>
+<pre><code class="hljs">java ${waltz_uber+-cp ${waltz_uber}} \
+    com.wepay.waltz.tools.zk.ZooKeeperCli \
+   <span class="hljs-built_in"> add-storage-node </span>\
+    --storage ${storage_node?} \
+    --group ${group?} \
+    --cli-config-path ${cli_config_path?}
+</code></pre>
+<p>where group is meant to represent a collection of storage nodes that should contain a complete replica of the data.  This is meant to map to a region; for example, group=&quot;us-central&quot;</p>
+<p>Step 3: Use <code>auto-assign</code> command to assign partitions to storage node(s) in group (with Round Robin)</p>
+<pre><code class="hljs">java <span class="hljs-symbol">$</span>{waltz_uber+-cp <span class="hljs-symbol">$</span>{waltz_uber}} \
+    com.wepay.waltz.tools.zk.ZooKeeperCli \
+    auto-<span class="hljs-keyword">assign</span> \
+    --group <span class="hljs-symbol">$</span>{group?} \
+    --cli-config-path <span class="hljs-symbol">$</span>{cli_config_path?}
+</code></pre>
+<p>At this point, start up only the storage nodes.</p>
+<p>Step 4: Use <code>add-partition</code> command to assign partitions to storage node(s) based on what was assigned in ZooKeeper:</p>
+<pre><code class="hljs">java ${waltz_uber+-cp ${waltz_uber}} \
+    com.wepay.waltz.tools.storage.StorageCli \
+   <span class="hljs-built_in"> add-partition </span>\
+    --partition ${partition?} \
+    --storage ${storage_node?} \
+    --cli-config-path ${cli_config_path?}
+</code></pre>
+<p>The SSL config should be specified in <code>cli_config_path</code> file. The <code>storage</code> parameter should point to the storage node's admin port.</p>
+<p>You will need to do this for every single replica assignment on every storage node. To get a list of replica assignments, you can run the list command to dump server metadata from ZooKeeper.</p>
+<pre><code class="hljs">java <span class="hljs-variable">${waltz_uber</span>+-cp <span class="hljs-variable">${waltz_uber}</span>} \
+    com.wepay.waltz.tools.zk.ZooKeeperCli \
+    <span class="hljs-keyword">list</span> \
+    --<span class="hljs-keyword">cli</span>-config-path <span class="hljs-variable">${cli_config_path</span>?}
+</code></pre>
+<p>Once all replicas have been added to all storage nodes, you can start the Waltz servers. Running the list command again should show the servers now.</p>
+<p>To manually assign a partition to storage node(s), you can use <code>assign-partition</code> command.</p>
+<pre><code class="hljs">java <span class="hljs-symbol">$</span>{waltz_uber+-cp <span class="hljs-symbol">$</span>{waltz_uber}} \
+    com.wepay.waltz.tools.zk.ZooKeeperCli \
+    <span class="hljs-keyword">assign</span>-partition \
+    --partition <span class="hljs-symbol">$</span>{partition?} \
+    --storage <span class="hljs-symbol">$</span>{storage_node?} \
+    --cli-config-path <span class="hljs-symbol">$</span>{cli_config_path?}
+</code></pre>
+<p>To manually un-assign a partition from storage node(s), you can use <code>unassign-partition</code> command.</p>
+<pre><code class="hljs">java ${waltz_uber+-cp $waltz_uber} \
+    com.wepay.waltz.tools.zk.ZooKeeperCli \
+    unassign-partition \
+    -<span class="ruby">-partition ${partition?} \
+</span>    -<span class="ruby">-storage ${storage_node?} \
+</span>    -<span class="ruby">-cli-config-path ${cli_config_path?}
+</span></code></pre>
+<p>To remove a storage node from cluster, you can use <code>remove-storage-node</code> command.</p>
+<pre><code class="hljs"><span class="hljs-attr">java</span> <span class="hljs-string">${waltz_uber+-cp $waltz_uber} \
+    com.wepay.waltz.tools.zk.ZooKeeperCli \
+    remove-storage-node \
+    --storage ${storage_node?} \
+    --cli-config-path ${cli_config_path?}</span>
+</code></pre>
+<p>To delete server metadata, you can use <code>delete</code> command.</p>
+<pre><code class="hljs">java ${waltz_uber+-cp $waltz_uber} <span class="hljs-string">\</span>
+    com.wepay.waltz.tools.zk.ZooKeeperCli <span class="hljs-string">\</span>
+    <span class="hljs-keyword">delete</span> <span class="hljs-string">\</span>
+    --name ${cluster_name?} <span class="hljs-string">\</span>
+    --force <span class="hljs-string">\</span> <span class="hljs-comment"># force delete even if cluster name don't match</span>
+    --cli-config-path ${cli_config_path?}
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="configuration-parameters"></a><a href="#configuration-parameters" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuration Parameters</h2>
+<p>Waltz uses YAML for configuration files. Configuration parameters have the form of dot-delimited names. When assigning a value &quot;V&quot; to a parameter &quot;A.B.C&quot;, all of the following YAML is valid.</p>
+<pre><code class="hljs">A<span class="hljs-selector-class">.B</span><span class="hljs-selector-class">.C</span>: V
+</code></pre>
+<pre><code class="hljs">A<span class="hljs-selector-class">.B</span>:
+  C: V
+</code></pre>
+<pre><code class="hljs"><span class="hljs-string">A:</span>
+  B.<span class="hljs-string">C:</span> V
+</code></pre>
+<pre><code class="hljs"><span class="hljs-symbol">A:</span>
+<span class="hljs-symbol">  B:</span>
+<span class="hljs-symbol">    C:</span> V
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="configuring-waltzserver"></a><a href="#configuring-waltzserver" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuring WaltzServer</h2>
+<h3><a class="anchor" aria-hidden="true" id="minimum-configuration-parameters"></a><a href="#minimum-configuration-parameters" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Minimum Configuration Parameters</h3>
+<p>The following is the minimum required configuration parameters.</p>
+<table>
+<thead>
+<tr><th>Parameter Name</th><th>Description</th><th>Default Value</th></tr>
+</thead>
+<tbody>
+<tr><td>zookeeper.connectString</td><td>zookeeper connect string</td><td></td></tr>
+<tr><td>zookeeper.sessionTimeout</td><td>zookeeper session timeout</td><td></td></tr>
+<tr><td>cluster.root</td><td>cluster root path in Zookeeper</td><td></td></tr>
+<tr><td>server.port</td><td>server port number</td><td></td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="parameters-for-metrics"></a><a href="#parameters-for-metrics" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Parameters for Metrics</h3>
+<p>This setting enables the following endpoints.</p>
+<ul>
+<li>/ping</li>
+<li>/buildinfo</li>
+<li>/metrics</li>
+<li>/health</li>
+</ul>
+<table>
+<thead>
+<tr><th>Parameter Name</th><th>Description</th><th>Default Value</th></tr>
+</thead>
+<tbody>
+<tr><td>server.jetty.port</td><td>server jetty port number</td><td></td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="security-configuration-parameters"></a><a href="#security-configuration-parameters" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Security Configuration Parameters</h3>
+<p>It is strongly recommended to set security configuration parameters in production.</p>
+<h4><a class="anchor" aria-hidden="true" id="configuration-parameters-for-the-client-server-communication"></a><a href="#configuration-parameters-for-the-client-server-communication" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuration parameters for the client-server communication</h4>
+<table>
+<thead>
+<tr><th>Parameter Name</th><th>Description</th><th>Default Value</th></tr>
+</thead>
+<tbody>
+<tr><td>server.ssl.keyStore.location</td><td>key store location path</td><td></td></tr>
+<tr><td>server.ssl.keyStore.password</td><td>key store password</td><td></td></tr>
+<tr><td>server.ssl.keyStore.type</td><td>key store type</td><td>JKS</td></tr>
+<tr><td>server.ssl.trustStore.location</td><td>trust store location path</td><td></td></tr>
+<tr><td>server.ssl.trustStore.password</td><td>trust store password</td><td></td></tr>
+<tr><td>server.ssl.trustStore.type</td><td>trust store type</td><td>JKS</td></tr>
+<tr><td>server.ssl.keyManager.algorithm</td><td>algorithm used when creating a KeyManagerFactory</td><td>SunX509</td></tr>
+<tr><td>server.ssl.trustManager.algorithm</td><td>algorithm used when creating a TrustManagerFactory</td><td>SunX509</td></tr>
+</tbody>
+</table>
+<h4><a class="anchor" aria-hidden="true" id="configuration-parameters-for-the-server-storage-communication"></a><a href="#configuration-parameters-for-the-server-storage-communication" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuration parameters for the server-storage communication</h4>
+<table>
+<thead>
+<tr><th>Parameter Name</th><th>Description</th><th>Default Value</th></tr>
+</thead>
+<tbody>
+<tr><td>storage.ssl.keyStore.location</td><td>key store location path</td><td></td></tr>
+<tr><td>storage.ssl.keyStore.password</td><td>key store password</td><td></td></tr>
+<tr><td>storage.ssl.keyStore.type</td><td>key store type</td><td>JKS</td></tr>
+<tr><td>storage.ssl.trustStore.location</td><td>trust store location path</td><td></td></tr>
+<tr><td>storage.ssl.trustStore.password</td><td>trust store password</td><td></td></tr>
+<tr><td>storage.ssl.trustStore.type</td><td>trust store type</td><td>JKS</td></tr>
+<tr><td>storage.ssl.keyManager.algorithm</td><td>algorithm used when creating a KeyManagerFactory</td><td>SunX509</td></tr>
+<tr><td>storage.ssl.trustManager.algorithm</td><td>algorithm used when creating a TrustManagerFactory</td><td>SunX509</td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="more-server-configuration-parameters"></a><a href="#more-server-configuration-parameters" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>More Server Configuration Parameters</h3>
+<p>See <em>com.wepay.waltz.server.WaltzServerConfig</em> for more configuration parameters.</p>
+<h2><a class="anchor" aria-hidden="true" id="starting-a-waltzserver-instance"></a><a href="#starting-a-waltzserver-instance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Starting a WaltzServer instance</h2>
+<pre><code class="hljs">java -cp waltz-uber-X<span class="hljs-selector-class">.Y</span><span class="hljs-selector-class">.Z</span><span class="hljs-selector-class">.jar</span> com<span class="hljs-selector-class">.wepay</span><span class="hljs-selector-class">.waltz</span><span class="hljs-selector-class">.server</span><span class="hljs-selector-class">.WaltzServer</span> &lt;config file path&gt;
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="configuring-waltz-storage-server"></a><a href="#configuring-waltz-storage-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuring Waltz Storage Server</h2>
+<p>Create a property file as a configuration file.</p>
+<h3><a class="anchor" aria-hidden="true" id="minimum-configuration-parameters-1"></a><a href="#minimum-configuration-parameters-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Minimum Configuration Parameters</h3>
+<p>The following is the minimum required configuration parameters.</p>
+<table>
+<thead>
+<tr><th>Parameter Name</th><th>Description</th><th>Default Value</th></tr>
+</thead>
+<tbody>
+<tr><td>storage.port</td><td>storage port number</td><td></td></tr>
+<tr><td>storage.admin</td><td>port  storage admin port number</td><td></td></tr>
+<tr><td>storage.directory</td><td>path to data directory</td><td></td></tr>
+<tr><td>storage.segment</td><td>size.threshold    threshold of segment size (a new segment is created when a segment size exceed this value)</td><td>1000000000</td></tr>
+<tr><td>cluster.key</td><td>cluster key (which is a unique identifier for the cluster)</td><td></td></tr>
+<tr><td>cluster.numPartitions</td><td>total number of partitions in the cluster</td><td></td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="parameters-for-metrics-1"></a><a href="#parameters-for-metrics-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Parameters for Metrics</h3>
+<p>This setting enables the following endpoints.</p>
+<ul>
+<li>/ping</li>
+<li>/buildinfo</li>
+<li>/metrics</li>
+<li>/health</li>
+</ul>
+<table>
+<thead>
+<tr><th>Parameter Name</th><th>Description</th><th>Default Value</th></tr>
+</thead>
+<tbody>
+<tr><td>storage.jetty.port</td><td>storage jetty port number</td><td></td></tr>
+</tbody>
+</table>
+<h2><a class="anchor" aria-hidden="true" id="security-configuration-parameters-1"></a><a href="#security-configuration-parameters-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Security Configuration Parameters</h2>
+<p>It is strongly recommended to set security configuration parameters in production.</p>
+<h3><a class="anchor" aria-hidden="true" id="configuration-parameters-for-the-server-storage-communication-1"></a><a href="#configuration-parameters-for-the-server-storage-communication-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuration parameters for the server-storage communication</h3>
+<table>
+<thead>
+<tr><th>Parameter Name</th><th>Description</th><th>Default Value</th></tr>
+</thead>
+<tbody>
+<tr><td>storage.ssl.keyStore.location</td><td>key store location path</td></tr>
+<tr><td>storage.ssl.keyStore.password</td><td>key store password</td></tr>
+<tr><td>storage.ssl.keyStore.type</td><td>key store type</td><td>JKS</td></tr>
+<tr><td>storage.ssl.trustStore.location</td><td>trust store location path</td><td></td></tr>
+<tr><td>storage.ssl.trustStore.password</td><td>trust store password</td><td></td></tr>
+<tr><td>storage.ssl.trustStore.type</td><td>trust store type</td><td>JKS</td></tr>
+<tr><td>storage.ssl.keyManager.algorithm</td><td>algorithm used when creating a KeyManagerFactory</td><td>SunX509</td></tr>
+<tr><td>storage.ssl.trustManager.algorithm</td><td>algorithm used when creating a TrustManagerFactory</td><td>SunX509</td></tr>
+</tbody>
+</table>
+<h2><a class="anchor" aria-hidden="true" id="starting-a-waltzstorage-instance"></a><a href="#starting-a-waltzstorage-instance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Starting a WaltzStorage instance</h2>
+<pre><code class="hljs">java -cp waltz-uber-X<span class="hljs-selector-class">.Y</span><span class="hljs-selector-class">.Z</span><span class="hljs-selector-class">.jar</span> com<span class="hljs-selector-class">.wepay</span><span class="hljs-selector-class">.waltz</span><span class="hljs-selector-class">.storage</span><span class="hljs-selector-class">.WaltzStorage</span> &lt;config file path&gt;
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="configuring-waltzclient"></a><a href="#configuring-waltzclient" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuring WaltzClient</h2>
+<p>Typically Waltz client is configured programatically using java.util.Properties and com.wepay.waltz.client.WaltzClientConfig. WaltzClientConfig defines symbols for configuration parameters.</p>
+<pre><code class="hljs">Map&lt;Object, Object&gt;<span class="hljs-built_in"> config </span>= new HashMap&lt;&gt;();
+config.put(WaltzClientConfig.ZOOKEEPER_CONNECT_STRING, <span class="hljs-string">"zkserve1:2181,zkserver2:2181,zkserver3:2181"</span>);
+config.put(WaltzClientConfig.ZOOKEEPER_SESSION_TIMEOUT, <span class="hljs-string">"30000"</span>);
+config.put(WaltzClientConfig.CLUSTER_ROOT, <span class="hljs-string">"/test/cluster"</span>);
+<span class="hljs-built_in">..</span>.
+WaltzClient<span class="hljs-built_in"> client </span>= new WaltzClient(callback, new WaltzClientConfig(config));
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="minimum-configuration-parameters-2"></a><a href="#minimum-configuration-parameters-2" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Minimum Configuration Parameters</h3>
+<p>The following is the minimum required configuration parameters.</p>
+<table>
+<thead>
+<tr><th>Parameter Name</th><th>Description</th><th>Default Value</th></tr>
+</thead>
+<tbody>
+<tr><td>zookeeper.connectString</td><td>zookeeper connect string</td><td></td></tr>
+<tr><td>zookeeper.sessionTimeout</td><td>zookeeper session timeout</td><td></td></tr>
+<tr><td>cluster.root</td><td>cluster root path in Zookeeper</td><td></td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="security-configuration-parameters-2"></a><a href="#security-configuration-parameters-2" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Security Configuration Parameters</h3>
+<p>It is strongly recommended to set security configuration parameters in production.</p>
+<h4><a class="anchor" aria-hidden="true" id="configuration-parameters-for-the-client-server-communication-1"></a><a href="#configuration-parameters-for-the-client-server-communication-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuration parameters for the client-server communication</h4>
+<table>
+<thead>
+<tr><th>Parameter Name</th><th>Description</th><th>Default Value</th></tr>
+</thead>
+<tbody>
+<tr><td>client.ssl.keyStore.location</td><td>key store location path</td><td></td></tr>
+<tr><td>client.ssl.keyStore.password</td><td>key store password</td><td></td></tr>
+<tr><td>client.ssl.keyStore.type</td><td>key store type</td><td>JKS</td></tr>
+<tr><td>client.ssl.trustStore.location</td><td>trust store location path</td><td></td></tr>
+<tr><td>client.ssl.trustStore.password</td><td>trust store password</td><td></td></tr>
+<tr><td>client.ssl.trustStore.type</td><td>trust store type</td><td>JKS</td></tr>
+<tr><td>client.ssl.keyManager.algorithm</td><td>algorithm used when creating a KeyManagerFactory</td><td>SunX509</td></tr>
+<tr><td>client.ssl.trustManager.algorithm</td><td>algorithm used when creating a TrustManagerFactory</td><td>SunX509</td></tr>
+</tbody>
+</table>
+<h3><a class="anchor" aria-hidden="true" id="other-configuration-parameters"></a><a href="#other-configuration-parameters" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Other Configuration Parameters</h3>
+<table>
+<thead>
+<tr><th>Parameter Name</th><th>Description</th><th>Default Value</th></tr>
+</thead>
+<tbody>
+<tr><td>client.numTransactionRetryThreads</td><td>number of threads used for retries of transactions</td><td>1</td></tr>
+</tbody>
+</table>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/waltz/docs/waltz-storage"><span class="arrow-prev">← </span><span>Waltz Storage</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#dependency">Dependency</a></li><li><a href="#things-to-decide-before-setup">Things to decide before setup</a></li><li><a href="#creating-a-waltz-cluster">Creating a Waltz Cluster</a></li><li><a href="#configuration-parameters">Configuration Parameters</a></li><li><a href="#configuring-waltzserver">Configuring WaltzServer</a><ul class="toc-headings"><li><a href="#minimum-configuration-parameters">Minimum Configuration Parameters</a></li><li><a href="#parameters-for-metrics">Parameters for Metrics</a></li><li><a href="#security-configuration-parameters">Security Configuration Parameters</a></li><li><a href="#more-server-configuration-parameters">More Server Configuration Parameters</a></li></ul></li><li><a href="#starting-a-waltzserver-instance">Starting a WaltzServer instance</a></li><li><a href="#configuring-waltz-storage-server">Configuring Waltz Storage Server</a><ul class="toc-headings"><li><a href="#minimum-configuration-parameters-1">Minimum Configuration Parameters</a></li><li><a href="#parameters-for-metrics-1">Parameters for Metrics</a></li></ul></li><li><a href="#security-configuration-parameters-1">Security Configuration Parameters</a><ul class="toc-headings"><li><a href="#configuration-parameters-for-the-server-storage-communication-1">Configuration parameters for the server-storage communication</a></li></ul></li><li><a href="#starting-a-waltzstorage-instance">Starting a WaltzStorage instance</a></li><li><a href="#configuring-waltzclient">Configuring WaltzClient</a><ul class="toc-headings"><li><a href="#minimum-configuration-parameters-2">Minimum Configuration Parameters</a></li><li><a href="#security-configuration-parameters-2">Security Configuration Parameters</a></li><li><a href="#other-configuration-parameters">Other Configuration Parameters</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/waltz/" class="nav-home"><img src="/waltz/img/favicon.ico" alt="Waltz" width="66" height="58"/></a><div><h5>Docs</h5><a href="/waltz/docs/introduction">Design</a><a href="/waltz/docs/waltz-setup">Administration</a><a href="/waltz/docs/application-programming-model">API Reference</a></div><div><h5>Community</h5><a href="https://stackoverflow.com/questions/tagged/" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://twitter.com/WePay" target="_blank" rel="noreferrer noopener">Twitter</a></div><div><h5>More</h5><a href="https://wecode.wepay.com">Blog</a><a href="https://github.com/wepay/waltz">GitHub</a></div></section><section class="copyright">Copyright © 2019 WePay Inc.</section></footer></div></body></html>

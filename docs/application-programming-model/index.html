@@ -1,0 +1,181 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Application Programming Model · Waltz</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="## Basic Idea"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Application Programming Model · Waltz"/><meta property="og:type" content="website"/><meta property="og:url" content="https:wepay.github.io///waltz/"/><meta property="og:description" content="## Basic Idea"/><meta property="og:image" content="https:wepay.github.io///waltz/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https:wepay.github.io///waltz/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/waltz/img/favicon.ico"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script src="/waltz/js/scrollSpy.js"></script><link rel="stylesheet" href="/waltz/css/main.css"/><script src="/waltz/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/waltz/"><img class="logo" src="/waltz/img/favicon.ico" alt="Waltz"/><h2 class="headerTitleWithLogo">Waltz</h2></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/waltz/docs/introduction" target="_self">Docs</a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Design</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Design</h3><ul class=""><li class="navListItem"><a class="navItem" href="/waltz/docs/introduction">Introduction</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/terminology">Terminology and Components</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/waltz/docs/application-programming-model">Application Programming Model</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/client-server-communication">Client-Server Communication</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/server-storage-communication">Server-Storage Communication</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/on-disk-data-structures">On-Disk Data Structures</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/concurrency-control-optimistic-locking">Concurrency Control (Optimistic Locking)</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/back-pressure">Back Pressure</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-client">Waltz Client</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-server">Waltz Server</a></li><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-storage">Waltz Storage</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Administration</h3><ul class=""><li class="navListItem"><a class="navItem" href="/waltz/docs/waltz-setup">Waltz Setup</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle">Application Programming Model</h1></header><article><div><span><h2><a class="anchor" aria-hidden="true" id="basic-idea"></a><a href="#basic-idea" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Basic Idea</h2>
+<p>An application should use Waltz as a write-ahead log. It should write to Waltz successfully before it considers a transaction committed. In this sense, Waltz has the transaction authority, i.e., Waltz log is the source of truth.</p>
+<p>Read/Write operations are done over the network. An operation may fail at any point in communication. Also the application process or waltz process may fail due to a code bug, a machine failure, etc. It is imperative to know which transactions are persisted in Waltz and which transactions are read by the application already after restart.</p>
+<p>To address the above concerns, We designed Waltz based on a stream oriented communication instead of a RPC based communication.</p>
+<p><img src="/img/docs/rpc-comm.png" alt="RPC communication design"></p>
+<p>Transactions are stored as a log (a series of records) and are assigned a unique transaction id (a long integer), which is monotonically increasing and dense (no gap). Waltz uses the transaction ID as a high-water mark in streaming. Waltz asks an application for its current high-water mark, the highest ID of transactions that the application consumed successfully. Based on this client high-water mark, Waltz starts streaming all transactions to the application after the high-water mark. This makes it easy for Waltz client code to discover which transactions have succeeded. Waltz clients automatically re-execute failed transactions by invoking application provided code that constructs a transaction data.</p>
+<p>An application may consist of multiple server processes which share the same application database. In this case, each application server receives not only transactions originated from that server but all transactions available for consumption. This is necessary for application servers to do seamless failover. So, it is important to ensure that there is no duplicate processing (or processing is idempotent), the instances collectively process all transactions, and each instance applies a non-deterministic subset of transactions to the application's database. In general it should be assumed that a transaction may be processed by an application instance other than the instance which created the transaction. We provide code that coordinates processing for database applications (AbstractClientCallbacksForJDBC).</p>
+<p>Sending all transaction data to all application server instances is wasteful. To address this issue we employ lazy loading of transaction data. The stream does not actually contain transaction data. Transaction data is loaded on demand only when an application requires it for processing.</p>
+<p>Finally, Waltz addresses consistency issues caused by concurrent updates. The transaction system should take care of update conflicts. They can happen when concurrent transactions overwrite each other, or when a transaction is performed based on stale data. In traditional database systems, this is handled by locking. In Waltz a similar machinery is provided. Waltz implements optimistic locking. When Waltz finds a transaction conflicting with an already committed transaction, it rejects the conflicting transactions.</p>
+<h2><a class="anchor" aria-hidden="true" id="an-example"></a><a href="#an-example" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>An Example</h2>
+<p>TODO</p>
+<h2><a class="anchor" aria-hidden="true" id="client-api"></a><a href="#client-api" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Client API</h2>
+<h3><a class="anchor" aria-hidden="true" id="waltzclient"></a><a href="#waltzclient" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>WaltzClient</h3>
+<p>A client application creates an instance of <code>WaltzClient</code> by giving an instance <code>WaltzClientCallbacks</code> and an instance <code>WaltzClientConfig</code>. As soon as an instance of <code>WaltzClient</code> is created, it attempts to connect Zookeeper cluster (the Zookeeper connect string is specified in <code>WaltzClientConfig</code>). Waltz uses <code>WaltzClientCallbacks</code> to talk to an application.</p>
+<p>An application call executes method to <code>execute</code> a transaction.</p>
+<pre><code class="hljs"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">submit</span><span class="hljs-params">(TransactionContext context)</span></span>;
+</code></pre>
+<p><code>TransactionContext</code> encapsulates code that builds a transaction. An application must define a subclass of <code>TransactionContext</code>.</p>
+<h3><a class="anchor" aria-hidden="true" id="transactioncontext"></a><a href="#transactioncontext" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>TransactionContext</h3>
+<pre><code class="hljs css language-java">
+<span class="hljs-comment">/**
+ * The abstract class of the transaction context.
+ */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TransactionContext</span> </span>{
+
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-keyword">long</span> creationTime;
+
+    <span class="hljs-comment">/**
+     * Class Constructor.
+     */</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">TransactionContext</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">this</span>.creationTime = System.currentTimeMillis();
+    }
+
+    <span class="hljs-comment">/**
+     * Returns the partition id for this transaction.
+     *
+     * <span class="hljs-doctag">@param</span> numPartitions the number of partitions.
+     * <span class="hljs-doctag">@return</span> the partitionId.
+     */</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">int</span> <span class="hljs-title">partitionId</span><span class="hljs-params">(<span class="hljs-keyword">int</span> numPartitions)</span></span>;
+
+    <span class="hljs-comment">/**
+     * &lt;p&gt;
+     * Executes the transaction. An application must implement this method.
+     * &lt;/p&gt;&lt;p&gt;
+     * The application sets the header and the data of the transaction using the builder, and optionally sets locks.
+     * When this returns true, the Waltz client builds the transaction from the builder and sends an append request
+     * to a Waltz server. If the client failed to send the request, it will call this method to execute the transaction
+     * again.
+     * &lt;/p&gt;&lt;P&gt;
+     * If the application finds that the transaction must be ignored, this call must return false.
+     * &lt;/P&gt;&lt;P&gt;
+     * If an exception is thrown by this method, the client will call {<span class="hljs-doctag">@link</span> TransactionContext#onException(Throwable)}.
+     * &lt;/P&gt;
+     *
+     * <span class="hljs-doctag">@param</span> builder TransactionBuilder.
+     * <span class="hljs-doctag">@return</span> {<span class="hljs-doctag">@code</span> true} if the transaction should be submitted, {<span class="hljs-doctag">@code</span> false} if the transaction should be ignored.
+     */</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">execute</span><span class="hljs-params">(TransactionBuilder builder)</span></span>;
+
+    <span class="hljs-comment">/**
+     * A method that is called on completion of this transaction context that did not fail due to expiration or exception.
+     * After this call, no retry will be attempted by the Waltz client.
+     * The {<span class="hljs-doctag">@code</span> result} parameter is {<span class="hljs-doctag">@code</span> true} if the transaction is successfully appended to Waltz log,
+     * otherwise {<span class="hljs-doctag">@code</span> false}, i.e., the transaction is ignored.
+     *
+     * <span class="hljs-doctag">@param</span> result {<span class="hljs-doctag">@code</span> true} if the transaction is successfully appended to Waltz log, otherwise {<span class="hljs-doctag">@code</span> false}.
+     */</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onCompletion</span><span class="hljs-params">(<span class="hljs-keyword">boolean</span> result)</span> </span>{
+    }
+
+    <span class="hljs-comment">/**
+     * A method that is called on exception.
+     * After this call, no retry will be attempted by the Waltz client.
+     */</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onException</span><span class="hljs-params">(Throwable ex)</span> </span>{
+    }
+
+}
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="waltz-client-callbacks"></a><a href="#waltz-client-callbacks" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Waltz Client Callbacks</h3>
+<p>An application must implement <code>WaltzClientCallbacks</code> which has three methods shown below. They are invoked by <code>WaltzClient</code> to retrieve the client high-water mark, and to supply new committed transactions to the application to update application's states, and to allow the application to handle exceptions.</p>
+<pre><code class="hljs css language-java"><span class="hljs-comment">/**
+ * The interface for Waltz client callback methods.
+ */</span>
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">WaltzClientCallbacks</span> </span>{
+
+    <span class="hljs-comment">/**
+     * Returns the current high-water mark of the client application.
+     * {<span class="hljs-doctag">@link</span> WaltzClient} calls this method to know which offset to start transaction feeds from.
+     *
+     * <span class="hljs-doctag">@param</span> partitionId the partition id to get client high-water mark of.
+     * <span class="hljs-doctag">@return</span> client high-water mark.
+     */</span>
+    <span class="hljs-function"><span class="hljs-keyword">long</span> <span class="hljs-title">getClientHighWaterMark</span><span class="hljs-params">(<span class="hljs-keyword">int</span> partitionId)</span></span>;
+
+    <span class="hljs-comment">/**
+     * Applies a committed transaction to the client application.
+     * {<span class="hljs-doctag">@link</span> WaltzClient} calls this method to pass a transaction information that is committed to the write ahead log.
+     *
+     * <span class="hljs-doctag">@param</span> transaction a committed transaction.
+     */</span>
+    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">applyTransaction</span><span class="hljs-params">(Transaction transaction)</span></span>;
+
+    <span class="hljs-comment">/**
+     * A method called by the Waltz client when {<span class="hljs-doctag">@link</span> #applyTransaction(Transaction)} throws an exception.
+     *
+     * <span class="hljs-doctag">@param</span> partitionId the partition id of the transaction.
+     * <span class="hljs-doctag">@param</span> transactionId the id of the transaction.
+     * <span class="hljs-doctag">@param</span> exception thrown exception by {<span class="hljs-doctag">@link</span> #applyTransaction(Transaction)}.
+     */</span>
+    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">uncaughtException</span><span class="hljs-params">(<span class="hljs-keyword">int</span> partitionId, <span class="hljs-keyword">long</span> transactionId, Throwable exception)</span></span>;
+
+}
+</code></pre>
+<p>Other important classes/interfaces</p>
+<ul>
+<li><code>TransactionBuilder</code></li>
+<li><code>Transaction</code></li>
+<li><code>WaltzClientConfig</code></li>
+<li><code>PartitionLocalLock</code></li>
+<li><code>Serializer</code></li>
+</ul>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/waltz/docs/terminology"><span class="arrow-prev">← </span><span>Terminology and Components</span></a><a class="docs-next button" href="/waltz/docs/client-server-communication"><span>Client-Server Communication</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#basic-idea">Basic Idea</a></li><li><a href="#an-example">An Example</a></li><li><a href="#client-api">Client API</a><ul class="toc-headings"><li><a href="#waltzclient">WaltzClient</a></li><li><a href="#transactioncontext">TransactionContext</a></li><li><a href="#waltz-client-callbacks">Waltz Client Callbacks</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/waltz/" class="nav-home"><img src="/waltz/img/favicon.ico" alt="Waltz" width="66" height="58"/></a><div><h5>Docs</h5><a href="/waltz/docs/introduction">Design</a><a href="/waltz/docs/waltz-setup">Administration</a><a href="/waltz/docs/application-programming-model">API Reference</a></div><div><h5>Community</h5><a href="https://stackoverflow.com/questions/tagged/" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://twitter.com/WePay" target="_blank" rel="noreferrer noopener">Twitter</a></div><div><h5>More</h5><a href="https://wecode.wepay.com">Blog</a><a href="https://github.com/wepay/waltz">GitHub</a></div></section><section class="copyright">Copyright © 2019 WePay Inc.</section></footer></div></body></html>
