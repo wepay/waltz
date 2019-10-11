@@ -11,7 +11,7 @@ Read/Write operations are done over the network. An operation may fail at any po
 
 To address the above concerns, We designed Waltz based on a stream oriented communication instead of a RPC based communication.
 
-![RPC communication design](/waltz/img/docs/rpc-comm.png)
+![RPC communication design](assets/rpc-comm.png)
 
 Transactions are stored as a log (a series of records) and are assigned a unique transaction id (a long integer), which is monotonically increasing and dense (no gap). Waltz uses the transaction ID as a high-water mark in streaming. Waltz asks an application for its current high-water mark, the highest ID of transactions that the application consumed successfully. Based on this client high-water mark, Waltz starts streaming all transactions to the application after the high-water mark. This makes it easy for Waltz client code to discover which transactions have succeeded. Waltz clients automatically re-execute failed transactions by invoking application provided code that constructs a transaction data.
 

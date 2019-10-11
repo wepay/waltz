@@ -23,7 +23,7 @@ const users = [
 const siteConfig = {
   title: 'Waltz', // Title for your website.
   tagline: 'An open source quorum-based distributed write-ahead log',
-  url: 'https:wepay.github.io', // Your website URL
+  url: 'https://wepay.github.io', // Your website URL
   baseUrl: '/waltz/', // Base URL for your project */
   // For github.io type URLs, you would set the url and baseUrl like:
   //   url: 'https://facebook.github.io',

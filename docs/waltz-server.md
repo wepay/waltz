@@ -3,7 +3,7 @@ id: waltz-server
 title: Waltz Server
 ---
 
-![Waltz server](/waltz/img/docs/waltz-server.png)
+![Waltz server](assets/waltz-server.png)
 
 Waltz Server receives messages from the clients. We implemented the networking layer on Netty. Netty calls `WaltzServerHandler` for each message. Messages are enqueued into the message queue and dispatched to partition by the message handler thread running in `WaltzServerHandler`.
 
@@ -11,7 +11,7 @@ A partition object represents a Waltz log partition. The persistent log data are
 
 ## Partition Object
 
-![Waltz server partition object](/waltz/img/docs/waltz-server-partition-object.png)
+![Waltz server partition object](assets/waltz-server-partition-object.png)
 
 Each partition object has three tasks (threads), Append task, Realtime Feed task, and Catch-up Feed Task.
 
@@ -19,7 +19,7 @@ An append request is immediately place in the append request queue in the append
 
 ## Store Partition Object
 
-![Waltz server partition object](/waltz/img/docs/waltz-server-store-partition-object.png)
+![Waltz server partition object](assets/waltz-server-store-partition-object.png)
 
 A Store Partition object manages read/write to storage servers. A store partition represents a partition which is replicated to multiple storage servers. Read/write operations are performed in a context of a session called a store session. Actual read/write operations to a partition on each storage server is also performed in a session called a replica session.
 
@@ -97,37 +97,37 @@ A recovery procedure is applied whenever Store Session Manager creates a new sto
 
 **Example 1 (Adding single replica)**
 
-![Adding a single replica image](/waltz/img/docs/adding-single-replica.png)
+![Adding a single replica image](assets/adding-single-replica.png)
 
 **Example 2 (Adding multiple replicas)**
 
-![Adding multiple replicas image](/waltz/img/docs/adding-multiple-replicas.png)
+![Adding multiple replicas image](assets/adding-multiple-replicas.png)
 
 **Example 3 (Removing single replica)**
 
-![Removing a single replica image](/waltz/img/docs/removing-single-replica.png)
+![Removing a single replica image](assets/removing-single-replica.png)
 
 **Example 4 (Removing multiple replicas)**
 
-![Removing multiple replicas image](/waltz/img/docs/removing-multiple-replicas.png)
+![Removing multiple replicas image](assets/removing-multiple-replicas.png)
 
 ## Quorum Checking in the Recovery Process
 
 Quorum checking in the recovery process has a subtle difference from quorum checking in the write operation. We need to find out the highest high-water mark that majority of replicas agree on. In the following figure, the high-water marks of Replica A, B, and C are HA, HB, and HC, respectively. The highest high-water mark that a majority of replicas agree is HA.
 
-![Quorum check](/waltz/img/docs/quorum-check-healthy.png)
+![Quorum check](assets/quorum-check-healthy.png)
 
 We do the selection by having replicas vote on high-water marks. A replica with the high-water mark X votes for any high-water mark H that is equal to or less than X. So, Replica A votes for { HA, HC }, Replica B votes for { HA, HB, HC }, and Replica C votes for { HC }. Clearly HA is the highest high-water mark that a majority replicas vote. This is correct since all transactions above HA have no chance of getting the write quorum, thus they are uncommitted. All transactions at HA or below have the write quorum, thus it is safe to declare they are committed.
 
 This works fine when all replicas are participating. However, we cannot expect all replicas are available all the time. There may be inaccessible storage servers during the recovery process which may have caused the recovery process in the first place. So, the quorum checking must take that into consideration.
 
-![Quorum check](/waltz/img/docs/quorum-check-b-offline.png)
+![Quorum check](assets/quorum-check-b-offline.png)
 
 If Replica B is inaccessible, only Replica A and C vote. The highest high-water mark with majority vote is HC, but this is wrong. The high-water mark is undecidable in this situation.
 
 The solution is to detect the undecidable situation by counting inaccessible replicas and wait until it becomes decidable. It becomes decidable when enough (not necessarily all) replicas come online. In the above case, it becomes decidable when Replica B comes back. Another situation that it becomes decidable is Replica C catches up with Replica A.
 
-![Quorum check](/waltz/img/docs/quorum-check-c-catch-up.png)
+![Quorum check](assets/quorum-check-c-catch-up.png)
 
 Undecidability is detected as follows. We examine voted high-water marks in descending order. If the number of votes is not reaching the quorum, the number of votes + the number of offline storages is tested. If it is equal to or greater than the quorum, the high-water mark is not decidable. In the above example, the quorum is two votes. HA is examined first. It doesn't have enough votes (only 1 vote). But, # of votes (1) + # of offline storage (1) is two. This is equal to the quorum, thus the true high-water mark is undecidable.
 

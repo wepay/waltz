@@ -18,7 +18,7 @@ Transaction Header: Transaction header is a 32-bit integer value. Its semantics 
 
 The system consists of four kinds of processes, application processes, Waltz Server processes, Waltz Storage processes, and Zookeeper server processes.
 
-![Waltz architecture diagram](/waltz/img/docs/architecture.png)
+![Waltz architecture diagram](assets/architecture.png)
 
 An application process serves application specific services. It generates transaction data and sends them to Waltz Server using Waltz Client running inside the application. The application receives all committed transactions in the commit order from Waltz Server and updates application’s database.
 
