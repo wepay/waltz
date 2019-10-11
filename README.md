@@ -123,3 +123,6 @@ To remove the database:
 
     bin/demo-bank-app.sh clean
 
+## Publishing Waltz Docs
+
+Go through website/README.md
