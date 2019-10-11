@@ -4,8 +4,7 @@ Waltz is a distributed/replicated write ahead log for transactions.
 
 ## Documentation
 
-We have the design document and the setup manual.
-See website/README.md for how to build and browse the document.
+We have the documention [here](https://wepay.github.io/waltz).
 
 ## Building
 
@@ -128,3 +127,6 @@ To remove the database:
 
     bin/demo-bank-app.sh clean
 
+## Publishing Waltz Docs
+
+Go through website/README.md

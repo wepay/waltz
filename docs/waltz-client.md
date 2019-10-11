@@ -7,7 +7,7 @@ title: Waltz Client
 
 An application must define a subclass of `WaltzClientCallback` and supply an instance of it to the constructor of `WaltzClient`. Through the callbacks, Waltz client gets the latest client high-water mark for a partition and also applies a committed transaction to the application.
 
-![Waltz client](/img/docs/waltz-client.png)
+![Waltz client](assets/waltz-client.png)
 
 An application must define a subclass of TransactionContext to send a transaction data to Waltz. A transaction context encapsulates an application logic and data that are necessary to generate a transaction data.
 
