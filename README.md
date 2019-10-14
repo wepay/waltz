@@ -2,6 +2,10 @@
 
 Waltz is a distributed/replicated write ahead log for transactions.
 
+## Documentation
+
+We have the documention [here](https://wepay.github.io/waltz).
+
 ## Building
 
 To build Waltz:
