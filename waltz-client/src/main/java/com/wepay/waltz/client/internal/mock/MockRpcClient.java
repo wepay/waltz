@@ -31,4 +31,9 @@ class MockRpcClient implements RpcClient {
         return CompletableFuture.completedFuture(partitions.get(partitionId).getTransactionData(transactionId));
     }
 
+    @Override
+    public Future<Long> getHighWaterMark(int partitionId) {
+        return CompletableFuture.completedFuture(partitions.get(partitionId).getHighWaterMark());
+    }
+
 }
