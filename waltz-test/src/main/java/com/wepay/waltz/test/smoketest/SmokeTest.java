@@ -214,7 +214,7 @@ public class SmokeTest {
         runner.awaitStart();
 
         // Assign all partitions to this storage.
-        helper.setWaltzStorageAssignment(adminPort, true);
+        helper.setWaltzStorageAssignmentWithPort(adminPort, true);
 
         runner.stop();
 

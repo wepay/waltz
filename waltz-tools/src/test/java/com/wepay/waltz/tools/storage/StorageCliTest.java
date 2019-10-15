@@ -59,6 +59,10 @@ public final class StorageCliTest {
 
     @Before
     public void setUpStreams() throws UnsupportedEncodingException {
+        setUpStreams(outContent, errContent);
+    }
+    public void setUpStreams(ByteArrayOutputStream outContent, ByteArrayOutputStream errContent)
+            throws UnsupportedEncodingException {
         System.setOut(new PrintStream(outContent, false, "UTF-8"));
         System.setErr(new PrintStream(errContent, false, "UTF-8"));
     }
@@ -84,57 +88,86 @@ public final class StorageCliTest {
 
     @Test
     public void testListPartition() throws Exception {
-        int numPartitions = 1;
-        IntegrationTestHelper helper = getIntegrationTestHelper(numPartitions);
-        int partitionId = new Random().nextInt(helper.getNumPartitions());
+        int numPartitions = 4;
+        int numStorages = 2;
+        assertEquals(0, numPartitions % numStorages);
+        IntegrationTestHelper helper = getIntegrationTestHelper(numPartitions, numStorages);
+        int partitionId = 0;
 
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(), helper.getSslSetup());
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
 
         helper.startZooKeeperServer();
 
-        WaltzStorageRunner storageRunner = helper.getWaltzStorageRunner();
-        storageRunner.startAsync();
-        WaltzStorage storage = storageRunner.awaitStart();
-        int adminPort = storage.adminPort;
-        String adminConnectString = helper.getHost() + ":" + adminPort;
-
-        helper.startWaltzServer(true);
+        String[] adminConnectStrings = new String[numStorages];
+        int adminPort = 0;
+        for (int s = 0; s < numStorages; s++) {
+            WaltzStorageRunner storageRunner = helper.getWaltzStorageRunner(s);
+            storageRunner.startAsync();
+            WaltzStorage storage = storageRunner.awaitStart();
+            adminPort = storage.adminPort;
+            adminConnectStrings[s] = helper.getHost() + ":" + adminPort;
+        }
 
         // wait for storage node partitions creation
         Thread.sleep(1000);
 
-        // default partition assignment is set to True
-        PartitionInfoSnapshot info = storage
-                .getPartitionInfos()
-                .stream()
-                .filter(pis -> pis.partitionId == partitionId)
-                .findFirst()
-                .get();
-        assertFalse(info.isAssigned);
+        String expectedCmdOutput;
 
         try {
+            int index = 0;
+            int partitionsPerStorage = numPartitions / numStorages;
             // add partition to storage
-            String[] args1 = {
-                    "add-partition",
-                    "--storage", adminConnectString,
-                    "--partition", String.valueOf(partitionId),
-                    "--cli-config-path", configFilePath
-            };
-
-            StorageCli.testMain(args1);
+            for (int s = 0; s < numStorages; s++) {
+                for (int p = 0; p < partitionsPerStorage; p++) {
+                    String[] addPartitionArgs = {
+                            "add-partition",
+                            "--storage", adminConnectStrings[s],
+                            "--partition", String.valueOf(index++),
+                            "--cli-config-path", configFilePath
+                    };
+                    StorageCli.testMain(addPartitionArgs);
+                }
+            }
 
             // successful path
-            String[] args2 = {
+            for (int s = 0; s < numStorages; s++) {
+                String[] args2 = {
+                        "list",
+                        "--storage", adminConnectStrings[s],
+                        "--cli-config-path", configFilePath
+                };
+                ByteArrayOutputStream successfulPathOut = new ByteArrayOutputStream();
+                ByteArrayOutputStream successfulPathErr = new ByteArrayOutputStream();
+                setUpStreams(successfulPathOut, successfulPathErr);
+                StorageCli.testMain(args2);
+
+                expectedCmdOutput = "Partition Info for id: " + partitionId;
+                assertTrue(successfulPathOut.toString("UTF-8").contains(expectedCmdOutput));
+            }
+            setUpStreams();
+
+
+            // no path
+            /*
+             * The partitions themselves and their ids will be wrong. This should only verify if all hosts and ports are being
+             * detected to be displayed. The reason the partitions are wrong has to do with the fact that this
+             * test runs everything in the same JVM. This issue will not exist in production
+             */
+            String[] argsNoPath = {
                     "list",
-                    "--storage", adminConnectString,
                     "--cli-config-path", configFilePath
             };
+            ByteArrayOutputStream noPathOut = new ByteArrayOutputStream();
+            ByteArrayOutputStream noPathErr = new ByteArrayOutputStream();
+            setUpStreams(noPathOut, noPathErr);
+            StorageCli.testMain(argsNoPath);
 
-            StorageCli.testMain(args2);
-
-            String expectedCmdOutput = "Partition Info for id: " + partitionId;
-            assertTrue(outContent.toString("UTF-8").contains(expectedCmdOutput));
+            for (int s = 0; s < numStorages; s++) {
+                expectedCmdOutput = "Partition Info for id: " + partitionId + " at " + adminConnectStrings[s];
+                assertTrue(noPathOut.toString("UTF-8").contains(expectedCmdOutput));
+            }
+            setUpStreams();
 
             // failure path
             String[] args3 = {
@@ -437,7 +470,7 @@ public final class StorageCliTest {
             // Create partitions on each storage node
             for (WaltzStorage waltzStorage : Utils.list(sourceWaltzStorage, destinationWaltzStorage)) {
                 int adminPort = waltzStorage.adminPort;
-                StorageAdminClient adminClient = helper.getStorageAdminClient(adminPort);
+                StorageAdminClient adminClient = helper.getStorageAdminClientWithPort(adminPort);
                 adminClient.open();
                 for (int i = 0; i < numPartitions; i++) {
                     adminClient.setPartitionAssignment(i, true, false).get();
@@ -700,7 +733,7 @@ public final class StorageCliTest {
             int adminPort = waltzStorage.adminPort;
 
             // Create partitions on each storage node
-            StorageAdminClient adminClient = helper.getStorageAdminClient(adminPort);
+            StorageAdminClient adminClient = helper.getStorageAdminClientWithPort(adminPort);
             adminClient.open();
             for (int i = 0; i < numPartitions; i++) {
                 adminClient.setPartitionAssignment(i, true, false).get();
@@ -800,6 +833,15 @@ public final class StorageCliTest {
         Properties properties =  new Properties();
         properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/storage/cli/test");
         properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, String.valueOf(numPartitions));
+        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
+        return new IntegrationTestHelper(properties);
+    }
+
+    private IntegrationTestHelper getIntegrationTestHelper(int numPartitions, int numStorages) throws Exception {
+        Properties properties =  new Properties();
+        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/storage/cli/test");
+        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, String.valueOf(numPartitions));
+        properties.setProperty(IntegrationTestHelper.Config.NUM_STORAGES, String.valueOf(numStorages));
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
         return new IntegrationTestHelper(properties);
     }

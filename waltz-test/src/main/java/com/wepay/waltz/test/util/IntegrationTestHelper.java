@@ -60,9 +60,9 @@ public class IntegrationTestHelper {
     private final String host;
 
     private int zkPort;
-    private int storagePort;
-    private int storageAdminPort;
-    private int storageJettyPort;
+    private List<Integer> storagePorts = new ArrayList<>();
+    private List<Integer> storageAdminPorts = new ArrayList<>();
+    private List<Integer> storageJettyPorts = new ArrayList<>();
     private int serverPort;
     private int serverJettyPort;
 
@@ -73,6 +73,7 @@ public class IntegrationTestHelper {
 
     private final String znodePath;
     private final int numPartitions;
+    private final int numStorages;
     private final int zkSessionTimeout;
     private final long segmentSizeThreshold;
 
@@ -99,6 +100,7 @@ public class IntegrationTestHelper {
         }
         this.znodePath = props.getProperty(Config.ZNODE_PATH);
         this.numPartitions = Integer.parseInt(props.getProperty(Config.NUM_PARTITIONS));
+        this.numStorages = Integer.parseInt(props.getProperty(Config.NUM_STORAGES, "1"));
         this.zkSessionTimeout = Integer.parseInt(props.getProperty(Config.ZK_SESSION_TIMEOUT));
         this.root = new ZNode(znodePath);
 
@@ -110,16 +112,22 @@ public class IntegrationTestHelper {
 
         PortFinder portFinder = new PortFinder();
         this.zkPort = portFinder.getPort();
-        this.storagePort = portFinder.getPort();
-        this.storageAdminPort = portFinder.getPort();
-        this.storageJettyPort = portFinder.getPort();
+        for (int i = 0; i < numStorages; i++) {
+            this.storagePorts.add(portFinder.getPort());
+            this.storageAdminPorts.add(portFinder.getPort());
+            this.storageJettyPorts.add(portFinder.getPort());
+        }
         this.serverPort = portFinder.getPort();
         this.serverJettyPort = portFinder.getPort();
 
         this.host = InetAddress.getLocalHost().getCanonicalHostName();
         this.zkConnectString = host + ":" + zkPort;
-        this.storageGroupMap = Utils.map(host + ":" + storagePort, STORAGE_GROUP_ID);
-        this.storageConnectionMap = Utils.map(host + ":" + storagePort, storageAdminPort);
+        this.storageGroupMap = new HashMap<String, Integer>();
+        this.storageConnectionMap = new HashMap<String, Integer>();
+        for (int i = 0; i < numStorages; i++) {
+            this.storageGroupMap.put(host + ":" + storagePorts.get(i), STORAGE_GROUP_ID);
+            this.storageConnectionMap.put(host + ":" + storagePorts.get(i), storageAdminPorts.get(i));
+        }
         this.workDir = Files.createTempDirectory("waltz-integration-test");
         this.sslConfigPath = createYamlConfigFile(this.workDir, "ssl.yaml", props);
 
@@ -257,7 +265,14 @@ public class IntegrationTestHelper {
      * Return WaltzStorageRunner with auto-assigned serverPort and storageJettyPort
      */
     public WaltzStorageRunner getWaltzStorageRunner() throws Exception {
-        return getWaltzStorageRunner(storagePort, storageAdminPort, storageJettyPort);
+        return getWaltzStorageRunner(0);
+    }
+
+    /**
+     * Return WaltzStorageRunner with auto-assigned serverPort and storageJettyPort
+     */
+    public WaltzStorageRunner getWaltzStorageRunner(int portsIndex) throws Exception {
+        return getWaltzStorageRunner(storagePorts.get(portsIndex), storageAdminPorts.get(portsIndex), storageJettyPorts.get(portsIndex));
     }
 
     /**
@@ -297,7 +312,19 @@ public class IntegrationTestHelper {
      * @throws Exception
      */
     public StorageAdminClient getStorageAdminClient() throws Exception {
-        return getStorageAdminClient(storageAdminPort);
+        return getStorageAdminClientWithPort(0);
+    }
+
+    /**
+     * Return an existing StorageAdminClient if there is one, otherwise a new one is created and opened.
+     * The Storage client requires ZooKeeperServer to be running, meaning you must call startZooKeeperServer()
+     * before calling this method.
+     *
+     * @return StorageAdminClient instance
+     * @throws Exception
+     */
+    public StorageAdminClient getStorageAdminClient(int adminPortIndex) throws Exception {
+        return getStorageAdminClientWithPort(storageAdminPorts.get(adminPortIndex));
     }
 
     /**
@@ -308,7 +335,7 @@ public class IntegrationTestHelper {
      * @return StorageAdminClient instance
      * @throws Exception
      */
-    public StorageAdminClient getStorageAdminClient(int adminPort) throws Exception {
+    public StorageAdminClient getStorageAdminClientWithPort(int adminPort) throws Exception {
         synchronized (storageAdminClients) {
             StorageAdminClient storageAdminClient = storageAdminClients.get(adminPort);
             if (storageAdminClient == null) {
@@ -328,14 +355,21 @@ public class IntegrationTestHelper {
      * This method assigns/unassigns all partitions to the storage node via the Storage admin client
      */
     public void setWaltzStorageAssignment(boolean isAssigned) throws Exception {
-        setWaltzStorageAssignment(storageAdminPort, isAssigned);
+        setWaltzStorageAssignment(0, isAssigned);
     }
 
     /**
      * This method assigns/unassigns all partitions to the storage node via the Storage admin client
      */
-    public void setWaltzStorageAssignment(int adminPort, boolean isAssigned) throws Exception {
-        StorageAdminClient storageAdminClient = getStorageAdminClient(adminPort);
+    public void setWaltzStorageAssignment(int portIndex, boolean isAssigned) throws Exception {
+        setWaltzStorageAssignmentWithPort(storageAdminPorts.get(portIndex), isAssigned);
+    }
+
+    /**
+     * This method assigns/unassigns all partitions to the storage node via the Storage admin client
+     */
+    public void setWaltzStorageAssignmentWithPort(int adminPort, boolean isAssigned) throws Exception {
+        StorageAdminClient storageAdminClient = getStorageAdminClientWithPort(adminPort);
 
         List<Future<?>> futures = new ArrayList<>(numPartitions);
         for (int i = 0; i < numPartitions; i++) {
@@ -408,19 +442,35 @@ public class IntegrationTestHelper {
     }
 
     public int getStoragePort() {
-        return storagePort;
+        return getStoragePort(0);
+    }
+
+    public int getStoragePort(int portIndex) {
+        return storagePorts.get(portIndex);
     }
 
     public String getStorageConnectString() {
-        return host + ":" + storagePort;
+        return getStorageConnectString(0);
+    }
+
+    public String getStorageConnectString(int storagePortIndex) {
+        return host + ":" + storagePorts.get(storagePortIndex);
     }
 
     public int getStorageAdminPort() {
-        return storageAdminPort;
+        return getStorageAdminPort(0);
+    }
+
+    public int getStorageAdminPort(int portIndex) {
+        return storageAdminPorts.get(portIndex);
     }
 
     public int getStorageJettyPort() {
-        return storageJettyPort;
+        return getStorageJettyPort(0);
+    }
+
+    public int getStorageJettyPort(int portIndex) {
+        return storageJettyPorts.get(portIndex);
     }
 
     public int getServerPort() {
@@ -469,6 +519,7 @@ public class IntegrationTestHelper {
 
     public static class Config {
         public static final String NUM_PARTITIONS = "numPartitions";
+        public static final String NUM_STORAGES = "numStorages";
         public static final String ZK_SESSION_TIMEOUT = "zookeeper.sessionTimeout";
         public static final String ZNODE_PATH = "zookeeper.znodePath";
     }
