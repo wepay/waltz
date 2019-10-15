@@ -17,6 +17,7 @@ import static org.junit.Assert.assertFalse;
 
 public class ClientCliTest {
 
+    private static final int CLUSTER_NUM_PARTITIONS = 3;
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
     private final PrintStream originalOut = System.out;
@@ -50,7 +51,7 @@ public class ClientCliTest {
     public void testSubmit() throws Exception {
         Properties properties = new Properties();
         properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/client/cli/test");
-        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, "1");
+        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, String.valueOf(CLUSTER_NUM_PARTITIONS));
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
         IntegrationTestHelper helper = new IntegrationTestHelper(properties);
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
@@ -60,36 +61,29 @@ public class ClientCliTest {
         helper.startZooKeeperServer();
         helper.startWaltzStorage(true);
 
-        int partitionToTest = 0;
-        String[] args = {
-                "add-partition",
-                "--storage", helper.getHost() + ":" + helper.getStorageAdminPort(),
-                "--partition", String.valueOf(partitionToTest),
-                "--cli-config-path", configFilePath
-        };
-        StorageCli.testMain(args);
+        String storage = helper.getHost() + ":" + helper.getStorageAdminPort();
+        addPartitionsToStorage(CLUSTER_NUM_PARTITIONS, storage, configFilePath);
 
         helper.startWaltzServer(true);
 
         try {
+            // validate with single partition
             String[] args1 = {
                     "validate",
-                    "--partition", String.valueOf(partitionToTest),
                     "--txn-per-client", "50",
-                    "--num-client", "2",
+                    "--num-clients", "2",
                     "--interval", "20",
                     "--cli-config-path", configFilePath
             };
             ClientCli.testMain(args1);
             assertFalse(errContent.toString("UTF-8").contains("Error"));
 
-            // validate cmd with --high-watermark option
+            // validate with customized high-watermark
             String[] args2 = {
                     "validate",
-                    "--partition", String.valueOf(partitionToTest),
                     "--high-watermark", "99",
                     "--txn-per-client", "50",
-                    "--num-client", "2",
+                    "--num-clients", "2",
                     "--interval", "20",
                     "--cli-config-path", configFilePath
             };
@@ -97,6 +91,54 @@ public class ClientCliTest {
             assertFalse(errContent.toString("UTF-8").contains("Error"));
         } finally {
             helper.closeAll();
+        }
+    }
+
+    @Test
+    public void testSubmitWithMultiplePartitions() throws Exception {
+        Properties properties = new Properties();
+        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/client/cli/test");
+        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, String.valueOf(CLUSTER_NUM_PARTITIONS));
+        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
+        IntegrationTestHelper helper = new IntegrationTestHelper(properties);
+        Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
+                helper.getZkSessionTimeout(), helper.getSslSetup());
+        String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
+
+        helper.startZooKeeperServer();
+        helper.startWaltzStorage(true);
+
+        String storage = helper.getHost() + ":" + helper.getStorageAdminPort();
+        addPartitionsToStorage(CLUSTER_NUM_PARTITIONS, storage, configFilePath);
+
+        helper.startWaltzServer(true);
+
+        try {
+            // validate with multi-partitions
+            String[] args1 = {
+                    "validate",
+                    "--txn-per-client", "50",
+                    "--num-clients", "2",
+                    "--interval", "20",
+                    "--num-active-partitions", "3",
+                    "--cli-config-path", configFilePath
+            };
+            ClientCli.testMain(args1);
+            assertFalse(errContent.toString("UTF-8").contains("Error"));
+        } finally {
+            helper.closeAll();
+        }
+    }
+
+    private void addPartitionsToStorage(int numPartitions, String storage, String configFilePath) {
+        for (int partitionId = 0; partitionId < numPartitions; partitionId++) {
+            String[] args = {
+                    "add-partition",
+                    "--storage", storage,
+                    "--partition", String.valueOf(partitionId),
+                    "--cli-config-path", configFilePath
+            };
+            StorageCli.testMain(args);
         }
     }
 }

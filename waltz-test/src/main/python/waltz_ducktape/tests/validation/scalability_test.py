@@ -1,3 +1,4 @@
+from random import randrange
 from ducktape.mark import parametrize
 from ducktape.mark.resource import cluster
 from ducktape.utils.util import wait_until
@@ -12,22 +13,22 @@ class ScalabilityTest(ProduceConsumeValidateTest):
         super(ScalabilityTest, self).__init__(test_context=test_context, num_storage_nodes=4)
 
     @cluster(nodes_spec={'storage':4, 'server':2, 'client':1})
-    @parametrize(partition=1, txn_per_client=500, num_clients=1, interval=100, timeout=240)
-    def test_scale_up_replica(self, partition, txn_per_client, num_clients, interval, timeout):
+    @parametrize(num_active_partitions=1, txn_per_client=500, num_clients=1, interval=100, timeout=240)
+    def test_scale_up_replica(self, num_active_partitions, txn_per_client, num_clients, interval, timeout):
         src_node_idx = 0
         added_node_idx = 3
         # new replica will not receive appends until offline recovery completes
         self.set_storage_nodes_to_ignore([added_node_idx])
-        self.run_produce_consume_validate(lambda: self.scale_up_replica(src_node_idx, added_node_idx, partition,
+        self.run_produce_consume_validate(lambda: self.scale_up_replica(src_node_idx, added_node_idx, num_active_partitions,
                                                                         txn_per_client, num_clients, interval, timeout))
 
-    def scale_up_replica(self, src_node_idx, added_node_idx, partition, txn_per_client, num_clients, interval, timeout):
+    def scale_up_replica(self, src_node_idx, added_node_idx, num_active_partitions, txn_per_client, num_clients, interval, timeout):
         """
         A validate function to test scaling up replica for given partition.
 
         :param src_node_idx: The index of source node, where new replica recovers from
         :param added_node_idx: The index of replica to add
-        :param partition: The partition id to test against
+        :param num_active_partitions: Number of active partitions
         :param txn_per_client: Number of transactions per client
         :param num_clients: Number of total clients
         :param interval: Average interval(millisecond) between transactions
@@ -42,9 +43,10 @@ class ScalabilityTest(ProduceConsumeValidateTest):
         added_node = self.waltz_storage.nodes[added_node_idx]
         added_node_hostname = added_node.account.ssh_hostname
         added_storage = self.get_host(added_node_hostname, admin_port)
+        partition = randrange(num_active_partitions)
 
         # Step 1: Produce transactions with current cluster.
-        cmd = self.client_cli.validate_txn_cmd(partition, txn_per_client, num_clients, interval)
+        cmd = self.client_cli.validate_txn_cmd(num_active_partitions, txn_per_client, num_clients, interval)
         self.verifiable_client.start(cmd)
         wait_until(lambda: self.is_max_transaction_id_updated(src_storage, port, partition, -1), timeout_sec=timeout)
 
