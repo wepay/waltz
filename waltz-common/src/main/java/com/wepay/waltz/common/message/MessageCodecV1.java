@@ -89,6 +89,13 @@ public class MessageCodecV1 implements MessageCodec {
                 transactionId = reader.readLong();
                 return new FlushResponse(reqId, transactionId);
 
+            case MessageType.HIGH_WATER_MARK_REQUEST:
+                return new HighWaterMarkRequest(reqId);
+
+            case MessageType.HIGH_WATER_MARK_RESPONSE:
+                transactionId = reader.readLong();
+                return new HighWaterMarkResponse(reqId, transactionId);
+
             case MessageType.LOCK_FAILURE:
                 transactionId = reader.readLong();
                 return new LockFailure(reqId, transactionId);
@@ -166,6 +173,14 @@ public class MessageCodecV1 implements MessageCodec {
             case MessageType.FLUSH_RESPONSE:
                 FlushResponse flushResponse = (FlushResponse) msg;
                 writer.writeLong(flushResponse.transactionId);
+                break;
+
+            case MessageType.HIGH_WATER_MARK_REQUEST:
+                break;
+
+            case MessageType.HIGH_WATER_MARK_RESPONSE:
+                HighWaterMarkResponse highWaterMarkResponse = (HighWaterMarkResponse) msg;
+                writer.writeLong(highWaterMarkResponse.transactionId);
                 break;
 
             case MessageType.LOCK_FAILURE:

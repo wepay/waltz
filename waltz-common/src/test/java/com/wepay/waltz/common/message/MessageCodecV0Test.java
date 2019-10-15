@@ -122,6 +122,19 @@ public class MessageCodecV0Test {
         assertNotNull(transactionDataResponse3.exception);
         assertNotNull(transactionDataResponse4.exception);
         assertEquals(transactionDataResponse3.exception.toString(), transactionDataResponse4.exception.toString());
+
+        HighWaterMarkRequest highWaterMarkRequest1 = new HighWaterMarkRequest(reqId());
+        HighWaterMarkRequest highWaterMarkRequest2 = encodeThenDecode(highWaterMarkRequest1);
+        assertEquals(MessageType.HIGH_WATER_MARK_REQUEST, highWaterMarkRequest1.type());
+        assertEquals(highWaterMarkRequest1.type(), highWaterMarkRequest2.type());
+        assertEquals(highWaterMarkRequest1.reqId, highWaterMarkRequest2.reqId);
+
+        HighWaterMarkResponse highWaterMarkResponse1 = new HighWaterMarkResponse(reqId(), rand.nextLong());
+        HighWaterMarkResponse highWaterMarkResponse2 = encodeThenDecode(highWaterMarkResponse1);
+        assertEquals(MessageType.HIGH_WATER_MARK_RESPONSE, highWaterMarkResponse1.type());
+        assertEquals(highWaterMarkResponse1.type(), highWaterMarkResponse2.type());
+        assertEquals(highWaterMarkResponse1.reqId, highWaterMarkResponse2.reqId);
+        assertEquals(highWaterMarkResponse1.transactionId, highWaterMarkResponse2.transactionId);
     }
 
     @Test(expected = UnsupportedOperationException.class)

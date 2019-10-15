@@ -70,4 +70,12 @@ public interface WaltzClientHandlerCallbacks extends MessageHandlerCallbacks {
      */
     void onLockFailed(LockFailure lockFailure);
 
+    /**
+     * Invoked when high watermark of given partition is received.
+     *
+     * @param partitionId the id of the partition.
+     * @param highWaterMark the current high watermark
+     */
+    void onHighWaterMarkReceived(int partitionId, long highWaterMark);
+
 }

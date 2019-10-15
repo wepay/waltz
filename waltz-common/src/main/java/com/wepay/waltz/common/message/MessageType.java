@@ -17,5 +17,7 @@ public final class MessageType {
     public static final int FLUSH_REQUEST = 8;
     public static final int FLUSH_RESPONSE = 9;
     public static final int LOCK_FAILURE = 10;
+    public static final int HIGH_WATER_MARK_REQUEST = 11;
+    public static final int HIGH_WATER_MARK_RESPONSE = 12;
 
 }

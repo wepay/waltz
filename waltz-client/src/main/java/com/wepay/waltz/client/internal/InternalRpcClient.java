@@ -26,6 +26,7 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
     /**
      * Invoked when a {@link Partition} is being mounted.
      * Resubmits outstanding transaction data requests, if any.
+     * Resubmits high watermark requests, if any.
      *
      * @param networkClient the {@code WaltzNetworkClient} being used to mount the partition.
      * @param partition the {@code Partition} being mounted.
@@ -33,6 +34,7 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
     @Override
     public void onMountingPartition(final WaltzNetworkClient networkClient, final Partition partition) {
         partition.resubmitTransactionDataRequests();
+        partition.resubmitHighWaterMarkRequests();
     }
 
     /**
@@ -45,6 +47,17 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
     @Override
     public Future<byte[]> getTransactionData(int partitionId, long transactionId) {
         return getPartition(partitionId).getTransactionData(transactionId);
+    }
+
+    /**
+     * Gets high watermark from a given partition id.
+     *
+     * @param partitionId the id of the partition to read from.
+     * @return a {@link Future} which contains the high watermark when complete.
+     */
+    @Override
+    public Future<Long> getHighWaterMark(int partitionId) {
+        return getPartition(partitionId).getHighWaterMark();
     }
 
 }

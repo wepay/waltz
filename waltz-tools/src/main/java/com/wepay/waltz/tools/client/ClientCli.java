@@ -40,7 +40,8 @@ public final class ClientCli extends SubcommandCli {
 
     private ClientCli(String[] args,  boolean useByTest) {
         super(args, useByTest, Arrays.asList(
-                new Subcommand(Validate.NAME, Validate.DESCRIPTION, Validate::new)
+                new Subcommand(Validate.NAME, Validate.DESCRIPTION, Validate::new),
+                new Subcommand(HighWaterMark.NAME, HighWaterMark.DESCRIPTION, HighWaterMark::new)
         ));
     }
 
@@ -213,20 +214,6 @@ public final class ClientCli extends SubcommandCli {
         @Override
         protected String getUsage() {
             return buildUsage(NAME, DESCRIPTION, getOptions());
-        }
-
-        /**
-         * Return an object of {@code WaltzClientConfig} built from configuration file.
-         * @param configFilePath the path to configuration file
-         * @return WaltzClientConfig
-         * @throws IOException
-         */
-        private WaltzClientConfig getWaltzClientConfig(String configFilePath) throws IOException {
-            Yaml yaml = new Yaml();
-            try (FileInputStream in = new FileInputStream(configFilePath)) {
-                Map<Object, Object> props = yaml.load(in);
-                return new WaltzClientConfig(props);
-            }
         }
 
         /**
@@ -486,6 +473,92 @@ public final class ClientCli extends SubcommandCli {
         private static int nextExponentialDistributedInterval(int avgInterval) {
             // LAMBDA defaults to 1, so average interval is decided by avgInterval
             return (int) (avgInterval * (Math.log(1 - Math.random()) / -LAMBDA));
+        }
+    }
+
+    /**
+     * The {@code MaxTransactionId} command displays the maximum transaction ID of a partition for given storage node.
+     */
+    private static final class HighWaterMark extends Cli {
+        private static final String NAME = "high-water-mark";
+        private static final String DESCRIPTION = "Displays high water mark of given partition";
+
+        private HighWaterMark(String[] args) {
+            super(args);
+        }
+
+        @Override
+        protected void configureOptions(Options options) {
+            Option partitionOption = Option.builder("p")
+                    .longOpt("partition")
+                    .desc("Specify the partition id whose max transaction ID to be returned")
+                    .hasArg()
+                    .build();
+            Option cliCfgOption = Option.builder("c")
+                    .longOpt("cli-config-path")
+                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config")
+                    .hasArg()
+                    .build();
+            partitionOption.setRequired(true);
+            cliCfgOption.setRequired(true);
+
+            options.addOption(partitionOption);
+            options.addOption(cliCfgOption);
+        }
+
+        @Override
+        protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
+            String partitionId = cmd.getOptionValue("partition");
+            String configFilePath = cmd.getOptionValue("cli-config-path");
+            try {
+                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath);
+                long highWaterMark = getHighWaterMark(Integer.parseInt(partitionId), waltzClientConfig);
+                System.out.println(String.format("Partition %s current high watermark: %d", partitionId, highWaterMark));
+            } catch (Exception e) {
+                throw new SubCommandFailedException(String.format("Failed to get high watermark of partition %s. %n%s", partitionId, e.getMessage()));
+            }
+        }
+
+        private long getHighWaterMark(int partitionId, WaltzClientConfig config) throws Exception {
+            DummyTxnCallbacks callbacks = new DummyTxnCallbacks();
+            WaltzClient client = new WaltzClient(callbacks, config);
+            return client.getHighWaterMark(partitionId);
+        }
+
+        @Override
+        protected String getUsage() {
+            return buildUsage(NAME, DESCRIPTION, getOptions());
+        }
+
+        private final class DummyTxnCallbacks implements WaltzClientCallbacks {
+
+            @Override
+            public long getClientHighWaterMark(int partitionId) {
+                return Long.MAX_VALUE;
+            }
+
+            @Override
+            public void applyTransaction(Transaction transaction) {
+            }
+
+            @Override
+            public void uncaughtException(int partitionId, long transactionId, Throwable exception) {
+
+            }
+        }
+    }
+
+    /**
+     * Return an object of {@code WaltzClientConfig} built from configuration file.
+     * @param configFilePath the path to configuration file
+     * @return WaltzClientConfig
+     * @throws IOException
+     */
+    private static WaltzClientConfig getWaltzClientConfig(String configFilePath) throws IOException {
+        Yaml yaml = new Yaml();
+        try (FileInputStream in = new FileInputStream(configFilePath)) {
+            Map<Object, Object> props = yaml.load(in);
+            return new WaltzClientConfig(props);
         }
     }
 

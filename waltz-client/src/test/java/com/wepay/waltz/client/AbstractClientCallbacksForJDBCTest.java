@@ -237,6 +237,12 @@ public class AbstractClientCallbacksForJDBCTest {
                 public Future<byte[]> getTransactionData(int partitionId, long transactionId) {
                     return CompletableFuture.completedFuture("dummy".getBytes(StandardCharsets.UTF_8));
                 }
+
+                @Override
+                public Future<Long> getHighWaterMark(int partitionId) {
+                    return CompletableFuture.completedFuture(-1L);
+                }
+
                 @Override
                 public void close() {
                 }

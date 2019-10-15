@@ -11,4 +11,6 @@ public interface RpcClient {
 
     Future<byte[]> getTransactionData(int partitionId, long transactionId);
 
+    Future<Long> getHighWaterMark(int partitionId);
+
 }

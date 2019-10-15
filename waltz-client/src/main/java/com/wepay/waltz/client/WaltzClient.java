@@ -15,6 +15,7 @@ import com.wepay.zktools.clustermgr.ManagedClient;
 import org.slf4j.Logger;
 
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -206,6 +207,14 @@ public class WaltzClient {
      */
     public Set<Integer> getPartitions() {
         return streamClient.getActivePartitions();
+    }
+
+    /**
+     * Gets current high watermark of a partition.
+     * @return
+     */
+    public long getHighWaterMark(int partitionId) throws ExecutionException, InterruptedException {
+        return rpcClient.getHighWaterMark(partitionId).get();
     }
 
     // Executes the transaction asynchronously. This is used in retrying a failed transaction.
