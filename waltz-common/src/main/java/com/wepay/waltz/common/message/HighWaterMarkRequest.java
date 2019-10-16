@@ -1,8 +1,8 @@
 package com.wepay.waltz.common.message;
 
-public class HighWaterMarkRequest extends AbstractMessage{
+public class HighWaterMarkRequest extends AbstractMessage {
 
-    public HighWaterMarkRequest (ReqId reqId) {
+    public HighWaterMarkRequest(ReqId reqId) {
         super(reqId);
     }
 

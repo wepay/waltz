@@ -71,7 +71,7 @@ public class ClientCliTest {
         helper.startWaltzServer(true);
 
         try {
-            // validate with single partition
+            // validate partition that is clean
             String[] args1 = {
                     "validate",
                     "--txn-per-client", "50",
@@ -82,10 +82,9 @@ public class ClientCliTest {
             ClientCli.testMain(args1);
             assertFalse(errContent.toString("UTF-8").contains("Error"));
 
-            // validate with customized high-watermark
+            // validate partition that data exists
             String[] args2 = {
                     "validate",
-                    "--high-watermark", "99",
                     "--txn-per-client", "50",
                     "--num-clients", "2",
                     "--interval", "20",

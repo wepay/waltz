@@ -20,7 +20,6 @@ class ClientCli(Cli):
 
         java com.wepay.waltz.tools.client.ClientCli \
             validate \
-            --num_active_partitions <number of active partitions> \
             --txn-per-client <number of transactions per client> \
             --num-clients <number of total clients> \
             --interval <average interval(millisecond) between transactions> \

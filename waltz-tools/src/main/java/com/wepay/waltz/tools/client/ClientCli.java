@@ -31,6 +31,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static java.lang.Math.toIntExact;
+
 /**
  * {@code ClientCli} is a tool designed to help integration test
  * , which utilizes Waltz Client to produce, consume transactions
@@ -84,7 +86,6 @@ public final class ClientCli extends SubcommandCli {
         private static final String LOCK_NAME = "validate-lock";
         private static final int LOCK_ID = 0;
         private static final int LAMBDA = 1;
-        private static final int DEFAULT_HIGH_WATERMARK = -1;
         private static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
         private static final Random RANDOM = new Random();
 
@@ -125,11 +126,6 @@ public final class ClientCli extends SubcommandCli {
                     .desc("Specify client cli config file path")
                     .hasArg()
                     .build();
-            Option highWatermarkOption = Option.builder("h")
-                    .longOpt("high-watermark")
-                    .desc("Specify current high watermark for the partition")
-                    .hasArg()
-                    .build();
             Option numActivePartitionOption = Option.builder("ap")
                     .longOpt("num-active-partitions")
                     .desc(String.format("Specify number of partitions to interact with. e.g. if set to 3, transactions will"
@@ -141,14 +137,12 @@ public final class ClientCli extends SubcommandCli {
             numClientsOption.setRequired(true);
             intervalOption.setRequired(true);
             cfgPathOption.setRequired(true);
-            highWatermarkOption.setRequired(false);
             numActivePartitionOption.setRequired(false);
 
             options.addOption(txnPerClientOption);
             options.addOption(numClientsOption);
             options.addOption(intervalOption);
             options.addOption(cfgPathOption);
-            options.addOption(highWatermarkOption);
             options.addOption(numActivePartitionOption);
         }
 
@@ -172,20 +166,22 @@ public final class ClientCli extends SubcommandCli {
                 WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath);
 
                 // check optional argument
-                int highWaterMark = cmd.hasOption("high-watermark") ? Integer.parseInt(cmd.getOptionValue("high-watermark")) : DEFAULT_HIGH_WATERMARK;
-                if (highWaterMark < -1) {
-                    throw new IllegalArgumentException("high-watermark must be greater or equals to -1");
-                }
                 int numActivePartitions = cmd.hasOption("num-active-partitions") ? Integer.parseInt(cmd.getOptionValue("num-active-partitions")) : DEFAULT_NUMBER_ACTIVE_PARTITIONS;
                 if (numActivePartitions < 1) {
                     throw new IllegalArgumentException("num-active-partitions must be greater or equals to 1");
                 }
 
-                int numTxnToSubmit = txnPerClient * numClients;
-                int numTxnAppended = highWaterMark + 1;
+                // get number of existing transactions across all partitions
+                long numTxnToSubmit = txnPerClient * numClients;
+                long numExistingTransactions = 0;
+                for (int partitionId = 0; partitionId < numActivePartitions; partitionId++) {
+                    long partitionHighWaterMark = getHighWaterMark(partitionId, waltzClientConfig);
+                    numExistingTransactions += partitionHighWaterMark > -1L ? partitionHighWaterMark + 1 : 0;
+                }
+
                 // each client will receive callback of all transactions
-                int expectNumProducerCallbacks = (numTxnAppended + numTxnToSubmit) * numClients;
-                int expectNumConsumerCallbacks = (numTxnAppended + numTxnToSubmit) * 1;
+                int expectNumProducerCallbacks = toIntExact((numExistingTransactions + numTxnToSubmit) * numClients);
+                int expectNumConsumerCallbacks = toIntExact((numExistingTransactions + numTxnToSubmit) * 1);
                 allProducerReady = new CountDownLatch(numClients);
                 allProducerTxnCallbackReceived = new CountDownLatch(expectNumProducerCallbacks);
                 allConsumerTxnCallbackReceived = new CountDownLatch(expectNumConsumerCallbacks);
@@ -477,7 +473,7 @@ public final class ClientCli extends SubcommandCli {
     }
 
     /**
-     * The {@code MaxTransactionId} command displays the maximum transaction ID of a partition for given storage node.
+     * The {@code MaxTransactionId} command displays the maximum transaction ID of given partition.
      */
     private static final class HighWaterMark extends Cli {
         private static final String NAME = "high-water-mark";
@@ -519,32 +515,9 @@ public final class ClientCli extends SubcommandCli {
             }
         }
 
-        private long getHighWaterMark(int partitionId, WaltzClientConfig config) throws Exception {
-            DummyTxnCallbacks callbacks = new DummyTxnCallbacks();
-            WaltzClient client = new WaltzClient(callbacks, config);
-            return client.getHighWaterMark(partitionId);
-        }
-
         @Override
         protected String getUsage() {
             return buildUsage(NAME, DESCRIPTION, getOptions());
-        }
-
-        private final class DummyTxnCallbacks implements WaltzClientCallbacks {
-
-            @Override
-            public long getClientHighWaterMark(int partitionId) {
-                return Long.MAX_VALUE;
-            }
-
-            @Override
-            public void applyTransaction(Transaction transaction) {
-            }
-
-            @Override
-            public void uncaughtException(int partitionId, long transactionId, Throwable exception) {
-
-            }
         }
     }
 
@@ -559,6 +532,33 @@ public final class ClientCli extends SubcommandCli {
         try (FileInputStream in = new FileInputStream(configFilePath)) {
             Map<Object, Object> props = yaml.load(in);
             return new WaltzClientConfig(props);
+        }
+    }
+
+    private static long getHighWaterMark(int partitionId, WaltzClientConfig config) throws Exception {
+        DummyTxnCallbacks callbacks = new DummyTxnCallbacks();
+        WaltzClient client = new WaltzClient(callbacks, config);
+        return client.getHighWaterMark(partitionId);
+    }
+
+    /**
+     * A transaction callback to help construct {@link WaltzClient}. It is dummy because
+     * it is not suppose to receive any callbacks.
+     */
+    private static final class DummyTxnCallbacks implements WaltzClientCallbacks {
+
+        @Override
+        public long getClientHighWaterMark(int partitionId) {
+            return Long.MAX_VALUE;
+        }
+
+        @Override
+        public void applyTransaction(Transaction transaction) {
+        }
+
+        @Override
+        public void uncaughtException(int partitionId, long transactionId, Throwable exception) {
+
         }
     }
 
