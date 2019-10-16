@@ -97,7 +97,7 @@ class RecoveryTest(ProduceConsumeValidateTest):
         partition = randrange(num_active_partitions)
 
         # Step 1: Produce a number of transactions.
-        cmd = self.client_cli.validate_txn_cmd(num_active_partitions, txn_per_client, num_clients, interval, -1)
+        cmd = self.client_cli.validate_txn_cmd(num_active_partitions, txn_per_client, num_clients, interval)
         self.verifiable_client.start(cmd)
 
         # Step 2: Mark storage node 0 offline for reads and writes.
