@@ -109,8 +109,7 @@ public final class StorageCli extends SubcommandCli {
                     }
                     hostsAndPorts = new ArrayList<>();
                     hostsAndPorts.add(hostAndPortArray);
-                }
-                catch (IllegalArgumentException e) {
+                } catch (IllegalArgumentException e) {
                     throw new SubCommandFailedException(String.format("Cannot fetch partition ownership for %s:%n%s",
                             providedHostAndPort, e.getMessage()));
                 }
