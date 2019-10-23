@@ -4,10 +4,9 @@ DIR=$(dirname $0)
 
 $DIR/../gradlew --console plain -q copyLibs
 
-CLASSPATH=""
-for file in waltz-test/build/libs/*.jar;
-do
-    CLASSPATH="$CLASSPATH":"$file"
+unset CLASSPATH
+for file in waltz-test/build/libs/*.jar; do
+    CLASSPATH="${CLASSPATH+$CLASSPATH:}$file"
 done
 
 JVMOPTS="-Xms1g -Xmx1g -server -Dlog4j.configuration=file:config/log4j-smoketest.properties"
