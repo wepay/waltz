@@ -41,6 +41,11 @@ public class WaltzServerConfig extends AbstractConfig {
     /** Default optimistic lock table size. */
     public static final int DEFAULT_OPTIMISTIC_LOCK_TABLE_SIZE = 30000;
 
+    /** StoreSession batch size, <code>server.storeSessionBatchSize</code> */
+    public static final String STORE_SESSION_BATCH_SIZE = "server.storeSessionBatchSize";
+    /** Default value for {@link #STORE_SESSION_BATCH_SIZE} config. */
+    public static final int DEFAULT_STORE_SESSION_BATCH_SIZE = 100;
+
     /** Feed cache size. */
     public static final String FEED_CACHE_SIZE = "server.feedCacheSize";
     /** Default feed cache size. */
@@ -117,6 +122,7 @@ public class WaltzServerConfig extends AbstractConfig {
 
             // Partition
             put(OPTIMISTIC_LOCK_TABLE_SIZE, intParser.withDefault(DEFAULT_OPTIMISTIC_LOCK_TABLE_SIZE));
+            put(STORE_SESSION_BATCH_SIZE, intParser.withDefault(DEFAULT_STORE_SESSION_BATCH_SIZE));
             put(FEED_CACHE_SIZE, intParser.withDefault(DEFAULT_FEED_CACHE_SIZE));
             put(MIN_FETCH_SIZE, intParser.withDefault(DEFAULT_MIN_FETCH_SIZE));
             put(REALTIME_THRESHOLD, intParser.withDefault(DEFAULT_REALTIME_THRESHOLD));

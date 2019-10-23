@@ -32,6 +32,7 @@ public class WaltzServerConfigTest {
         map.put(WaltzServerConfig.SERVER_PORT, "8888");
 
         map.put(WaltzServerConfig.OPTIMISTIC_LOCK_TABLE_SIZE, "2000");
+        map.put(WaltzServerConfig.STORE_SESSION_BATCH_SIZE, "100");
         map.put(WaltzServerConfig.FEED_CACHE_SIZE, "1000");
         map.put(WaltzServerConfig.MIN_FETCH_SIZE, "50");
         map.put(WaltzServerConfig.REALTIME_THRESHOLD, "500");
@@ -61,6 +62,10 @@ public class WaltzServerConfigTest {
         value = config.get(WaltzServerConfig.OPTIMISTIC_LOCK_TABLE_SIZE);
         assertTrue(value instanceof Integer);
         assertEquals(2000, value);
+
+        value = config.get(WaltzServerConfig.STORE_SESSION_BATCH_SIZE);
+        assertTrue(value instanceof Integer);
+        assertEquals(100, value);
 
         value = config.get(WaltzServerConfig.FEED_CACHE_SIZE);
         assertTrue(value instanceof Integer);
@@ -118,6 +123,10 @@ public class WaltzServerConfigTest {
         value = config.get(WaltzServerConfig.OPTIMISTIC_LOCK_TABLE_SIZE);
         assertTrue(value instanceof Integer);
         assertEquals(WaltzServerConfig.DEFAULT_OPTIMISTIC_LOCK_TABLE_SIZE, value);
+
+        value = config.get(WaltzServerConfig.STORE_SESSION_BATCH_SIZE);
+        assertTrue(value instanceof Integer);
+        assertEquals(WaltzServerConfig.DEFAULT_STORE_SESSION_BATCH_SIZE, value);
 
         value = config.get(WaltzServerConfig.FEED_CACHE_SIZE);
         assertTrue(value instanceof Integer);

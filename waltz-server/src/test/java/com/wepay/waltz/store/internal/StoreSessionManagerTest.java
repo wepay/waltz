@@ -3,6 +3,7 @@ package com.wepay.waltz.store.internal;
 import com.wepay.waltz.common.message.Record;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.common.util.BackoffTimer;
+import com.wepay.waltz.server.WaltzServerConfig;
 import com.wepay.waltz.store.TestUtils;
 import com.wepay.waltz.store.exception.GenerationMismatchException;
 import com.wepay.waltz.store.exception.SessionClosedException;
@@ -43,7 +44,15 @@ public class StoreSessionManagerTest {
 
             ReplicaSessionManager replicaSessionManager = new TestReplicaSessionManager(1, NUM_REPLICAS);
 
-            StoreSessionManager storeSessionManager = new StoreSessionManager(partitionId, generation, replicaSessionManager, zkClient, znode);
+            StoreSessionManager storeSessionManager =
+                new StoreSessionManager(
+                    partitionId,
+                    generation,
+                    WaltzServerConfig.DEFAULT_STORE_SESSION_BATCH_SIZE,
+                    replicaSessionManager,
+                    zkClient,
+                    znode
+                );
             StoreSession session;
             try {
                 long expectedHighWaterMark = -1L;
@@ -126,7 +135,15 @@ public class StoreSessionManagerTest {
 
             TestReplicaSessionManager replicaSessionManager = new TestReplicaSessionManager(1, NUM_REPLICAS);
 
-            StoreSessionManager storeSessionManager = new StoreSessionManager(partitionId, generation, replicaSessionManager, zkClient, znode);
+            StoreSessionManager storeSessionManager =
+                new StoreSessionManager(
+                    partitionId,
+                    generation,
+                    WaltzServerConfig.DEFAULT_STORE_SESSION_BATCH_SIZE,
+                    replicaSessionManager,
+                    zkClient,
+                    znode
+                );
             StoreSession session = null;
             try {
                 long expectedHighWaterMark = -1L;
@@ -242,7 +259,15 @@ public class StoreSessionManagerTest {
             ZNode znode = new ZNode(root, Integer.toString(partitionId));
 
             TestReplicaSessionManager replicaSessionManager = new TestReplicaSessionManager(1, NUM_REPLICAS);
-            StoreSessionManager storeSessionManager1 = new StoreSessionManager(partitionId, generation, replicaSessionManager, zkClient, znode);
+            StoreSessionManager storeSessionManager1 =
+                new StoreSessionManager(
+                    partitionId,
+                    generation,
+                    WaltzServerConfig.DEFAULT_STORE_SESSION_BATCH_SIZE,
+                    replicaSessionManager,
+                    zkClient,
+                    znode
+                );
             StoreSessionManager storeSessionManager2 = null;
             StoreSession session1;
             StoreSession session2;
@@ -268,7 +293,15 @@ public class StoreSessionManagerTest {
                 }
 
                 // Open another session manager with new generation
-                storeSessionManager2 = new StoreSessionManager(partitionId, generation + 1, replicaSessionManager, zkClient, znode);
+                storeSessionManager2 =
+                    new StoreSessionManager(
+                        partitionId,
+                        generation + 1,
+                        WaltzServerConfig.DEFAULT_STORE_SESSION_BATCH_SIZE,
+                        replicaSessionManager,
+                        zkClient,
+                        znode
+                    );
 
                 session2 = storeSessionManager2.getStoreSession();
                 assertEquals(expectedHighWaterMark, session2.highWaterMark());

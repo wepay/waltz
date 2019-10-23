@@ -3,6 +3,7 @@ package com.wepay.waltz.store.internal;
 import com.wepay.waltz.common.message.Record;
 import com.wepay.waltz.common.message.RecordHeader;
 import com.wepay.waltz.common.message.ReqId;
+import com.wepay.waltz.server.WaltzServerConfig;
 import com.wepay.waltz.store.TestUtils;
 import com.wepay.waltz.store.exception.GenerationMismatchException;
 import com.wepay.waltz.store.internal.metadata.PartitionMetadata;
@@ -66,7 +67,16 @@ public class StoreSessionImplTest {
 
             try {
                 ArrayList<ReplicaSession> replicaSessions = replicaSessionManager.getReplicaSessions(partitionId, sessionId);
-                StoreSessionImpl session = new StoreSessionImpl(partitionId, generation, sessionId, replicaSessions, zkClient, znode);
+                StoreSessionImpl session =
+                    new StoreSessionImpl(
+                        partitionId,
+                        generation,
+                        sessionId,
+                        WaltzServerConfig.DEFAULT_STORE_SESSION_BATCH_SIZE,
+                        replicaSessions,
+                        zkClient,
+                        znode
+                    );
                 session.open();
                 try {
                     // Test generation mismatch
