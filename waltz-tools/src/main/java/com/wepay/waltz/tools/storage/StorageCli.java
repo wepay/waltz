@@ -123,7 +123,7 @@ public final class StorageCli extends SubcommandCli {
 
                     String metricsJson = getMetricsJson(storageHost, Integer.parseInt(storagePort), cliConfigPath);
                     Map<Integer, PartitionInfoSnapshot> partitionInfo = getPartitionInfo(metricsJson);
-                    partitionInfoStringBuilder.append(getListPartitionInfo(partitionInfo, storageHost, storagePort));
+                    partitionInfoStringBuilder.append(formatPartitionInfo(partitionInfo, storageHost, storagePort));
                     partitionInfoStringBuilder.append("\n");
                 } catch (Exception e) {
                     throw new SubCommandFailedException(String.format("Cannot fetch partition ownership for %s:%s:%n%s",
@@ -206,7 +206,7 @@ public final class StorageCli extends SubcommandCli {
             return partitionInfo;
         }
 
-        private StringBuilder getListPartitionInfo(Map<Integer, PartitionInfoSnapshot> partitionInfo, String storageHost, String storagePort) {
+        private StringBuilder formatPartitionInfo(Map<Integer, PartitionInfoSnapshot> partitionInfo, String storageHost, String storagePort) {
             StringBuilder sb = new StringBuilder();
             // display partition info
             for (Map.Entry<Integer, PartitionInfoSnapshot> entry: partitionInfo.entrySet()) {
@@ -223,7 +223,7 @@ public final class StorageCli extends SubcommandCli {
         }
 
         private void listPartitionInfo(Map<Integer, PartitionInfoSnapshot> partitionInfo, String storageHost, String storagePort) {
-            System.out.println(getListPartitionInfo(partitionInfo, storageHost, storagePort));
+            System.out.println(formatPartitionInfo(partitionInfo, storageHost, storagePort));
         }
 
         @Override
