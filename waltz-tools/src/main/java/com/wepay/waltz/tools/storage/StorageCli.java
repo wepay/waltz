@@ -37,6 +37,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -107,8 +108,7 @@ public final class StorageCli extends SubcommandCli {
                     if (hostAndPortArray.length != 2) {
                         throw new IllegalArgumentException("Http must be in format of host:admin_port");
                     }
-                    hostsAndPorts = new ArrayList<>();
-                    hostsAndPorts.add(hostAndPortArray);
+                    hostsAndPorts = Collections.singletonList(hostAndPortArray);
                 } catch (IllegalArgumentException e) {
                     throw new SubCommandFailedException(String.format("Cannot fetch partition ownership for %s:%n%s",
                             providedHostAndPort, e.getMessage()));
