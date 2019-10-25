@@ -112,11 +112,6 @@ public class IntegrationTestHelper {
 
         PortFinder portFinder = new PortFinder();
         this.zkPort = portFinder.getPort();
-        for (int i = 0; i < numStorages; i++) {
-            this.storagePorts.add(portFinder.getPort());
-            this.storageAdminPorts.add(portFinder.getPort());
-            this.storageJettyPorts.add(portFinder.getPort());
-        }
         this.serverPort = portFinder.getPort();
         this.serverJettyPort = portFinder.getPort();
 
@@ -125,6 +120,9 @@ public class IntegrationTestHelper {
         this.storageGroupMap = new HashMap<String, Integer>();
         this.storageConnectionMap = new HashMap<String, Integer>();
         for (int i = 0; i < numStorages; i++) {
+            this.storagePorts.add(portFinder.getPort());
+            this.storageAdminPorts.add(portFinder.getPort());
+            this.storageJettyPorts.add(portFinder.getPort());
             this.storageGroupMap.put(host + ":" + storagePorts.get(i), STORAGE_GROUP_ID);
             this.storageConnectionMap.put(host + ":" + storagePorts.get(i), storageAdminPorts.get(i));
         }
@@ -312,7 +310,7 @@ public class IntegrationTestHelper {
      * @throws Exception
      */
     public StorageAdminClient getStorageAdminClient() throws Exception {
-        return getStorageAdminClientWithPort(0);
+        return getStorageAdminClientWithIndex(0);
     }
 
     /**
@@ -320,11 +318,12 @@ public class IntegrationTestHelper {
      * The Storage client requires ZooKeeperServer to be running, meaning you must call startZooKeeperServer()
      * before calling this method.
      *
+     * @param adminPortIndex index of the admin port from storageAdminPorts
      * @return StorageAdminClient instance
      * @throws Exception
      */
-    public StorageAdminClient getStorageAdminClient(int adminPortIndex) throws Exception {
-        return getStorageAdminClientWithPort(storageAdminPorts.get(adminPortIndex));
+    public StorageAdminClient getStorageAdminClientWithIndex(int adminPortIndex) throws Exception {
+        return getStorageAdminClientWithAdminPort(storageAdminPorts.get(adminPortIndex));
     }
 
     /**
@@ -332,10 +331,11 @@ public class IntegrationTestHelper {
      * The Storage client requires ZooKeeperServer to be running, meaning you must call startZooKeeperServer()
      * before calling this method.
      *
+     * @param adminPort Admin port for the StorageAdminClient
      * @return StorageAdminClient instance
      * @throws Exception
      */
-    public StorageAdminClient getStorageAdminClientWithPort(int adminPort) throws Exception {
+    public StorageAdminClient getStorageAdminClientWithAdminPort(int adminPort) throws Exception {
         synchronized (storageAdminClients) {
             StorageAdminClient storageAdminClient = storageAdminClients.get(adminPort);
             if (storageAdminClient == null) {
@@ -355,13 +355,13 @@ public class IntegrationTestHelper {
      * This method assigns/unassigns all partitions to the storage node via the Storage admin client
      */
     public void setWaltzStorageAssignment(boolean isAssigned) throws Exception {
-        setWaltzStorageAssignment(0, isAssigned);
+        setWaltzStorageAssignmentWithIndex(0, isAssigned);
     }
 
     /**
      * This method assigns/unassigns all partitions to the storage node via the Storage admin client
      */
-    public void setWaltzStorageAssignment(int portIndex, boolean isAssigned) throws Exception {
+    public void setWaltzStorageAssignmentWithIndex(int portIndex, boolean isAssigned) throws Exception {
         setWaltzStorageAssignmentWithPort(storageAdminPorts.get(portIndex), isAssigned);
     }
 
@@ -369,7 +369,7 @@ public class IntegrationTestHelper {
      * This method assigns/unassigns all partitions to the storage node via the Storage admin client
      */
     public void setWaltzStorageAssignmentWithPort(int adminPort, boolean isAssigned) throws Exception {
-        StorageAdminClient storageAdminClient = getStorageAdminClientWithPort(adminPort);
+        StorageAdminClient storageAdminClient = getStorageAdminClientWithAdminPort(adminPort);
 
         List<Future<?>> futures = new ArrayList<>(numPartitions);
         for (int i = 0; i < numPartitions; i++) {

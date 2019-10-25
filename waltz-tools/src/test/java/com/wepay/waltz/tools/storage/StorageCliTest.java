@@ -147,13 +147,10 @@ public final class StorageCliTest {
             }
             setUpStreams();
 
-
             // no path
-            /*
-             * The partitions themselves and their ids will be wrong. This should only verify if all hosts and ports are being
-             * detected to be displayed. The reason the partitions are wrong has to do with the fact that this
-             * test runs everything in the same JVM. This issue will not exist in production
-             */
+            // The partitions themselves and their ids will be wrong. This should only verify if all hosts and ports are being
+            // detected to be displayed. The reason the partitions are wrong has to do with the fact that this
+            // test runs everything in the same JVM. This issue will not exist in production
             String[] argsNoPath = {
                     "list",
                     "--cli-config-path", configFilePath
@@ -470,7 +467,7 @@ public final class StorageCliTest {
             // Create partitions on each storage node
             for (WaltzStorage waltzStorage : Utils.list(sourceWaltzStorage, destinationWaltzStorage)) {
                 int adminPort = waltzStorage.adminPort;
-                StorageAdminClient adminClient = helper.getStorageAdminClientWithPort(adminPort);
+                StorageAdminClient adminClient = helper.getStorageAdminClientWithAdminPort(adminPort);
                 adminClient.open();
                 for (int i = 0; i < numPartitions; i++) {
                     adminClient.setPartitionAssignment(i, true, false).get();
@@ -733,7 +730,7 @@ public final class StorageCliTest {
             int adminPort = waltzStorage.adminPort;
 
             // Create partitions on each storage node
-            StorageAdminClient adminClient = helper.getStorageAdminClientWithPort(adminPort);
+            StorageAdminClient adminClient = helper.getStorageAdminClientWithAdminPort(adminPort);
             adminClient.open();
             for (int i = 0; i < numPartitions; i++) {
                 adminClient.setPartitionAssignment(i, true, false).get();
