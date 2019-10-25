@@ -41,11 +41,6 @@ public class WaltzServerConfig extends AbstractConfig {
     /** Default optimistic lock table size. */
     public static final int DEFAULT_OPTIMISTIC_LOCK_TABLE_SIZE = 30000;
 
-    /** StoreSession batch size, <code>server.storeSessionBatchSize</code> */
-    public static final String STORE_SESSION_BATCH_SIZE = "server.storeSessionBatchSize";
-    /** Default value for {@link #STORE_SESSION_BATCH_SIZE} config. */
-    public static final int DEFAULT_STORE_SESSION_BATCH_SIZE = 100;
-
     /** Feed cache size. */
     public static final String FEED_CACHE_SIZE = "server.feedCacheSize";
     /** Default feed cache size. */
@@ -70,6 +65,11 @@ public class WaltzServerConfig extends AbstractConfig {
     public static final String TRANSACTION_DATA_CACHE_ALLOCATION = "server.transactionDataCacheAllocation";
     /** Default transaction data cache allocation. */
     public static final String DEFAULT_TRANSACTION_DATA_CACHE_ALLOCATION = "heap"; // heap or direct
+
+    /** Maximum batch size, <code>storage.maxBatchSize</code> */
+    public static final String MAX_BATCH_SIZE = "storage.maxBatchSize";
+    /** Default value for {@link #MAX_BATCH_SIZE} config. */
+    public static final int DEFAULT_MAX_BATCH_SIZE = 100;
 
     /** Initial retry interval. */
     public static final String INITIAL_RETRY_INTERVAL = "storage.initialRetryInterval";
@@ -122,7 +122,6 @@ public class WaltzServerConfig extends AbstractConfig {
 
             // Partition
             put(OPTIMISTIC_LOCK_TABLE_SIZE, intParser.withDefault(DEFAULT_OPTIMISTIC_LOCK_TABLE_SIZE));
-            put(STORE_SESSION_BATCH_SIZE, intParser.withDefault(DEFAULT_STORE_SESSION_BATCH_SIZE));
             put(FEED_CACHE_SIZE, intParser.withDefault(DEFAULT_FEED_CACHE_SIZE));
             put(MIN_FETCH_SIZE, intParser.withDefault(DEFAULT_MIN_FETCH_SIZE));
             put(REALTIME_THRESHOLD, intParser.withDefault(DEFAULT_REALTIME_THRESHOLD));
@@ -131,6 +130,7 @@ public class WaltzServerConfig extends AbstractConfig {
                 .withValidator(new CacheAllocationValidator()));
 
             // Storage
+            put(MAX_BATCH_SIZE, intParser.withDefault(DEFAULT_MAX_BATCH_SIZE));
             put(INITIAL_RETRY_INTERVAL, longParser.withDefault(DEFAULT_INITIAL_RETRY_INTERVAL));
             put(MAX_RETRY_INTERVAL, longParser.withDefault(DEFAULT_MAX_RETRY_INTERVAL));
             put(CHECKPOINT_INTERVAL, intParser.withDefault(DEFAULT_CHECKPOINT_INTERVAL));

@@ -72,7 +72,7 @@ public class StoreSessionImplTest {
                         partitionId,
                         generation,
                         sessionId,
-                        WaltzServerConfig.DEFAULT_STORE_SESSION_BATCH_SIZE,
+                        WaltzServerConfig.DEFAULT_MAX_BATCH_SIZE,
                         replicaSessions,
                         zkClient,
                         znode

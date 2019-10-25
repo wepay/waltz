@@ -32,11 +32,11 @@ public class WaltzServerConfigTest {
         map.put(WaltzServerConfig.SERVER_PORT, "8888");
 
         map.put(WaltzServerConfig.OPTIMISTIC_LOCK_TABLE_SIZE, "2000");
-        map.put(WaltzServerConfig.STORE_SESSION_BATCH_SIZE, "100");
         map.put(WaltzServerConfig.FEED_CACHE_SIZE, "1000");
         map.put(WaltzServerConfig.MIN_FETCH_SIZE, "50");
         map.put(WaltzServerConfig.REALTIME_THRESHOLD, "500");
 
+        map.put(WaltzServerConfig.MAX_BATCH_SIZE, "500");
         map.put(WaltzServerConfig.INITIAL_RETRY_INTERVAL, "30");
         map.put(WaltzServerConfig.MAX_RETRY_INTERVAL, "30000");
 
@@ -63,10 +63,6 @@ public class WaltzServerConfigTest {
         assertTrue(value instanceof Integer);
         assertEquals(2000, value);
 
-        value = config.get(WaltzServerConfig.STORE_SESSION_BATCH_SIZE);
-        assertTrue(value instanceof Integer);
-        assertEquals(100, value);
-
         value = config.get(WaltzServerConfig.FEED_CACHE_SIZE);
         assertTrue(value instanceof Integer);
         assertEquals(1000, value);
@@ -76,6 +72,10 @@ public class WaltzServerConfigTest {
         assertEquals(50, value);
 
         value = config.get(WaltzServerConfig.REALTIME_THRESHOLD);
+        assertTrue(value instanceof Integer);
+        assertEquals(500, value);
+
+        value = config.get(WaltzServerConfig.MAX_BATCH_SIZE);
         assertTrue(value instanceof Integer);
         assertEquals(500, value);
 
@@ -124,10 +124,6 @@ public class WaltzServerConfigTest {
         assertTrue(value instanceof Integer);
         assertEquals(WaltzServerConfig.DEFAULT_OPTIMISTIC_LOCK_TABLE_SIZE, value);
 
-        value = config.get(WaltzServerConfig.STORE_SESSION_BATCH_SIZE);
-        assertTrue(value instanceof Integer);
-        assertEquals(WaltzServerConfig.DEFAULT_STORE_SESSION_BATCH_SIZE, value);
-
         value = config.get(WaltzServerConfig.FEED_CACHE_SIZE);
         assertTrue(value instanceof Integer);
         assertEquals(WaltzServerConfig.DEFAULT_FEED_CACHE_SIZE, value);
@@ -139,6 +135,10 @@ public class WaltzServerConfigTest {
         value = config.get(WaltzServerConfig.REALTIME_THRESHOLD);
         assertTrue(value instanceof Integer);
         assertEquals(WaltzServerConfig.DEFAULT_REALTIME_THRESHOLD, value);
+
+        value = config.get(WaltzServerConfig.MAX_BATCH_SIZE);
+        assertTrue(value instanceof Integer);
+        assertEquals(WaltzServerConfig.DEFAULT_MAX_BATCH_SIZE, value);
 
         value = config.get(WaltzServerConfig.INITIAL_RETRY_INTERVAL);
         assertTrue(value instanceof Long);

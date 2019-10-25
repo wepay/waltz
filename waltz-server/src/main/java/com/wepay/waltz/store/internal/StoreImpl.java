@@ -80,7 +80,7 @@ public class StoreImpl implements Store {
                 new StoreSessionManager(
                     partitionId,
                     generation,
-                    (int) config.get(WaltzServerConfig.STORE_SESSION_BATCH_SIZE),
+                    (int) config.get(WaltzServerConfig.MAX_BATCH_SIZE),
                     replicaSessionManager,
                     zkClient,
                     znode

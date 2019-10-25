@@ -48,7 +48,7 @@ public class StoreSessionManagerTest {
                 new StoreSessionManager(
                     partitionId,
                     generation,
-                    WaltzServerConfig.DEFAULT_STORE_SESSION_BATCH_SIZE,
+                    WaltzServerConfig.DEFAULT_MAX_BATCH_SIZE,
                     replicaSessionManager,
                     zkClient,
                     znode
@@ -139,7 +139,7 @@ public class StoreSessionManagerTest {
                 new StoreSessionManager(
                     partitionId,
                     generation,
-                    WaltzServerConfig.DEFAULT_STORE_SESSION_BATCH_SIZE,
+                    WaltzServerConfig.DEFAULT_MAX_BATCH_SIZE,
                     replicaSessionManager,
                     zkClient,
                     znode
@@ -263,7 +263,7 @@ public class StoreSessionManagerTest {
                 new StoreSessionManager(
                     partitionId,
                     generation,
-                    WaltzServerConfig.DEFAULT_STORE_SESSION_BATCH_SIZE,
+                    WaltzServerConfig.DEFAULT_MAX_BATCH_SIZE,
                     replicaSessionManager,
                     zkClient,
                     znode
@@ -297,7 +297,7 @@ public class StoreSessionManagerTest {
                     new StoreSessionManager(
                         partitionId,
                         generation + 1,
-                        WaltzServerConfig.DEFAULT_STORE_SESSION_BATCH_SIZE,
+                        WaltzServerConfig.DEFAULT_MAX_BATCH_SIZE,
                         replicaSessionManager,
                         zkClient,
                         znode
