@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * ZooKeeper is a tool for interacting with Waltz ZooKeeper data.
+ * ZooKeeperCli is a tool for interacting with Waltz ZooKeeper data.
  */
 public final class ZooKeeperCli extends SubcommandCli {
 
@@ -150,7 +150,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                 System.out.println("  key=" + storeParams.key.toString());
                 System.out.println("  numPartitions=" + storeParams.numPartitions);
             } else {
-                System.out.println("  not found");
+                System.out.println("Store parameters not found");
             }
         }
 
@@ -164,7 +164,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     System.out.println("  " + entry.getKey() + " = " + Arrays.toString(entry.getValue()) + ", GroupId: " + groups.get(entry.getKey()));
                 }
             } else {
-                System.out.println("  not found");
+                System.out.println("Replicas not found");
             }
         }
 
@@ -177,7 +177,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     System.out.println("  " + entry.getKey() + " has admin port: " + entry.getValue());
                 }
             } else {
-                System.out.println("  not found");
+                System.out.println("Connections not found");
             }
         }
 
@@ -194,7 +194,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     System.out.println("  " + entry.getKey() + ", SessionId: " + entry.getValue().sessionId + ", closingHighWaterMark: " + ((entry.getValue().closingHighWaterMark) == ReplicaState.UNRESOLVED ? "UNRESOLVED" : entry.getValue().closingHighWaterMark));
                 }
             } else {
-                System.out.println("  no node found");
+                System.out.println("No node found");
             }
         }
 
@@ -284,7 +284,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     .build();
             Option cliCfgOption = Option.builder("c")
                     .longOpt("cli-config-path")
-                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path")
+                    .desc("Specify the cli config file path required for ZooKeeper connection string, ZooKeeper root path")
                     .hasArg()
                     .build();
 
@@ -408,7 +408,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     .build();
             Option cliCfgOption = Option.builder("c")
                     .longOpt("cli-config-path")
-                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path")
+                    .desc("Specify the cli config file path required for ZooKeeper connection string, ZooKeeper root path")
                     .hasArg()
                     .build();
 
@@ -575,7 +575,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     .build();
             Option cliCfgOption = Option.builder("c")
                     .longOpt("cli-config-path")
-                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path")
+                    .desc("Specify the cli config file path required for ZooKeeper connection string, ZooKeeper root path")
                     .hasArg()
                     .build();
 
@@ -645,7 +645,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     .build();
             Option cliCfgOption = Option.builder("c")
                     .longOpt("cli-config-path")
-                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path")
+                    .desc("Specify the cli config file path required for ZooKeeper connection string, ZooKeeper root path")
                     .hasArg()
                     .build();
 
@@ -718,7 +718,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     .build();
             Option cliCfgOption = Option.builder("c")
                     .longOpt("cli-config-path")
-                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path")
+                    .desc("Specify the cli config file path required for ZooKeeper connection string, ZooKeeper root path")
                     .hasArg()
                     .build();
 
@@ -786,7 +786,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     .build();
             Option cliCfgOption = Option.builder("c")
                     .longOpt("cli-config-path")
-                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path")
+                    .desc("Specify the cli config file path required for ZooKeeper connection string, ZooKeeper root path")
                     .hasArg()
                     .build();
 

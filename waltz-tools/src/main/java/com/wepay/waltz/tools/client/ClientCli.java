@@ -132,7 +132,7 @@ public final class ClientCli extends SubcommandCli {
             Option numActivePartitionOption = Option.builder("ap")
                     .longOpt("num-active-partitions")
                     .desc(String.format("Specify number of partitions to interact with. e.g. if set to 3, transactions will"
-                            + "be evenly distributed among partition 0, 1 and 2. Defualt to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
+                            + "be evenly distributed among partition 0, 1 and 2. Default to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
                     .hasArg()
                     .build();
 
