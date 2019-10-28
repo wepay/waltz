@@ -43,7 +43,15 @@ public class StorePartitionTest {
             ZNode znode = new ZNode(root, Integer.toString(partitionId));
 
             ReplicaSessionManager replicaSessionManager = new TestReplicaSessionManager(1, NUM_REPLICAS);
-            StoreSessionManager storeSessionManager = new StoreSessionManager(partitionId, generation, replicaSessionManager, zkClient, znode);
+            StoreSessionManager storeSessionManager =
+                new StoreSessionManager(
+                    partitionId,
+                    generation,
+                    WaltzServerConfig.DEFAULT_MAX_BATCH_SIZE,
+                    replicaSessionManager,
+                    zkClient,
+                    znode
+                );
             StorePartitionImpl partition = new StorePartitionImpl(storeSessionManager, config);
 
             try {
@@ -99,7 +107,15 @@ public class StorePartitionTest {
             ZNode znode = new ZNode(root, Integer.toString(partitionId));
 
             TestReplicaSessionManager replicaSessionManager = new TestReplicaSessionManager(1, NUM_REPLICAS);
-            StoreSessionManager storeSessionManager = new StoreSessionManager(partitionId, generation, replicaSessionManager, zkClient, znode);
+            StoreSessionManager storeSessionManager =
+                new StoreSessionManager(
+                    partitionId,
+                    generation,
+                    WaltzServerConfig.DEFAULT_MAX_BATCH_SIZE,
+                    replicaSessionManager,
+                    zkClient,
+                    znode
+                );
             StorePartitionImpl partition = new StorePartitionImpl(storeSessionManager, config);
 
             try {

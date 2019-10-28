@@ -66,6 +66,11 @@ public class WaltzServerConfig extends AbstractConfig {
     /** Default transaction data cache allocation. */
     public static final String DEFAULT_TRANSACTION_DATA_CACHE_ALLOCATION = "heap"; // heap or direct
 
+    /** Maximum batch size, <code>storage.maxBatchSize</code> */
+    public static final String MAX_BATCH_SIZE = "storage.maxBatchSize";
+    /** Default value for {@link #MAX_BATCH_SIZE} config. */
+    public static final int DEFAULT_MAX_BATCH_SIZE = 100;
+
     /** Initial retry interval. */
     public static final String INITIAL_RETRY_INTERVAL = "storage.initialRetryInterval";
     /** Default initial retry interval. */
@@ -125,6 +130,7 @@ public class WaltzServerConfig extends AbstractConfig {
                 .withValidator(new CacheAllocationValidator()));
 
             // Storage
+            put(MAX_BATCH_SIZE, intParser.withDefault(DEFAULT_MAX_BATCH_SIZE));
             put(INITIAL_RETRY_INTERVAL, longParser.withDefault(DEFAULT_INITIAL_RETRY_INTERVAL));
             put(MAX_RETRY_INTERVAL, longParser.withDefault(DEFAULT_MAX_RETRY_INTERVAL));
             put(CHECKPOINT_INTERVAL, intParser.withDefault(DEFAULT_CHECKPOINT_INTERVAL));
