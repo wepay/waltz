@@ -86,14 +86,17 @@ public final class StorageCli extends SubcommandCli {
                     .hasArg()
                     .build();
             storageOption.setRequired(false);
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
             options.addOption(storageOption);
             options.addOption(cliCfgOption);
         }
 
         @Override
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
-            String cliConfigPath = cmd.getOptionValue("cli-config-path");
+            String cliConfigPath = cmd.getOptionValue(
+                "cli-config-path",
+                System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+            );
             String providedHostAndPort = cmd.getOptionValue("storage");
             List<String[]> hostsAndPorts;
             if (providedHostAndPort == null) {
@@ -263,7 +266,7 @@ public final class StorageCli extends SubcommandCli {
 
             storageOption.setRequired(true);
             partitionOption.setRequired(true);
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
 
             options.addOption(storageOption);
             options.addOption(partitionOption);
@@ -274,7 +277,10 @@ public final class StorageCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             String hostAndPort = cmd.getOptionValue("storage");
             String partitionId = cmd.getOptionValue("partition");
-            String cliConfigPath = cmd.getOptionValue("cli-config-path");
+            String cliConfigPath = cmd.getOptionValue(
+                    "cli-config-path",
+                    System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+            );
 
             try {
                 String[] hostAndPortArray = hostAndPort.split(":");
@@ -363,7 +369,7 @@ public final class StorageCli extends SubcommandCli {
             storageOption.setRequired(true);
             partitionOption.setRequired(true);
             onlineOption.setRequired(true);
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
 
             options.addOption(storageOption);
             options.addOption(partitionOption);
@@ -376,7 +382,10 @@ public final class StorageCli extends SubcommandCli {
             String hostAndPort = cmd.getOptionValue("storage");
             String partitionId = cmd.getOptionValue("partition");
             String isOnline = cmd.getOptionValue("online");
-            String cliConfigPath = cmd.getOptionValue("cli-config-path");
+            String cliConfigPath = cmd.getOptionValue(
+                "cli-config-path",
+                System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+            );
 
             try {
                 String[] hostAndPortArray = hostAndPort.split(":");
@@ -466,7 +475,7 @@ public final class StorageCli extends SubcommandCli {
 
             storageOption.setRequired(true);
             partitionOption.setRequired(true);
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
             deleteStorageFilesOption.setRequired(false);
 
             options.addOption(storageOption);
@@ -479,7 +488,10 @@ public final class StorageCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             String hostAndPort = cmd.getOptionValue("storage");
             String partitionId = cmd.getOptionValue("partition");
-            String cliConfigPath = cmd.getOptionValue("cli-config-path");
+            String cliConfigPath = cmd.getOptionValue(
+                "cli-config-path",
+                System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+            );
             boolean deleteStorageFiles = false;
 
             if (cmd.hasOption("delete-storage-files")) {
@@ -609,7 +621,7 @@ public final class StorageCli extends SubcommandCli {
             destinationStoragePortOption.setRequired(true);
             partitionOption.setRequired(true);
             batchSizeOption.setRequired(true);
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
             sourceSslOption.setRequired(false);
             destinationSslOption.setRequired(false);
 
@@ -630,7 +642,10 @@ public final class StorageCli extends SubcommandCli {
             String destinationStoragePort = cmd.getOptionValue("destination-storage-port");
             String partitionId = cmd.getOptionValue("partition");
             String batchSize = cmd.getOptionValue("batch-size");
-            String cliConfigPath = cmd.getOptionValue("cli-config-path");
+            String cliConfigPath = cmd.getOptionValue(
+                    "cli-config-path",
+                    System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+            );
             String sourceSslConfigPath = cmd.getOptionValue("source-ssl-config-path");
             String destinationSslConfigPath = cmd.getOptionValue("destination-ssl-config-path");
 
@@ -743,14 +758,17 @@ public final class StorageCli extends SubcommandCli {
                     .hasArg()
                     .build();
 
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
 
             options.addOption(cliCfgOption);
         }
 
         @Override
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
-            String cliConfigPath = cmd.getOptionValue("cli-config-path");
+            String cliConfigPath = cmd.getOptionValue(
+                    "cli-config-path",
+                    System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+            );
 
             try {
                 syncPartitionAssignments(cliConfigPath);
@@ -818,7 +836,7 @@ public final class StorageCli extends SubcommandCli {
                     .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config")
                     .hasArg()
                     .build();
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
 
             options.addOption(cliCfgOption);
         }
@@ -826,7 +844,10 @@ public final class StorageCli extends SubcommandCli {
         @Override
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             try {
-                String cliConfigPath = cmd.getOptionValue("cli-config-path");
+                String cliConfigPath = cmd.getOptionValue(
+                        "cli-config-path",
+                        System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+                );
 
                 validateConnectivity(cliConfigPath);
             } catch (Exception e) {
@@ -951,7 +972,7 @@ public final class StorageCli extends SubcommandCli {
             storageOption.setRequired(true);
             storagePortOption.setRequired(true);
             partitionOption.setRequired(true);
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
             offlineOption.setRequired(false);
 
             options.addOption(storageOption);
@@ -966,7 +987,10 @@ public final class StorageCli extends SubcommandCli {
             String hostAndPort = cmd.getOptionValue("storage");
             String storagePort = cmd.getOptionValue("storage-port");
             String partitionId = cmd.getOptionValue("partition");
-            String cliConfigPath = cmd.getOptionValue("cli-config-path");
+            String cliConfigPath = cmd.getOptionValue(
+                    "cli-config-path",
+                    System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+            );
             boolean usedByOfflineRecovery = cmd.hasOption("offline");
 
             try {
