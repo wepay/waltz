@@ -92,7 +92,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                 .hasArg()
                 .build();
 
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
 
             options.addOption(cliCfgOption);
         }
@@ -101,7 +101,10 @@ public final class ZooKeeperCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             ZooKeeperClient zkClient = null;
             try {
-                String cliConfigPath = cmd.getOptionValue("cli-config-path");
+                String cliConfigPath = cmd.getOptionValue(
+                        "cli-config-path",
+                        System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+                );
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
@@ -223,7 +226,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                 .hasArg()
                 .build();
 
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
 
             options.addOption(cliCfgOption);
         }
@@ -232,7 +235,10 @@ public final class ZooKeeperCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             ZooKeeperClient zkClient = null;
             try {
-                String cliConfigPath = cmd.getOptionValue("cli-config-path");
+                String cliConfigPath = cmd.getOptionValue(
+                        "cli-config-path",
+                        System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+                );
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
@@ -288,7 +294,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     .hasArg()
                     .build();
 
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
             nameOption.setRequired(true);
             partitionsOption.setRequired(true);
 
@@ -301,7 +307,10 @@ public final class ZooKeeperCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             ZooKeeperClient zkClient = null;
             try {
-                String cliConfigPath = cmd.getOptionValue("cli-config-path");
+                String cliConfigPath = cmd.getOptionValue(
+                        "cli-config-path",
+                        System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+                );
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
@@ -412,7 +421,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     .hasArg()
                     .build();
 
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
             nameOption.setRequired(true);
             forceOption.setRequired(false);
 
@@ -425,7 +434,10 @@ public final class ZooKeeperCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             ZooKeeperClient zkClient = null;
             try {
-                String cliConfigPath = cmd.getOptionValue("cli-config-path");
+                String cliConfigPath = cmd.getOptionValue(
+                        "cli-config-path",
+                        System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+                );
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
@@ -508,7 +520,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     .hasArg()
                     .build();
 
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
             storageOption.setRequired(true);
             storageAdminPortOption.setRequired(true);
             groupOption.setRequired(true);
@@ -523,7 +535,10 @@ public final class ZooKeeperCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             ZooKeeperClient zkClient = null;
             try {
-                String cliConfigPath = cmd.getOptionValue("cli-config-path");
+                String cliConfigPath = cmd.getOptionValue(
+                        "cli-config-path",
+                        System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+                );
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
@@ -579,7 +594,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     .hasArg()
                     .build();
 
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
             storageOption.setRequired(true);
 
             options.addOption(cliCfgOption);
@@ -590,7 +605,10 @@ public final class ZooKeeperCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             ZooKeeperClient zkClient = null;
             try {
-                String cliConfigPath = cmd.getOptionValue("cli-config-path");
+                String cliConfigPath = cmd.getOptionValue(
+                        "cli-config-path",
+                        System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+                );
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
@@ -649,7 +667,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     .hasArg()
                     .build();
 
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
             partitionOption.setRequired(true);
             storageOption.setRequired(true);
 
@@ -662,7 +680,10 @@ public final class ZooKeeperCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             ZooKeeperClient zkClient = null;
             try {
-                String cliConfigPath = cmd.getOptionValue("cli-config-path");
+                String cliConfigPath = cmd.getOptionValue(
+                        "cli-config-path",
+                        System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+                );
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
@@ -722,7 +743,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     .hasArg()
                     .build();
 
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
             partitionOption.setRequired(true);
             storageOption.setRequired(true);
 
@@ -735,7 +756,10 @@ public final class ZooKeeperCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             ZooKeeperClient zkClient = null;
             try {
-                String cliConfigPath = cmd.getOptionValue("cli-config-path");
+                String cliConfigPath = cmd.getOptionValue(
+                        "cli-config-path",
+                        System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+                );
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
@@ -790,7 +814,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     .hasArg()
                     .build();
 
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
             groupOption.setRequired(true);
 
             options.addOption(cliCfgOption);
@@ -801,7 +825,10 @@ public final class ZooKeeperCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             ZooKeeperClient zkClient = null;
             try {
-                String cliConfigPath = cmd.getOptionValue("cli-config-path");
+                String cliConfigPath = cmd.getOptionValue(
+                        "cli-config-path",
+                        System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+                );
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
