@@ -27,12 +27,14 @@ class ClientCli(Cli):
             --num-active-partitions <number of partitions to interact with>
         """
         cmd_arr = [
-            "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
+            "java -Dwaltz.config={} -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg".format(
+                self.cli_config_path),
+            self.java_cli_class_name(),
             "validate",
             "--txn-per-client", txn_per_client,
             "--num-clients", num_clients,
             "--interval", interval,
-            "--cli-config-path", self.cli_config_path,
+            "--high-watermark {}".format(high_watermark) if high_watermark is not None else "",
             "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else ""
         ]
         return self.build_cmd(cmd_arr)
