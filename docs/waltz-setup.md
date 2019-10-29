@@ -27,11 +27,11 @@ Step 1: Use `create` command to create a cluster
 ```
 waltz_uber=/path/to/waltz-uber-X.Y.Z.jar
 java ${waltz_uber+-cp ${waltz_uber}} \
+    -Dwaltz.config=${cli_config_path?} \
     com.wepay.waltz.tools.zk.ZooKeeperCli \
     create \
     --name ${cluster_name?} \
-    --partitions ${partition_count?} \
-    --cli-config-path ${cli_config_path?}
+    --partitions ${partition_count?}
 ```
 
 Step 2: Use `add-storage-node` command to add storage node(s)
