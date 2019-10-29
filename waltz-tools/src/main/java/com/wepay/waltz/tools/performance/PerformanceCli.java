@@ -116,7 +116,7 @@ public final class PerformanceCli extends SubcommandCli {
             txnPerThreadOption.setRequired(true);
             numThreadOption.setRequired(true);
             intervalOption.setRequired(true);
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
             numActivePartitionOption.setRequired(false);
             lockPoolSizeOption.setRequired(false);
 
@@ -150,7 +150,12 @@ public final class PerformanceCli extends SubcommandCli {
                 if (avgInterval < 0) {
                     throw new IllegalArgumentException("Found negative: interval must be greater or equals to 0");
                 }
-                waltzClientConfig = getWaltzClientConfig(cmd.getOptionValue("cli-config-path"));
+                waltzClientConfig = getWaltzClientConfig(
+                        cmd.getOptionValue(
+                                "cli-config-path",
+                                System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+                        )
+                );
 
                 // check optional argument
                 if (cmd.hasOption("num-active-partitions")) {
@@ -389,7 +394,7 @@ public final class PerformanceCli extends SubcommandCli {
                     .build();
             txnSizeOption.setRequired(true);
             numTxnOption.setRequired(true);
-            cliCfgOption.setRequired(true);
+            cliCfgOption.setRequired(false);
             numActivePartitionOption.setRequired(false);
 
             options.addOption(txnSizeOption);
@@ -413,7 +418,12 @@ public final class PerformanceCli extends SubcommandCli {
                 }
                 allTxnReceived = new CountDownLatch(numTxn);
                 allTxnRead = new CountDownLatch(numTxn);
-                waltzClientConfig = getWaltzClientConfig(cmd.getOptionValue("cli-config-path"));
+                waltzClientConfig = getWaltzClientConfig(
+                        cmd.getOptionValue(
+                                "cli-config-path",
+                                System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+                        )
+                );
 
                 // check optional argument
                 if (cmd.hasOption("num-active-partitions")) {
