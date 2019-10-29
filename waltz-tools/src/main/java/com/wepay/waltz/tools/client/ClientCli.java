@@ -123,7 +123,7 @@ public final class ClientCli extends SubcommandCli {
                     .build();
             Option cfgPathOption = Option.builder("c")
                     .longOpt("cli-config-path")
-                    .desc("Specify client cli config file path")
+                    .desc("Specify client cli config file path (overrides system property waltz.config)")
                     .hasArg()
                     .build();
             Option numActivePartitionOption = Option.builder("ap")
@@ -136,7 +136,7 @@ public final class ClientCli extends SubcommandCli {
             txnPerClientOption.setRequired(true);
             numClientsOption.setRequired(true);
             intervalOption.setRequired(true);
-            cfgPathOption.setRequired(true);
+            cfgPathOption.setRequired(false);
             numActivePartitionOption.setRequired(false);
 
             options.addOption(txnPerClientOption);
@@ -162,7 +162,10 @@ public final class ClientCli extends SubcommandCli {
                 if (avgInterval < 0) {
                     throw new IllegalArgumentException("Found negative: interval must be greater or equals to 0");
                 }
-                String configFilePath = cmd.getOptionValue("cli-config-path");
+                String configFilePath = cmd.getOptionValue(
+                        "cli-config-path",
+                        System.getProperty("waltz.config", "/etc/waltz/waltz.cfg")
+                );
                 WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath);
 
                 // check optional argument
