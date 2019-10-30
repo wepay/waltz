@@ -7,10 +7,10 @@ findImage() {
     if test -z "${imageId}"; then
         if [ $imageSource == "docker" ]
         then
-            echo "$imageName not found, pulling..."
+            echo "...pulling image [$imageName]"
             docker pull $imageName || die
         else
-            echo "$imageName not found, building..."
+            echo "...building image [$imageName]"
             $DIR/../../gradlew $imageSource || die
         fi
     fi
@@ -21,14 +21,15 @@ startContainer() {
     local containerId
     containerId=$(docker ps -q -f name=${containerName}) || die
     if test -n "${containerId}"; then
-        echo "$containerName container already running [$containerId]"
+        echo "...$containerName container already running [$containerId]"
     else
         # check if the container is stopped
         containerId=$(docker ps -q -a -f name=${containerName}) || die
         if test -n "${containerId}"; then
-            echo "starting container $containerName [$containerId]"
+            echo "...resuming container $containerName [$containerId]"
             docker start $containerName || die
         else
+            echo "...starting container $containerName"
             runContainer || die
         fi
     fi
@@ -39,10 +40,10 @@ stopContainer() {
     local containerId
     containerId=$(docker ps -q -f name=${containerName}) || die
     if test -n "${containerId}"; then
-        echo "stopping $containerName [$containerId]"
+        echo "...stopping $containerName [$containerId]"
         docker stop $containerId || die
     else
-        echo "$containerName not running"
+        echo "...$containerName not running"
     fi
 }
 
@@ -51,14 +52,14 @@ removeContainer() {
     local containerId
     containerId=$(docker ps -q -f name=${containerName}) || die
     if test -n "${containerId}"; then
-        echo "$containerName still running [$containerId], not removed"
+        echo "...$containerName still running [$containerId], not removed"
     else
         containerId=$(docker ps -q -a -f name=${containerName}) || die
         if test -n "${containerId}"; then
-            echo "Removing container $containerName [$containerId]"
+            echo "...Removing container $containerName [$containerId]"
             docker rm "$containerName" || die
         else
-            echo "container $containerName not found"
+            echo "...container $containerName not found"
         fi
     fi
 }
