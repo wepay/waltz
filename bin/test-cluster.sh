@@ -3,13 +3,15 @@
 DIR=$(dirname $0)
 cmd=$1
 
+die() { test -n "$*" && echo "$*"; exit 1; } >&2
+
 start() {
-    $DIR/docker/create-network.sh
-    $DIR/docker/zookeeper.sh start
-    $DIR/docker/cluster.sh create
-    $DIR/docker/waltz-storage.sh start
-    $DIR/docker/add-storage.sh
-    $DIR/docker/waltz-server.sh start
+    $DIR/docker/create-network.sh || die
+    $DIR/docker/zookeeper.sh start || die
+    $DIR/docker/cluster.sh create || die
+    $DIR/docker/waltz-storage.sh start || die
+    $DIR/docker/add-storage.sh || die
+    $DIR/docker/waltz-server.sh start || die
 }
 
 stop() {
