@@ -48,8 +48,7 @@ case $cmd in
         fi
         ;;
     *)
-        echo "unknown command"
+        echo "unknown command" >&2
+        exit 1
         ;;
 esac
-
-
