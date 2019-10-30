@@ -1,68 +1,64 @@
+die() { test -n "$*" && echo "$*"; exit 1; } >&2
+
 findImage() {
-    # check if the image is there
-    local imageId=$(docker images -q ${imageName})
-    if [ "${imageId}" == "" ]
-    then
+    # pull or build an image, as necessary
+    local imageId
+    imageId=$(docker images -q ${imageName}) || die
+    if test -z "${imageId}"; then
         if [ $imageSource == "docker" ]
         then
-            echo "...image not found, pulling an image"
-            docker pull $imageName
-            imageId=$(docker images -q ${imageName})
-            echo "...image pulled [$imageName]"
+            echo "$imageName not found, pulling..."
+            docker pull $imageName || die
         else
-            echo "...image not found, building an image"
-            $DIR/../../gradlew $imageSource
-            echo "...image built [$imageName]"
+            echo "$imageName not found, building..."
+            $DIR/../../gradlew $imageSource || die
         fi
     fi
 }
 
 startContainer() {
-    # check if the container is running
-    local containerId=$(docker ps -q -f name=${containerName})
-    if [ "${containerId}" != "" ]
-    then
-        echo "...container already running [$containerName]"
+    # start a container if not already running
+    local containerId
+    containerId=$(docker ps -q -f name=${containerName}) || die
+    if test -n "${containerId}"; then
+        echo "$containerName container already running [$containerId]"
     else
         # check if the container is stopped
-        containerId=$(docker ps -q -a -f name=${containerName})
-        if [ "${containerId}" != "" ]
-        then
-            docker start $containerName
-            echo "...container resumed [$containerName]"
+        containerId=$(docker ps -q -a -f name=${containerName}) || die
+        if test -n "${containerId}"; then
+            echo "starting container $containerName [$containerId]"
+            docker start $containerName || die
         else
-            runContainer
-            echo "...container started [$containerName]"
+            runContainer || die
         fi
     fi
 }
 
 stopContainer() {
-    # check if the container is running
-    local containerId=$(docker ps -q -f name=${containerName})
-    if [ "${containerId}" != "" ]
-    then
-        docker stop $containerName
-        echo "...container stopped [$containerName]"
+    # stop container, if running
+    local containerId
+    containerId=$(docker ps -q -f name=${containerName}) || die
+    if test -n "${containerId}"; then
+        echo "stopping $containerName [$containerId]"
+        docker stop $containerId || die
     else
-        echo "...container already stopped [$containerName]"
+        echo "$containerName not running"
     fi
 }
 
 removeContainer() {
-    # check if the container is stopped
-    local containerId=$(docker ps -q -f name=${containerName})
-    if [ "${containerId}" != "" ]
-    then
-        echo "...container still running [$containerName], not removed"
+    # remove container if not running
+    local containerId
+    containerId=$(docker ps -q -f name=${containerName}) || die
+    if test -n "${containerId}"; then
+        echo "$containerName still running [$containerId], not removed"
     else
-        containerId=$(docker ps -q -a -f name=${containerName})
-        if [ "${containerId}" != "" ]
-        then
-            docker rm $containerName
-            echo "...container removed [$containerName]"
+        containerId=$(docker ps -q -a -f name=${containerName}) || die
+        if test -n "${containerId}"; then
+            echo "Removing container $containerName [$containerId]"
+            docker rm "$containerName" || die
         else
-            echo "...container not found [$containerName]"
+            echo "container $containerName not found"
         fi
     fi
 }
@@ -84,6 +80,6 @@ case $cmd in
         removeContainer
         ;;
     *)
-        echo "invalid command [$cmd]"
+        die "invalid command [$cmd]"
         ;;
 esac

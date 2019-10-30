@@ -15,15 +15,15 @@ start() {
 }
 
 stop() {
-    $DIR/docker/waltz-server.sh stop
-    $DIR/docker/waltz-storage.sh stop
-    $DIR/docker/zookeeper.sh stop
+    $DIR/docker/waltz-server.sh stop || die
+    $DIR/docker/waltz-storage.sh stop || die
+    $DIR/docker/zookeeper.sh stop || die
 }
 
 clean() {
-    $DIR/docker/waltz-server.sh clean
-    $DIR/docker/waltz-storage.sh clean
-    $DIR/docker/zookeeper.sh clean
+    $DIR/docker/waltz-server.sh clean || die
+    $DIR/docker/waltz-storage.sh clean || die
+    $DIR/docker/zookeeper.sh clean || die
 }
 
 case $cmd in

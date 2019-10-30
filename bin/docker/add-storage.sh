@@ -16,7 +16,7 @@ TOOLSCONFIG=config/local-docker/waltz-tools.yml
 ZKCLI=com.wepay.waltz.tools.zk.ZooKeeperCli
 STORAGECLI=com.wepay.waltz.tools.storage.StorageCli
 
-echo "----- adding a storage to the cluster -----"
+echo "----- adding a storage node to the cluster -----"
 
 java $JVMOPTS -cp ${CLASSPATH#:} $ZKCLI add-storage-node -c $TOOLSCONFIG -s waltz-storage:55280 -a 55281 -g 0
 echo "...a storage node added the cluster"
