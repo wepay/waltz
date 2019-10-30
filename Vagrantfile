@@ -74,7 +74,6 @@ Vagrant.configure("2") do |config|
         google.machine_type = cfg['WaltzServerInstanceMachineType']
         google.zone = cfg['WaltzServerInstanceZone']
 
-        # the instance needs to be on the poc network
         google.network = cfg['GoogleNetwork']
         google.subnetwork = cfg['GoogleSubnetwork']
 
@@ -111,7 +110,6 @@ Vagrant.configure("2") do |config|
         google.machine_type = cfg['WaltzClientInstanceMachineType']
         google.zone = cfg['WaltzClientInstanceZone']
 
-        # the instance needs to be on the poc network
         google.network = cfg['GoogleNetwork']
         google.subnetwork = cfg['GoogleSubnetwork']
 
