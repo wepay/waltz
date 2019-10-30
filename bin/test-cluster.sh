@@ -41,6 +41,6 @@ case $cmd in
         clean
         ;;
     *)
-        echo "invalid command"
+        die "invalid command"
         ;;
 esac

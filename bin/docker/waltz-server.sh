@@ -10,7 +10,8 @@ networkName=waltz-network
 ports=55180-55182:55180-55182
 
 runContainer() {
-    local imageId=$(docker images -q ${imageName})
+    local imageId
+    imageId=$(docker images -q ${imageName}) || die
     if [ "${imageId}" == "" ]
     then
         echo "...image not built correctly"
@@ -18,7 +19,7 @@ runContainer() {
         docker run \
             --network=$networkName --net-alias $(hostname) -h $(hostname) -p $ports \
             --name $containerName -d -v $PWD/build/config:/config/ \
-            $imageId /config/waltz-server.yml
+            $imageId /config/waltz-server.yml || die
     fi
 }
 

@@ -11,7 +11,7 @@ networkName=waltz-network
 ports=42181:2181
 
 runContainer() {
-    docker run --network=$networkName -p $ports --name $containerName -d $imageName
+    docker run --network=$networkName -p $ports --name $containerName -d $imageName || die
 }
 
 source $DIR/container.sh

@@ -17,7 +17,12 @@ dbUser=demo
 dbUserPass=demo
 
 runContainer() {
-    docker run -p $ports --name $containerName -e MYSQL_ROOT_PASSWORD=$mysqlRootPass -d $imageName
+    docker run \
+	    -p "$ports" \
+	    --name "$containerName" \
+	    -e MYSQL_ROOT_PASSWORD="$mysqlRootPass" \
+	    -d "$imageName" \
+    || die
     newContainerStarted=true
 }
 
