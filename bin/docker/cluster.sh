@@ -48,7 +48,7 @@ case $cmd in
         fi
         ;;
     *)
-        echo "unknown command" >&2
+        echo "unknown command $cmd.  Valid commands: create, delete" >&2
         exit 1
         ;;
 esac
