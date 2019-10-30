@@ -41,6 +41,6 @@ case $cmd in
         clean
         ;;
     *)
-        die "invalid command"
+        die "invalid command $cmd.  Valid commands are start, stop, restart, clean"
         ;;
 esac
