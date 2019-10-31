@@ -55,7 +55,6 @@ public class Partition {
     private volatile int generation;
     private volatile PartitionState state = PartitionState.INACTIVE;
     private volatile boolean mounted = false;
-//    private volatile CompletableFuture<Long> highWaterMarkFuture;
     private final AtomicReference<CompletableFuture<Long>> highWaterMarkRef = new AtomicReference<>();
 
     /**

@@ -211,10 +211,14 @@ public class WaltzClient {
 
     /**
      * Gets current high watermark of a partition.
-     * @return
+     * @return High watermark of given partition.
      */
-    public long getHighWaterMark(int partitionId) throws ExecutionException, InterruptedException {
-        return rpcClient.getHighWaterMark(partitionId).get();
+    public long getHighWaterMark(int partitionId) {
+        try {
+            return rpcClient.getHighWaterMark(partitionId).get();
+        } catch (ExecutionException | InterruptedException e) {
+            throw new WaltzClientRuntimeException("failed to get high watermark", e.getCause());
+        }
     }
 
     // Executes the transaction asynchronously. This is used in retrying a failed transaction.

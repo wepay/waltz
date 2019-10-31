@@ -507,7 +507,7 @@ public final class ClientCli extends SubcommandCli {
             String partitionId = cmd.getOptionValue("partition");
             String configFilePath = cmd.getOptionValue("cli-config-path");
             try {
-                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath);
+                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath, false);
                 long highWaterMark = getHighWaterMark(Integer.parseInt(partitionId), waltzClientConfig);
                 System.out.println(String.format("Partition %s current high watermark: %d", partitionId, highWaterMark));
             } catch (Exception e) {
@@ -528,9 +528,21 @@ public final class ClientCli extends SubcommandCli {
      * @throws IOException
      */
     private static WaltzClientConfig getWaltzClientConfig(String configFilePath) throws IOException {
+        return getWaltzClientConfig(configFilePath, WaltzClientConfig.DEFAULT_AUTO_MOUNT);
+    }
+
+    /**
+     * Return an object of {@code WaltzClientConfig} built from configuration file.
+     * @param configFilePath the path to configuration file
+     * @param autoMount if set to false, partitions will not be mounted or receive feed
+     * @return WaltzClientConfig
+     * @throws IOException
+     */
+    private static WaltzClientConfig getWaltzClientConfig(String configFilePath, boolean autoMount) throws IOException {
         Yaml yaml = new Yaml();
         try (FileInputStream in = new FileInputStream(configFilePath)) {
             Map<Object, Object> props = yaml.load(in);
+            props.put(WaltzClientConfig.AUTO_MOUNT, autoMount);
             return new WaltzClientConfig(props);
         }
     }
@@ -549,7 +561,7 @@ public final class ClientCli extends SubcommandCli {
 
         @Override
         public long getClientHighWaterMark(int partitionId) {
-            return Long.MAX_VALUE;
+            return -1L;
         }
 
         @Override
@@ -558,7 +570,6 @@ public final class ClientCli extends SubcommandCli {
 
         @Override
         public void uncaughtException(int partitionId, long transactionId, Throwable exception) {
-
         }
     }
 
