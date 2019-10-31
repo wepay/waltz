@@ -581,13 +581,10 @@ public class Partition {
      * @param highWaterMark the high watermark.
      */
     public void highWaterMarkReceived(long highWaterMark) {
-        while (true) {
-            CompletableFuture<Long> future = highWaterMarkRef.get();
-            if (future != null) {
-                if (highWaterMarkRef.compareAndSet(future, null)) {
-                    future.complete(highWaterMark);
-                    break;
-                }
+        CompletableFuture<Long> future = highWaterMarkRef.get();
+        if (future != null) {
+            if (highWaterMarkRef.compareAndSet(future, null)) {
+                future.complete(highWaterMark);
             }
         }
     }
