@@ -33,7 +33,7 @@ then
     echo "...creating database"
     sleep 10
     docker exec -i $containerName sh <<EOF
-until mysql -uroot -ppass1234 -e "select 'MySQL started';";
+until mysql -uroot -p${mysqlRootPass} -e "select 'MySQL started';";
 do
     echo "...waiting for MySQL to start";
     sleep 1;
