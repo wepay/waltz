@@ -81,6 +81,6 @@ case $cmd in
         removeContainer
         ;;
     *)
-        die "invalid command [$cmd]"
+        die "invalid command [$cmd].  Valid commands: start, stop, clean"
         ;;
 esac
