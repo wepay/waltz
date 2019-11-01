@@ -8,6 +8,7 @@ import com.wepay.riff.util.Logging;
 import com.wepay.waltz.common.message.AbstractMessage;
 import com.wepay.waltz.common.message.FeedData;
 import com.wepay.waltz.common.message.FlushResponse;
+import com.wepay.waltz.common.message.HighWaterMarkResponse;
 import com.wepay.waltz.common.message.LockFailure;
 import com.wepay.waltz.common.message.MessageCodecV0;
 import com.wepay.waltz.common.message.MessageCodecV1;
@@ -106,6 +107,11 @@ public class WaltzClientHandler extends MessageHandler {
             case MessageType.FLUSH_RESPONSE:
                 FlushResponse flushResponse = (FlushResponse) msg;
                 handlerCallbacks.onFlushCompleted(flushResponse.reqId, flushResponse.transactionId);
+                break;
+
+            case MessageType.HIGH_WATER_MARK_RESPONSE:
+                HighWaterMarkResponse highWaterMarkResponse = (HighWaterMarkResponse) msg;
+                handlerCallbacks.onHighWaterMarkReceived(partitionId, highWaterMarkResponse.transactionId);
                 break;
 
             case MessageType.LOCK_FAILURE:

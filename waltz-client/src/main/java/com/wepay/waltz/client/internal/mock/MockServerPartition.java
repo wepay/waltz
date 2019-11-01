@@ -62,6 +62,12 @@ public class MockServerPartition {
         }
     }
 
+    Long getHighWaterMark() {
+        synchronized (this) {
+            return highWaterMark;
+        }
+    }
+
     void flushTransactions(final ReqId reqId) {
         executor.submit(new Flush(reqId));
     }

@@ -14,6 +14,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.Properties;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class ClientCliTest {
 
@@ -49,8 +50,10 @@ public class ClientCliTest {
 
     @Test
     public void testSubmit() throws Exception {
+        int numActivePartitions = 1;
         Properties properties = new Properties();
         properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/client/cli/test");
+
         properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, String.valueOf(CLUSTER_NUM_PARTITIONS));
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
         IntegrationTestHelper helper = new IntegrationTestHelper(properties);
@@ -62,12 +65,13 @@ public class ClientCliTest {
         helper.startWaltzStorage(true);
 
         String storage = helper.getHost() + ":" + helper.getStorageAdminPort();
+
         addPartitionsToStorage(CLUSTER_NUM_PARTITIONS, storage, configFilePath);
 
         helper.startWaltzServer(true);
 
         try {
-            // validate with single partition
+            // validate partition that is clean
             String[] args1 = {
                     "validate",
                     "--txn-per-client", "50",
@@ -78,10 +82,9 @@ public class ClientCliTest {
             ClientCli.testMain(args1);
             assertFalse(errContent.toString("UTF-8").contains("Error"));
 
-            // validate with customized high-watermark
+            // validate partition that data exists
             String[] args2 = {
                     "validate",
-                    "--high-watermark", "99",
                     "--txn-per-client", "50",
                     "--num-clients", "2",
                     "--interval", "20",
@@ -125,6 +128,52 @@ public class ClientCliTest {
             };
             ClientCli.testMain(args1);
             assertFalse(errContent.toString("UTF-8").contains("Error"));
+        } finally {
+            helper.closeAll();
+        }
+    }
+
+    @Test
+    public void testGetHighWaterMark() throws Exception {
+        Properties properties = new Properties();
+        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/client/cli/test");
+        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, String.valueOf(CLUSTER_NUM_PARTITIONS));
+        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
+        IntegrationTestHelper helper = new IntegrationTestHelper(properties);
+        Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
+                                                    helper.getZkSessionTimeout(), helper.getSslSetup());
+        String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
+
+        helper.startZooKeeperServer();
+        helper.startWaltzStorage(true);
+
+        String storage = helper.getHost() + ":" + helper.getStorageAdminPort();
+        addPartitionsToStorage(CLUSTER_NUM_PARTITIONS, storage, configFilePath);
+
+        helper.startWaltzServer(true);
+
+        try {
+            // update high watermark
+            String[] args1 = {
+                    "validate",
+                    "--txn-per-client", "50",
+                    "--num-clients", "2",
+                    "--interval", "20",
+                    "--num-active-partitions", "1",
+                    "--cli-config-path", configFilePath
+            };
+            ClientCli.testMain(args1);
+
+            // get high watermark
+            String[] args2 = {
+                    "high-water-mark",
+                    "--partition", "0",
+                    "--cli-config-path", configFilePath
+            };
+            ClientCli.testMain(args2);
+
+            assertFalse(errContent.toString("UTF-8").contains("Error"));
+            assertTrue(outContent.toString("UTF-8").contains("Partition 0 current high watermark: 99"));
         } finally {
             helper.closeAll();
         }

@@ -146,6 +146,10 @@ final class MockClientPartition {
         return serverPartition.getTransactionData(transactionId);
     }
 
+    Long getHighWaterMark() {
+        return serverPartition.getHighWaterMark();
+    }
+
     void flushTransactions() {
         synchronized (this) {
             if (active) {

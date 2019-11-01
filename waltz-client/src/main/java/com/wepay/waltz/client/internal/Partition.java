@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * An internal waltz client representation of a Partition.
@@ -54,6 +55,7 @@ public class Partition {
     private volatile int generation;
     private volatile PartitionState state = PartitionState.INACTIVE;
     private volatile boolean mounted = false;
+    private final AtomicReference<CompletableFuture<Long>> highWaterMarkRef = new AtomicReference<>();
 
     /**
      * Class Constructor.
@@ -560,6 +562,63 @@ public class Partition {
                 networkClient.requestTransactionData(nextReqId(), transactionId);
             } else {
                 logger.debug("failed to send data request: {}", this);
+            }
+        }
+    }
+
+    /**
+     * Resubmits pending HighWaterMark requests.
+     */
+    public void resubmitHighWaterMarkRequests() {
+        if (highWaterMarkRef.get() != null) {
+            sendHighWaterMarkRequest();
+        }
+    }
+
+    /**
+     * Invoked when the high watermark is received from a Waltz server.
+     *
+     * @param highWaterMark the high watermark.
+     */
+    public void highWaterMarkReceived(long highWaterMark) {
+        CompletableFuture<Long> future = highWaterMarkRef.get();
+        if (future != null) {
+            if (highWaterMarkRef.compareAndSet(future, null)) {
+                future.complete(highWaterMark);
+            }
+        }
+    }
+
+    /**
+     * Gets high watermark for current {@link Partition}.
+     *
+     * @return a {@link Future} which completes with high watermark received from a Waltz server.
+     */
+    public CompletableFuture<Long> getHighWaterMark() {
+        while (true) {
+            CompletableFuture<Long> future = highWaterMarkRef.get();
+            if (future != null) {
+                return future;
+            } else {
+                future = new CompletableFuture<>();
+                if (highWaterMarkRef.compareAndSet(null, future)) {
+                    sendHighWaterMarkRequest();
+                    return future;
+                }
+            }
+        }
+    }
+
+    public void sendHighWaterMarkRequest() {
+        // TransactionDataRequest is a RPC request. The partition doesn't need to be mounted.
+        if (state != PartitionState.CLOSED) {
+            // Cache the network client in the local variable for safety
+            WaltzNetworkClient networkClient = this.networkClient;
+
+            if (networkClient != null) {
+                networkClient.requestHighWaterMark(nextReqId());
+            } else {
+                logger.debug("failed to send high watermark request: {}", this);
             }
         }
     }

@@ -15,6 +15,8 @@ import com.wepay.waltz.common.message.FeedRequest;
 import com.wepay.waltz.common.message.FeedSuspended;
 import com.wepay.waltz.common.message.FlushRequest;
 import com.wepay.waltz.common.message.FlushResponse;
+import com.wepay.waltz.common.message.HighWaterMarkRequest;
+import com.wepay.waltz.common.message.HighWaterMarkResponse;
 import com.wepay.waltz.common.message.LockFailure;
 import com.wepay.waltz.common.message.MessageType;
 import com.wepay.waltz.common.message.MountRequest;
@@ -249,6 +251,10 @@ public class Partition {
                 appendTask.flush().whenComplete((h, t) -> {
                     client.sendMessage(new FlushResponse(((FlushRequest) msg).reqId, h), true);
                 });
+                break;
+
+            case MessageType.HIGH_WATER_MARK_REQUEST:
+                client.sendMessage(new HighWaterMarkResponse(((HighWaterMarkRequest) msg).reqId, commitHighWaterMark), true);
                 break;
 
             default:

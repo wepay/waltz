@@ -31,6 +31,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static java.lang.Math.toIntExact;
+
 /**
  * {@code ClientCli} is a tool designed to help integration test
  * , which utilizes Waltz Client to produce, consume transactions
@@ -40,7 +42,8 @@ public final class ClientCli extends SubcommandCli {
 
     private ClientCli(String[] args,  boolean useByTest) {
         super(args, useByTest, Arrays.asList(
-                new Subcommand(Validate.NAME, Validate.DESCRIPTION, Validate::new)
+                new Subcommand(Validate.NAME, Validate.DESCRIPTION, Validate::new),
+                new Subcommand(HighWaterMark.NAME, HighWaterMark.DESCRIPTION, HighWaterMark::new)
         ));
     }
 
@@ -83,7 +86,6 @@ public final class ClientCli extends SubcommandCli {
         private static final String LOCK_NAME = "validate-lock";
         private static final int LOCK_ID = 0;
         private static final int LAMBDA = 1;
-        private static final int DEFAULT_HIGH_WATERMARK = -1;
         private static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
         private static final Random RANDOM = new Random();
 
@@ -124,11 +126,6 @@ public final class ClientCli extends SubcommandCli {
                     .desc("Specify client cli config file path")
                     .hasArg()
                     .build();
-            Option highWatermarkOption = Option.builder("h")
-                    .longOpt("high-watermark")
-                    .desc("Specify current high watermark for the partition")
-                    .hasArg()
-                    .build();
             Option numActivePartitionOption = Option.builder("ap")
                     .longOpt("num-active-partitions")
                     .desc(String.format("Specify number of partitions to interact with. e.g. if set to 3, transactions will"
@@ -140,14 +137,12 @@ public final class ClientCli extends SubcommandCli {
             numClientsOption.setRequired(true);
             intervalOption.setRequired(true);
             cfgPathOption.setRequired(true);
-            highWatermarkOption.setRequired(false);
             numActivePartitionOption.setRequired(false);
 
             options.addOption(txnPerClientOption);
             options.addOption(numClientsOption);
             options.addOption(intervalOption);
             options.addOption(cfgPathOption);
-            options.addOption(highWatermarkOption);
             options.addOption(numActivePartitionOption);
         }
 
@@ -171,20 +166,22 @@ public final class ClientCli extends SubcommandCli {
                 WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath);
 
                 // check optional argument
-                int highWaterMark = cmd.hasOption("high-watermark") ? Integer.parseInt(cmd.getOptionValue("high-watermark")) : DEFAULT_HIGH_WATERMARK;
-                if (highWaterMark < -1) {
-                    throw new IllegalArgumentException("high-watermark must be greater or equals to -1");
-                }
                 int numActivePartitions = cmd.hasOption("num-active-partitions") ? Integer.parseInt(cmd.getOptionValue("num-active-partitions")) : DEFAULT_NUMBER_ACTIVE_PARTITIONS;
                 if (numActivePartitions < 1) {
                     throw new IllegalArgumentException("num-active-partitions must be greater or equals to 1");
                 }
 
-                int numTxnToSubmit = txnPerClient * numClients;
-                int numTxnAppended = highWaterMark + 1;
+                // get number of existing transactions across all partitions
+                long numTxnToSubmit = txnPerClient * numClients;
+                long numExistingTransactions = 0;
+                for (int partitionId = 0; partitionId < numActivePartitions; partitionId++) {
+                    long partitionHighWaterMark = getHighWaterMark(partitionId, waltzClientConfig);
+                    numExistingTransactions += partitionHighWaterMark > -1L ? partitionHighWaterMark + 1 : 0;
+                }
+
                 // each client will receive callback of all transactions
-                int expectNumProducerCallbacks = (numTxnAppended + numTxnToSubmit) * numClients;
-                int expectNumConsumerCallbacks = (numTxnAppended + numTxnToSubmit) * 1;
+                int expectNumProducerCallbacks = toIntExact((numExistingTransactions + numTxnToSubmit) * numClients);
+                int expectNumConsumerCallbacks = toIntExact((numExistingTransactions + numTxnToSubmit) * 1);
                 allProducerReady = new CountDownLatch(numClients);
                 allProducerTxnCallbackReceived = new CountDownLatch(expectNumProducerCallbacks);
                 allConsumerTxnCallbackReceived = new CountDownLatch(expectNumConsumerCallbacks);
@@ -213,20 +210,6 @@ public final class ClientCli extends SubcommandCli {
         @Override
         protected String getUsage() {
             return buildUsage(NAME, DESCRIPTION, getOptions());
-        }
-
-        /**
-         * Return an object of {@code WaltzClientConfig} built from configuration file.
-         * @param configFilePath the path to configuration file
-         * @return WaltzClientConfig
-         * @throws IOException
-         */
-        private WaltzClientConfig getWaltzClientConfig(String configFilePath) throws IOException {
-            Yaml yaml = new Yaml();
-            try (FileInputStream in = new FileInputStream(configFilePath)) {
-                Map<Object, Object> props = yaml.load(in);
-                return new WaltzClientConfig(props);
-            }
         }
 
         /**
@@ -486,6 +469,107 @@ public final class ClientCli extends SubcommandCli {
         private static int nextExponentialDistributedInterval(int avgInterval) {
             // LAMBDA defaults to 1, so average interval is decided by avgInterval
             return (int) (avgInterval * (Math.log(1 - Math.random()) / -LAMBDA));
+        }
+    }
+
+    /**
+     * The {@code MaxTransactionId} command displays the maximum transaction ID of given partition.
+     */
+    private static final class HighWaterMark extends Cli {
+        private static final String NAME = "high-water-mark";
+        private static final String DESCRIPTION = "Displays high water mark of given partition";
+
+        private HighWaterMark(String[] args) {
+            super(args);
+        }
+
+        @Override
+        protected void configureOptions(Options options) {
+            Option partitionOption = Option.builder("p")
+                    .longOpt("partition")
+                    .desc("Specify the partition id whose max transaction ID to be returned")
+                    .hasArg()
+                    .build();
+            Option cliCfgOption = Option.builder("c")
+                    .longOpt("cli-config-path")
+                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config")
+                    .hasArg()
+                    .build();
+            partitionOption.setRequired(true);
+            cliCfgOption.setRequired(true);
+
+            options.addOption(partitionOption);
+            options.addOption(cliCfgOption);
+        }
+
+        @Override
+        protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
+            String partitionId = cmd.getOptionValue("partition");
+            String configFilePath = cmd.getOptionValue("cli-config-path");
+            try {
+                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath, false);
+                long highWaterMark = getHighWaterMark(Integer.parseInt(partitionId), waltzClientConfig);
+                System.out.println(String.format("Partition %s current high watermark: %d", partitionId, highWaterMark));
+            } catch (Exception e) {
+                throw new SubCommandFailedException(String.format("Failed to get high watermark of partition %s. %n%s", partitionId, e.getMessage()));
+            }
+        }
+
+        @Override
+        protected String getUsage() {
+            return buildUsage(NAME, DESCRIPTION, getOptions());
+        }
+    }
+
+    /**
+     * Return an object of {@code WaltzClientConfig} built from configuration file.
+     * @param configFilePath the path to configuration file
+     * @return WaltzClientConfig
+     * @throws IOException
+     */
+    private static WaltzClientConfig getWaltzClientConfig(String configFilePath) throws IOException {
+        return getWaltzClientConfig(configFilePath, WaltzClientConfig.DEFAULT_AUTO_MOUNT);
+    }
+
+    /**
+     * Return an object of {@code WaltzClientConfig} built from configuration file.
+     * @param configFilePath the path to configuration file
+     * @param autoMount if set to false, partitions will not be mounted or receive feed
+     * @return WaltzClientConfig
+     * @throws IOException
+     */
+    private static WaltzClientConfig getWaltzClientConfig(String configFilePath, boolean autoMount) throws IOException {
+        Yaml yaml = new Yaml();
+        try (FileInputStream in = new FileInputStream(configFilePath)) {
+            Map<Object, Object> props = yaml.load(in);
+            props.put(WaltzClientConfig.AUTO_MOUNT, autoMount);
+            return new WaltzClientConfig(props);
+        }
+    }
+
+    private static long getHighWaterMark(int partitionId, WaltzClientConfig config) throws Exception {
+        DummyTxnCallbacks callbacks = new DummyTxnCallbacks();
+        WaltzClient client = new WaltzClient(callbacks, config);
+        return client.getHighWaterMark(partitionId);
+    }
+
+    /**
+     * A transaction callback to help construct {@link WaltzClient}. It is dummy because
+     * it is not suppose to receive any callbacks.
+     */
+    private static final class DummyTxnCallbacks implements WaltzClientCallbacks {
+
+        @Override
+        public long getClientHighWaterMark(int partitionId) {
+            return -1L;
+        }
+
+        @Override
+        public void applyTransaction(Transaction transaction) {
+        }
+
+        @Override
+        public void uncaughtException(int partitionId, long transactionId, Throwable exception) {
         }
     }
 

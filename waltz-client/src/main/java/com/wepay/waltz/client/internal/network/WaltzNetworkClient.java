@@ -6,6 +6,7 @@ import com.wepay.riff.network.NetworkClient;
 import com.wepay.riff.util.Logging;
 import com.wepay.waltz.client.internal.Partition;
 import com.wepay.waltz.common.message.FeedRequest;
+import com.wepay.waltz.common.message.HighWaterMarkRequest;
 import com.wepay.waltz.common.message.LockFailure;
 import com.wepay.waltz.common.message.MountRequest;
 import com.wepay.waltz.common.message.ReqId;
@@ -160,6 +161,26 @@ public class WaltzNetworkClient extends NetworkClient {
         }
     }
 
+    /**
+     * Requests high watermark for a given transactionId.
+     *
+     * @param reqId reqId of the {@link HighWaterMarkRequest}.
+     * @throws NetworkClientClosedException if this instance is already closed.
+     */
+    public void requestHighWaterMark(ReqId reqId) {
+        synchronized (lock) {
+            if (!running) {
+                throw new NetworkClientClosedException();
+            }
+
+            if (channelReady) {
+                sendMessage(new HighWaterMarkRequest(reqId));
+            } else {
+                logger.info("failed to send high watermark request, channel not ready: partitionId=" + reqId.partitionId());
+            }
+        }
+    }
+
     @Override
     protected MessageHandler getMessageHandler() {
         WaltzClientHandlerCallbacks handlerCallbacks = new WaltzClientHandlerCallbacksImpl();
@@ -307,6 +328,19 @@ public class WaltzNetworkClient extends NetworkClient {
             } else {
                 if (logger.isDebugEnabled()) {
                     logger.debug("partition not found: event=onFlushCompleted partitionId=" + reqId.partitionId());
+                }
+            }
+        }
+
+        @Override
+        public void onHighWaterMarkReceived(int partitionId, long highWaterMark) {
+            Partition partition = getPartition(partitionId);
+
+            if (partition != null) {
+                partition.highWaterMarkReceived(highWaterMark);
+            } else {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("partition not found: event=onHighWaterMarkReceived partitionId=" + partitionId);
                 }
             }
         }
