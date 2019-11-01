@@ -174,9 +174,9 @@ public final class ZooKeeperCliTest {
                     + "  ReplicaId(0,fakehost0:6000), SessionId: -1, closingHighWaterMark: UNRESOLVED\n"
                     + "  ReplicaId(0,fakehost1:6001), SessionId: -1, closingHighWaterMark: UNRESOLVED\n"
                     + "store [/test/root/store/partition/1] replica states:\n"
-                    + "  no node found\n"
+                    + "No node found\n"
                     + "store [/test/root/store/partition/2] replica states:\n"
-                    + "  no node found\n";
+                    + "No node found\n";
 
             assertTrue(outContent.toString("UTF-8").contains(expectedCmdOutput));
 
