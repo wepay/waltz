@@ -37,6 +37,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * StorageCli is a tool for interacting with Waltz Storage.
@@ -82,7 +85,7 @@ public final class StorageCli extends SubcommandCli {
                     .desc("Specify the cli config file path required for ZooKeeper connection string, ZooKeeper root path and SSL config")
                     .hasArg()
                     .build();
-            storageOption.setRequired(true);
+            storageOption.setRequired(false);
             cliCfgOption.setRequired(true);
             options.addOption(storageOption);
             options.addOption(cliCfgOption);
@@ -90,22 +93,69 @@ public final class StorageCli extends SubcommandCli {
 
         @Override
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
-            String hostAndPort = cmd.getOptionValue("storage");
             String cliConfigPath = cmd.getOptionValue("cli-config-path");
+            String providedHostAndPort = cmd.getOptionValue("storage");
+            List<String[]> hostsAndPorts;
+            if (providedHostAndPort == null) {
+                try {
+                    hostsAndPorts = getAllHostsAndPorts(cliConfigPath);
+                } catch (Exception e) {
+                    throw new SubCommandFailedException("Cannot obtain zookeeper connections");
+                }
+            } else {
+                try {
+                    String[] hostAndPortArray = providedHostAndPort.split(":");
+                    if (hostAndPortArray.length != 2) {
+                        throw new IllegalArgumentException("Http must be in format of host:admin_port");
+                    }
+                    hostsAndPorts = Collections.singletonList(hostAndPortArray);
+                } catch (IllegalArgumentException e) {
+                    throw new SubCommandFailedException(String.format("Cannot fetch partition ownership for %s:%n%s",
+                            providedHostAndPort, e.getMessage()));
+                }
+            }
+
+            StringBuilder partitionInfoStringBuilder = new StringBuilder();
+            for (String[] hostAndPortArray : hostsAndPorts) {
+                try {
+                    String storageHost = hostAndPortArray[0];
+                    String storagePort = hostAndPortArray[1];
+
+                    String metricsJson = getMetricsJson(storageHost, Integer.parseInt(storagePort), cliConfigPath);
+                    Map<Integer, PartitionInfoSnapshot> partitionInfo = getPartitionInfo(metricsJson);
+                    partitionInfoStringBuilder.append(formatPartitionInfo(partitionInfo, storageHost, storagePort));
+                    partitionInfoStringBuilder.append("\n");
+                } catch (Exception e) {
+                    throw new SubCommandFailedException(String.format("Cannot fetch partition ownership for %s:%s:%n%s",
+                            hostAndPortArray[0], hostAndPortArray[1], e.getMessage()));
+                }
+            }
+            System.out.println(partitionInfoStringBuilder.toString());
+        }
+
+        private List<String[]> getAllHostsAndPorts(String cliConfigPath) throws Exception {
+            CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
+            ZooKeeperClient zkClient = null;
 
             try {
-                String[] hostAndPortArray = hostAndPort.split(":");
-                if (hostAndPortArray.length != 2) {
-                    throw new IllegalArgumentException("Storage must be in format of host:admin_port");
-                }
-                String storageHost = hostAndPortArray[0];
-                String storagePort = hostAndPortArray[1];
+                String zkConnectString = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
+                int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+                String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
+                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout);
 
-                String metricsJson = getMetricsJson(storageHost, Integer.parseInt(storagePort), cliConfigPath);
-                Map<Integer, PartitionInfoSnapshot> partitionInfo = getPartitionInfo(metricsJson);
-                listPartitionInfo(partitionInfo);
-            } catch (Exception e) {
-                throw new SubCommandFailedException(String.format("Cannot fetch partition ownership for %s:%n%s", hostAndPort, e.getMessage()));
+                StoreMetadata storeMetadata = new StoreMetadata(zkClient, new ZNode(zkRoot + '/' + StoreMetadata.STORE_ZNODE_NAME));
+                ConnectionMetadata md = storeMetadata.getConnectionMetadata();
+                Map<String, Integer> cons = md.connections;
+
+                List<String[]> hostsAndPorts = new ArrayList<>();
+                for (Map.Entry<String, Integer> con : cons.entrySet()) {
+                    hostsAndPorts.add(new String[]{con.getKey().split(":")[0], con.getValue().toString()});
+                }
+                return hostsAndPorts;
+            } finally {
+                if (zkClient != null) {
+                    zkClient.close();
+                }
             }
         }
 
@@ -156,21 +206,24 @@ public final class StorageCli extends SubcommandCli {
             return partitionInfo;
         }
 
-        private void listPartitionInfo(Map<Integer, PartitionInfoSnapshot> partitionInfo) {
+        private StringBuilder formatPartitionInfo(Map<Integer, PartitionInfoSnapshot> partitionInfo, String storageHost, String storagePort) {
             StringBuilder sb = new StringBuilder();
-
             // display partition info
             for (Map.Entry<Integer, PartitionInfoSnapshot> entry: partitionInfo.entrySet()) {
                 int partitionId = entry.getKey();
                 PartitionInfoSnapshot snapshot = entry.getValue();
-                sb.append(String.format("Partition Info for id: %d%n", partitionId));
+                sb.append(String.format("Partition Info for id: %d at %s:%s%n", partitionId, storageHost, storagePort));
                 sb.append(String.format("\t sessionId: %d%n", snapshot.sessionId));
                 sb.append(String.format("\t lowWaterMark: %d%n", snapshot.lowWaterMark));
                 sb.append(String.format("\t localLowWaterMark: %d%n", snapshot.localLowWaterMark));
                 sb.append(String.format("\t isAssigned: %b%n", snapshot.isAssigned));
                 sb.append(String.format("\t isAvailable: %b%n", snapshot.isAvailable));
             }
-            System.out.println(sb.toString());
+            return sb;
+        }
+
+        private void listPartitionInfo(Map<Integer, PartitionInfoSnapshot> partitionInfo, String storageHost, String storagePort) {
+            System.out.println(formatPartitionInfo(partitionInfo, storageHost, storagePort));
         }
 
         @Override

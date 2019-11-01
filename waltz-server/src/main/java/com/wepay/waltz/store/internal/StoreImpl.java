@@ -77,7 +77,14 @@ public class StoreImpl implements Store {
             ZNode znode = new ZNode(partitionRoot, Integer.toString(partitionId));
 
             StoreSessionManager storeSessionManager =
-                new StoreSessionManager(partitionId, generation, replicaSessionManager, zkClient, znode);
+                new StoreSessionManager(
+                    partitionId,
+                    generation,
+                    (int) config.get(WaltzServerConfig.MAX_BATCH_SIZE),
+                    replicaSessionManager,
+                    zkClient,
+                    znode
+                );
 
             return new StorePartitionImpl(storeSessionManager, config);
 

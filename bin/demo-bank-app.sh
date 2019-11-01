@@ -4,14 +4,12 @@ DIR=$(dirname $0)
 
 $DIR/../gradlew --console plain -q copyLibs
 
-CLASSPATH=""
-for file in waltz-demo/build/libs/*.jar;
-do
-    CLASSPATH="$CLASSPATH":"$file"
-done
+unset CLASSPATH
+unset JAVA_TOOL_OPTIONS
+CLASSPATH=$(echo waltz-demo/build/libs/*.jar | tr ' ' :)
+JAVA_TOOL_OPTIONS=-Dlog4j.configuration=file:config/log4j.properties
 
-JVMOPTS=-Dlog4j.configuration=file:config/log4j.properties
-
-MAINCLASS=com.wepay.waltz.demo.DemoBankApp
-
-java $JVMOPTS -cp ${CLASSPATH#:} $MAINCLASS config/local-docker/demo-app.yml
+java \
+	$JAVA_TOOL_OPTIONS \
+	-cp "$CLASSPATH" \
+	com.wepay.waltz.demo.DemoBankApp config/local-docker/demo-app.yml

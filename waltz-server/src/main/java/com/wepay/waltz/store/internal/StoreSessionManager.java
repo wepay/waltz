@@ -41,11 +41,13 @@ public class StoreSessionManager {
     private final AtomicInteger generation;
     private volatile boolean healthy = true;
     private volatile StoreSession currentSession;
+    private final int maxBatchSize;
 
     /**
      * Class constructor.
      * @param partitionId The partition Id.
      * @param generation The generation number.
+     * @param maxBatchSize Batch size in {@link StoreSessionImpl}.
      * @param replicaSessionManager The {@link ReplicaSessionManager}.
      * @param zkClient The Zoo Keeper Client used in the Waltz cluster.
      * @param znode Path to the znode.
@@ -53,12 +55,14 @@ public class StoreSessionManager {
     public StoreSessionManager(
         final int partitionId,
         final int generation,
+        final int maxBatchSize,
         final ReplicaSessionManager replicaSessionManager,
         final ZooKeeperClient zkClient,
         final ZNode znode
     ) {
         this.partitionId = partitionId;
         this.generation = new AtomicInteger(generation);
+        this.maxBatchSize = maxBatchSize;
         this.zkClient = zkClient;
         this.znode = znode;
         this.replicaSessionManager = replicaSessionManager;
@@ -183,7 +187,7 @@ public class StoreSessionManager {
 
                 // Create a new session
                 ArrayList<ReplicaSession> replicaSessions = replicaSessionManager.getReplicaSessions(partitionId, sessionId);
-                session = new StoreSessionImpl(partitionId, generation, sessionId, replicaSessions, zkClient, znode);
+                session = new StoreSessionImpl(partitionId, generation, sessionId, maxBatchSize, replicaSessions, zkClient, znode);
                 session.open();
                 healthy = true;
 

@@ -24,12 +24,12 @@ import java.util.concurrent.LinkedBlockingDeque;
 public class StoreSessionImpl implements StoreSession {
 
     private static final Logger logger = Logging.getLogger(StoreSessionImpl.class);
-    private static final int BATCH_SIZE = 100;
 
     public final int generation;
     public final int partitionId;
     public final long sessionId;
 
+    private final int maxBatchSize;
     private final int numReplicas;
     private final int quorum;
     private final ArrayList<ReplicaSession> replicaSessions;
@@ -52,6 +52,7 @@ public class StoreSessionImpl implements StoreSession {
      * @param partitionId The partition Id.
      * @param generation The generation number.
      * @param sessionId The session Id.
+     * @param maxBatchSize Maximum number of pending {@link StoreAppendRequest}s processed at a time.
      * @param replicaSessions List of {@link ReplicaSession}s.
      * @param zkClient The ZooKeeperClient used in Waltz cluster.
      * @param znode Path to the znode.
@@ -60,6 +61,7 @@ public class StoreSessionImpl implements StoreSession {
         final int partitionId,
         final int generation,
         final long sessionId,
+        final int maxBatchSize,
         final ArrayList<ReplicaSession> replicaSessions,
         final ZooKeeperClient zkClient,
         final ZNode znode
@@ -67,6 +69,7 @@ public class StoreSessionImpl implements StoreSession {
         this.generation = generation;
         this.partitionId = partitionId;
         this.sessionId = sessionId;
+        this.maxBatchSize = maxBatchSize;
         this.numReplicas = replicaSessions.size();
         this.quorum = this.numReplicas / 2 + 1;
         this.replicaSessions = replicaSessions;
@@ -166,7 +169,7 @@ public class StoreSessionImpl implements StoreSession {
                 }
 
                 // Wait until the queue has enough space.
-                while (requestQueue.size() > BATCH_SIZE * 2) {
+                while (requestQueue.size() > maxBatchSize * 2) {
                     try {
                         wait();
                     } catch (InterruptedException ex) {
@@ -335,7 +338,7 @@ public class StoreSessionImpl implements StoreSession {
 
     private void doAppend() {
         synchronized (requestQueueProcessingLock) {
-            List<StoreAppendRequest> batch = requestQueue.dequeue(BATCH_SIZE);
+            List<StoreAppendRequest> batch = requestQueue.dequeue(maxBatchSize);
 
             if (batch != null && batch.size() > 0) {
                 synchronized (this) {
