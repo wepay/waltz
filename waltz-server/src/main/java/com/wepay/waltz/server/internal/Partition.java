@@ -125,6 +125,9 @@ public class Partition {
      * stopped successfully..
      */
     public CompletableFuture<Boolean> closeAsync() {
+        // Un-register metrics
+        unregisterMetrics();
+
         if (running.compareAndSet(true, false)) {
             storePartition.close();
 
@@ -146,9 +149,6 @@ public class Partition {
     public void close() {
         CompletableFuture<Boolean> future = closeAsync();
         Uninterruptibly.run(future::get);
-
-        // Un-register metrics
-        unregisterMetrics();
     }
 
     /**
