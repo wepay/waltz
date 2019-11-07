@@ -18,8 +18,7 @@ runContainer() {
     else
         docker run \
             --network=$networkName -p $ports --name $containerName -d -v $PWD/build/config:/config/ \
-            $imageId /config/waltz-storage.yml \
-        || die
+            $imageId /config/waltz-storage.yml || die
     fi
 }
 
