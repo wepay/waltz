@@ -3,7 +3,7 @@
 DIR=$(dirname $0)
 cmd=$1
 
-die() { test -n "$*" && echo "$*"; exit 1; } >&2
+die() { printf "%s${1:+\n}" "$*"; exit 1; } >&2
 
 start() {
     $DIR/docker/create-network.sh || die
