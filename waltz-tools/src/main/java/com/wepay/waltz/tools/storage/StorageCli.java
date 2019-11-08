@@ -82,7 +82,7 @@ public final class StorageCli extends SubcommandCli {
                     .build();
             Option cliCfgOption = Option.builder("c")
                     .longOpt("cli-config-path")
-                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config")
+                    .desc("Specify the cli config file path required for ZooKeeper connection string, ZooKeeper root path and SSL config")
                     .hasArg()
                     .build();
             storageOption.setRequired(false);
@@ -257,7 +257,7 @@ public final class StorageCli extends SubcommandCli {
                     .build();
             Option cliCfgOption = Option.builder("c")
                     .longOpt("cli-config-path")
-                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config")
+                    .desc("Specify the cli config file path required for ZooKeeper connection string, ZooKeeper root path and SSL config")
                     .hasArg()
                     .build();
 
@@ -351,12 +351,12 @@ public final class StorageCli extends SubcommandCli {
                     .build();
             Option onlineOption = Option.builder("o")
                     .longOpt("online")
-                    .desc("Specify 'true' or 'false' for the storage node")
+                    .desc("Specify 'true' or 'false' for the storage node is online")
                     .hasArg()
                     .build();
             Option cliCfgOption = Option.builder("c")
                     .longOpt("cli-config-path")
-                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config")
+                    .desc("Specify the cli config file path required for ZooKeeper connection string, ZooKeeper root path and SSL config")
                     .hasArg()
                     .build();
 
@@ -672,7 +672,7 @@ public final class StorageCli extends SubcommandCli {
          * @param destinationStoragePort        destination storage port
          * @param partitionId                   the partition id
          * @param batchSize                     the batch size to use when fetching records from storage node
-         * @param cliConfigPath                 the cli config file path required for zooKeeper connection string, zooKeeper root path
+         * @param cliConfigPath                 the cli config file path required for ZooKeeper connection string, ZooKeeper root path
          * @param sourceSslConfigPath           the SSL config file path required for the source storage node
          * @param destinationSslConfigPath      the SSL config file path required for the destination storage node
          * @throws Exception
@@ -815,7 +815,7 @@ public final class StorageCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option cliCfgOption = Option.builder("c")
                     .longOpt("cli-config-path")
-                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config")
+                    .desc("Specify the cli config file path required for ZooKeeper connection string, ZooKeeper root path and SSL config")
                     .hasArg()
                     .build();
             cliCfgOption.setRequired(true);

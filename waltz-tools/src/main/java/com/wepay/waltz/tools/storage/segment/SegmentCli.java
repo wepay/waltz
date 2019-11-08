@@ -440,7 +440,7 @@ public final class SegmentCli extends SubcommandCli {
         protected void dumpRecord(long transactionId) throws Exception {
             Record record = segment.getRecord(transactionId);
             if (record == null) {
-                throw new Exception("record not found for transaction id " + transactionId);
+                throw new Exception(String.format("record not found for transaction id %d", transactionId));
             }
             List<String> header = getTableHeader();
             List<String> row = getTableRow(record);
