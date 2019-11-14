@@ -1,4 +1,4 @@
-die() { test -n "$*" && echo "$*"; exit 1; } >&2
+die() { printf "%s${1:+\n}" "$*"; exit 1; } >&2
 
 findImage() {
     # pull or build an image, as necessary
