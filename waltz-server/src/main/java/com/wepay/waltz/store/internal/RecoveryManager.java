@@ -1,7 +1,7 @@
 package com.wepay.waltz.store.internal;
 
 import com.wepay.waltz.store.exception.RecoveryFailedException;
-import com.wepay.waltz.store.internal.metadata.ReplicaId;
+import com.wepay.waltz.common.metadata.store.internal.ReplicaId;
 
 import java.util.ArrayList;
 

@@ -1,4 +1,4 @@
-package com.wepay.waltz.store.exception;
+package com.wepay.waltz.common.metadata.store.exception;
 
 /**
  * This exception is thrown if unable to read the metadata

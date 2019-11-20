@@ -8,7 +8,7 @@ import com.wepay.waltz.store.TestUtils;
 import com.wepay.waltz.store.exception.GenerationMismatchException;
 import com.wepay.waltz.store.exception.ReplicaReaderException;
 import com.wepay.waltz.store.exception.SessionClosedException;
-import com.wepay.waltz.store.internal.metadata.ReplicaId;
+import com.wepay.waltz.common.metadata.store.internal.ReplicaId;
 import com.wepay.waltz.test.util.IntegrationTestHelper;
 import io.netty.handler.ssl.SslContext;
 import org.junit.Test;

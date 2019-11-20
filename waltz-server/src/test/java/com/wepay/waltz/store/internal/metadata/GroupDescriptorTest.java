@@ -1,5 +1,6 @@
 package com.wepay.waltz.store.internal.metadata;
 
+import com.wepay.waltz.common.metadata.store.internal.GroupDescriptor;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;

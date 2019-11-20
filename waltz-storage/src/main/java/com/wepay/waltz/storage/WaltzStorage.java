@@ -16,6 +16,8 @@ import com.wepay.riff.network.MessageHandler;
 import com.wepay.riff.network.NetworkServer;
 import com.wepay.riff.network.ServerSSL;
 import com.wepay.riff.util.Logging;
+import com.wepay.waltz.common.metadata.store.internal.StoreMetadata;
+import com.wepay.waltz.common.metadata.store.internal.StoreParams;
 import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.storage.exception.StorageException;
 import com.wepay.waltz.storage.server.health.Healthcheck;
@@ -25,6 +27,9 @@ import com.wepay.waltz.storage.server.internal.StorageManager;
 import com.wepay.waltz.storage.server.internal.StorageServerHandler;
 import com.wepay.waltz.storage.server.internal.WaltzStorageCli;
 import com.wepay.zktools.util.State;
+import com.wepay.zktools.zookeeper.ZNode;
+import com.wepay.zktools.zookeeper.ZooKeeperClient;
+import com.wepay.zktools.zookeeper.internal.ZooKeeperClientImpl;
 import io.netty.handler.ssl.SslContext;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -65,11 +70,21 @@ public class WaltzStorage {
         this.port = port;
         this.adminPort = adminPort;
         this.config = config;
+
+        // Fetch cluster configs from ZooKeeper
+        String zkConnectString = (String) config.get(WaltzStorageConfig.ZOOKEEPER_CONNECT_STRING);
+        int zkSessionTimeout = (int) config.get(WaltzStorageConfig.ZOOKEEPER_SESSION_TIMEOUT);
+        ZooKeeperClient zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout);
+
+        ZNode root = new ZNode((String) config.get(WaltzStorageConfig.CLUSTER_ROOT));
+        StoreParams storeParams =
+            new StoreMetadata(zkClient, new ZNode(root, StoreMetadata.STORE_ZNODE_NAME)).getStoreParams();
+
         this.storageManager = new StorageManager(
                 (String) config.get(WaltzStorageConfig.STORAGE_DIRECTORY),
                 (long) config.get(WaltzStorageConfig.SEGMENT_SIZE_THRESHOLD),
-                (Integer) config.get(WaltzStorageConfig.CLUSTER_NUM_PARTITIONS),
-                (UUID) config.get(WaltzStorageConfig.CLUSTER_KEY),
+                storeParams.numPartitions,
+                storeParams.key,
                 (Integer) config.get(WaltzStorageConfig.STORAGE_SEGMENT_CACHE_CAPACITY)
         );
         this.networkServer = new NetworkServer(port, sslCtx != null ? sslCtx : ServerSSL.createInsecureContext()) {
@@ -189,8 +204,8 @@ public class WaltzStorage {
         StorageManager storageManager = new StorageManager(
                 (String) config.get(WaltzStorageConfig.STORAGE_DIRECTORY),
                 (long) config.get(WaltzStorageConfig.SEGMENT_SIZE_THRESHOLD),
-                (Integer) config.get(WaltzStorageConfig.CLUSTER_NUM_PARTITIONS),
-                (UUID) config.get(WaltzStorageConfig.CLUSTER_KEY),
+                numPartitions,
+                key,
                 (Integer) config.get(WaltzStorageConfig.STORAGE_SEGMENT_CACHE_CAPACITY)
         );
         storageManager.open(key, numPartitions);

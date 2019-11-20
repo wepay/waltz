@@ -5,8 +5,8 @@ import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.server.WaltzServerConfig;
 import com.wepay.waltz.storage.WaltzStorageConfig;
 import com.wepay.waltz.storage.client.StorageAdminClient;
-import com.wepay.waltz.store.internal.metadata.StoreMetadata;
-import com.wepay.waltz.store.internal.metadata.StoreParams;
+import com.wepay.waltz.common.metadata.store.internal.StoreMetadata;
+import com.wepay.waltz.common.metadata.store.internal.StoreParams;
 import com.wepay.waltz.tools.zk.ZooKeeperCli;
 import com.wepay.zktools.zookeeper.ZNode;
 import com.wepay.zktools.zookeeper.ZooKeeperClient;
@@ -290,8 +290,9 @@ public class IntegrationTestHelper {
                 props.setProperty(WaltzStorageConfig.STORAGE_JETTY_PORT, String.valueOf(jettyPort));
                 props.setProperty(WaltzStorageConfig.STORAGE_DIRECTORY, storageDir.toString());
                 props.setProperty(WaltzStorageConfig.SEGMENT_SIZE_THRESHOLD, Long.toString(segmentSizeThreshold));
-                props.setProperty(WaltzStorageConfig.CLUSTER_NUM_PARTITIONS, String.valueOf(numPartitions));
-                props.setProperty(WaltzStorageConfig.CLUSTER_KEY, String.valueOf(key));
+                props.setProperty(WaltzStorageConfig.ZOOKEEPER_CONNECT_STRING, zkConnectString);
+                props.setProperty(WaltzStorageConfig.ZOOKEEPER_SESSION_TIMEOUT, String.valueOf(zkSessionTimeout));
+                props.setProperty(WaltzStorageConfig.CLUSTER_ROOT, root.path);
                 sslSetup.setConfigParams(props, WaltzStorageConfig.STORAGE_SSL_CONFIG_PREFIX);
 
                 waltzStorageRunner = new WaltzStorageRunner(port, adminPort, new WaltzStorageConfig(props));

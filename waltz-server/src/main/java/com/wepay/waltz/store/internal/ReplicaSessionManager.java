@@ -1,7 +1,7 @@
 package com.wepay.waltz.store.internal;
 
-import com.wepay.waltz.store.internal.metadata.ReplicaAssignments;
-import com.wepay.waltz.store.internal.metadata.ReplicaId;
+import com.wepay.waltz.common.metadata.store.internal.ReplicaAssignments;
+import com.wepay.waltz.common.metadata.store.internal.ReplicaId;
 import com.wepay.zktools.zookeeper.NodeData;
 
 import java.util.ArrayList;

@@ -1,5 +1,8 @@
 package com.wepay.waltz.store.internal.metadata;
 
+import com.wepay.waltz.common.metadata.store.internal.PartitionMetadata;
+import com.wepay.waltz.common.metadata.store.internal.ReplicaId;
+import com.wepay.waltz.common.metadata.store.internal.ReplicaState;
 import com.wepay.waltz.store.internal.TestReplicaSessionManager;
 import org.junit.Test;
 
