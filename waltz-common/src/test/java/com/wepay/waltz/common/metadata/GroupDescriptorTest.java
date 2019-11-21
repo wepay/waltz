@@ -1,6 +1,5 @@
-package com.wepay.waltz.store.internal.metadata;
+package com.wepay.waltz.common.metadata;
 
-import com.wepay.waltz.common.metadata.ConnectionMetadata;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -13,31 +12,33 @@ import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 
-public class ConnectionMetadataTest {
+public class GroupDescriptorTest {
 
     private Random rand = new Random();
 
     @Test
     public void testSerialization() throws Exception {
-        final int numStorageNodes = rand.nextInt(10) + 1;
+        final byte numGroups = (byte) (rand.nextInt(10) + 1);
+        final int numStorageNodesPerGroup = rand.nextInt(5) + 1;
 
-        Map<String, Integer> connections = new HashMap<>();
-        for (int i = 0; i < numStorageNodes; i++) {
-            String connectString = "test:" + i;
-            int adminPort = i + 10;
-            connections.put(connectString, adminPort);
+        Map<String, Integer> groups = new HashMap<>();
+        for (int i = 0; i < numStorageNodesPerGroup; i++) {
+            String connectStrings = "dummy:" + i;
+            int groupId = rand.nextInt(numGroups);
+            groups.put(connectStrings, groupId);
         }
 
-        ConnectionMetadata connectionMetadata = new ConnectionMetadata(connections);
+        GroupDescriptor groupDescriptor = new GroupDescriptor(groups);
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             try (DataOutputStream out = new DataOutputStream(baos)) {
-                connectionMetadata.writeTo(out);
+                groupDescriptor.writeTo(out);
             }
 
             try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(baos.toByteArray()))) {
-                assertEquals(connectionMetadata, ConnectionMetadata.readFrom(in));
+                assertEquals(groupDescriptor, GroupDescriptor.readFrom(in));
             }
         }
     }
+
 }

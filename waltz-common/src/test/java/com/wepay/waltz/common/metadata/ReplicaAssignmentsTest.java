@@ -1,6 +1,5 @@
-package com.wepay.waltz.store.internal.metadata;
+package com.wepay.waltz.common.metadata;
 
-import com.wepay.waltz.common.metadata.ReplicaAssignments;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
