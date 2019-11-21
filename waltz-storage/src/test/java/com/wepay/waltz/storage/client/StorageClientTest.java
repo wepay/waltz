@@ -4,7 +4,7 @@ import com.wepay.riff.network.ClientSSL;
 import com.wepay.riff.util.PortFinder;
 import com.wepay.waltz.common.message.Record;
 import com.wepay.waltz.common.message.RecordHeader;
-import com.wepay.waltz.common.metadata.store.internal.StoreMetadata;
+import com.wepay.waltz.common.metadata.StoreMetadata;
 import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.storage.WaltzStorage;
 import com.wepay.waltz.storage.WaltzStorageConfig;

@@ -1,6 +1,6 @@
 package com.wepay.waltz.store.internal;
 
-import com.wepay.waltz.common.metadata.store.internal.ReplicaAssignments;
+import com.wepay.waltz.common.metadata.ReplicaAssignments;
 import com.wepay.zktools.zookeeper.NodeData;
 import org.apache.zookeeper.data.Stat;
 import org.junit.Assert;

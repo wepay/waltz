@@ -2,7 +2,7 @@ package com.wepay.waltz.test.mock;
 
 import com.wepay.waltz.store.Store;
 import com.wepay.waltz.store.StorePartition;
-import com.wepay.waltz.common.metadata.store.internal.ReplicaId;
+import com.wepay.waltz.common.metadata.ReplicaId;
 
 import java.util.HashMap;
 import java.util.Set;

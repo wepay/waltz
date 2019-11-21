@@ -1,4 +1,4 @@
-package com.wepay.waltz.common.metadata.store.internal;
+package com.wepay.waltz.common.metadata;
 
 import com.wepay.zktools.zookeeper.serializer.SerializerHelper;
 

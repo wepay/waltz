@@ -1,6 +1,6 @@
 package com.wepay.waltz.store;
 
-import com.wepay.waltz.common.metadata.store.internal.ReplicaId;
+import com.wepay.waltz.common.metadata.ReplicaId;
 
 import java.util.Set;
 

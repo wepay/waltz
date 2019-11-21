@@ -9,7 +9,7 @@ import com.wepay.waltz.storage.WaltzStorageConfig;
 import com.wepay.waltz.storage.client.StorageAdminClient;
 import com.wepay.waltz.storage.client.StorageClient;
 import com.wepay.waltz.storage.server.internal.PartitionInfoSnapshot;
-import com.wepay.waltz.common.metadata.store.internal.StoreMetadata;
+import com.wepay.waltz.common.metadata.StoreMetadata;
 import com.wepay.waltz.test.util.ClientUtil;
 import com.wepay.waltz.test.util.IntegrationTestHelper;
 import com.wepay.waltz.test.util.SslSetup;
