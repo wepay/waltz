@@ -14,6 +14,11 @@ public abstract class QueueConsumerTask<E> extends RepeatingTask {
         this.queue = queue;
     }
 
+    /**
+     * Invokes {@link RequestQueue#enqueue(Object)} on the underlying {@link #queue} to enqueue a given item.
+     * @param item an item of type {@link E}
+     * @return {@code true} if enqueue is a success. {@code false} if the underlying queue is closed.
+     */
     public boolean enqueue(E item) {
         return queue.enqueue(item);
     }

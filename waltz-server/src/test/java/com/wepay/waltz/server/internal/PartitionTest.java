@@ -10,6 +10,7 @@ import com.wepay.waltz.common.message.MountResponse;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.server.WaltzServerConfig;
+import com.wepay.waltz.store.exception.StoreException;
 import com.wepay.waltz.test.mock.MockStore;
 import com.wepay.waltz.test.mock.MockStorePartition;
 import com.wepay.zktools.util.Uninterruptibly;
@@ -562,6 +563,18 @@ public class PartitionTest {
                 partition.close();
             }
         }
+    }
+
+    @Test(expected = PartitionClosedException.class)
+    public void testFlushAppendQueueAlreadyClosed() throws StoreException, PartitionClosedException {
+        Partition partition = new Partition(PARTITION_ID, storePartition, feedCachePartition, fetcher, config);
+        partition.open();
+
+        while (!partition.isClosed()) {
+            partition.close();
+        }
+
+        partition.flushAppendQueue();
     }
 
     private ReqId reqId(int clientId) {
