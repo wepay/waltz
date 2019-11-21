@@ -47,7 +47,7 @@ public class LRUCacheTest {
         // Access entries in the LRU Cache in a specific order
         List<Integer> list = new ArrayList<>(Arrays.asList(6, 5, 8, 7, 9));
         for (Integer idx : list) {
-            lruCache.get(idx);
+            assertNotNull(lruCache.get(idx));
         }
 
         // Verify access order
