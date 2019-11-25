@@ -1,6 +1,6 @@
-package com.wepay.waltz.store.internal.metadata;
+package com.wepay.waltz.common.metadata;
 
-import com.wepay.waltz.store.exception.StoreMetadataException;
+import com.wepay.waltz.exception.StoreMetadataException;
 import com.wepay.zktools.zookeeper.NodeData;
 import com.wepay.zktools.zookeeper.ZNode;
 import com.wepay.zktools.zookeeper.ZooKeeperSession;

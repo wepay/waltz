@@ -3,7 +3,7 @@ package com.wepay.waltz.store.internal;
 import com.wepay.waltz.common.message.Record;
 import com.wepay.waltz.common.message.RecordHeader;
 import com.wepay.waltz.store.TestUtils;
-import com.wepay.waltz.store.internal.metadata.ReplicaId;
+import com.wepay.waltz.common.metadata.ReplicaId;
 import org.junit.Test;
 
 import java.util.ArrayList;

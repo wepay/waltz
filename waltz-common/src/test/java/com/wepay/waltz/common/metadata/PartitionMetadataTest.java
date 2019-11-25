@@ -1,6 +1,5 @@
-package com.wepay.waltz.store.internal.metadata;
+package com.wepay.waltz.common.metadata;
 
-import com.wepay.waltz.store.internal.TestReplicaSessionManager;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -14,6 +13,7 @@ import static org.junit.Assert.assertEquals;
 
 public class PartitionMetadataTest {
 
+    private static final String CONNECT_STRING_TEMPLATE = "test:%d";
     private static final long MASK = 0x7FFFFFFFFFFFFFFFL;
 
     private Random rand = new Random();
@@ -24,7 +24,7 @@ public class PartitionMetadataTest {
 
         HashMap<ReplicaId, ReplicaState> replicaStates = new HashMap<>();
         for (int i = 0; i < 5; i++) {
-            ReplicaId replicaId = new ReplicaId(partitionId, String.format(TestReplicaSessionManager.CONNECT_STRING_TEMPLATE, i));
+            ReplicaId replicaId = new ReplicaId(partitionId, String.format(CONNECT_STRING_TEMPLATE, i));
             replicaStates.put(replicaId, new ReplicaState(replicaId, randomPositiveLong(), randomPositiveLong()));
         }
         PartitionMetadata partitionMetadata =

@@ -12,7 +12,7 @@ import com.wepay.waltz.server.WaltzServer;
 import com.wepay.waltz.server.WaltzServerConfig;
 import com.wepay.waltz.storage.WaltzStorage;
 import com.wepay.waltz.storage.WaltzStorageConfig;
-import com.wepay.waltz.store.internal.metadata.StoreMetadata;
+import com.wepay.waltz.common.metadata.StoreMetadata;
 import com.wepay.waltz.test.util.IntegrationTestHelper;
 import com.wepay.waltz.test.util.Runner;
 import com.wepay.waltz.test.util.RunnerScheduler;

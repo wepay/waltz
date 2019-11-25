@@ -11,7 +11,7 @@ import com.wepay.waltz.store.exception.ReplicaConnectionException;
 import com.wepay.waltz.store.exception.ReplicaConnectionFactoryClosedException;
 import com.wepay.waltz.store.exception.ReplicaSessionException;
 import com.wepay.waltz.store.exception.ReplicaWriterException;
-import com.wepay.waltz.store.internal.metadata.ReplicaId;
+import com.wepay.waltz.common.metadata.ReplicaId;
 import com.wepay.zktools.util.Uninterruptibly;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;

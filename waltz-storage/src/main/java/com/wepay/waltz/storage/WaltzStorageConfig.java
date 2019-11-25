@@ -24,8 +24,12 @@ public class WaltzStorageConfig extends AbstractConfig {
     // Jetty
     public static final String STORAGE_JETTY_PORT = "storage.jetty.port";
 
-    public static final String CLUSTER_NUM_PARTITIONS = "cluster.numPartitions";
-    public static final String CLUSTER_KEY = "cluster.key";
+    // ZooKeeper
+    public static final String ZOOKEEPER_CONNECT_STRING = "zookeeper.connectString";
+    public static final String ZOOKEEPER_SESSION_TIMEOUT = "zookeeper.sessionTimeout";
+
+    // Cluster
+    public static final String CLUSTER_ROOT = "cluster.root";
 
     public static final String STORAGE_SEGMENT_CACHE_CAPACITY = "storage.segment.cache.capacity";
     public static final int DEFAULT_STORAGE_SEGMENT_CACHE_CAPACITY = 5;
@@ -49,8 +53,12 @@ public class WaltzStorageConfig extends AbstractConfig {
             // Jetty
             put(STORAGE_JETTY_PORT, intParser.withValidator(portValidator));
 
-            put(CLUSTER_NUM_PARTITIONS, intParser);
-            put(CLUSTER_KEY, uuidParser);
+            // ZooKeeper
+            put(ZOOKEEPER_CONNECT_STRING, stringParser);
+            put(ZOOKEEPER_SESSION_TIMEOUT, intParser);
+
+            // Cluster
+            put(CLUSTER_ROOT, stringParser);
 
             put(STORAGE_SEGMENT_CACHE_CAPACITY, intParser.withDefault(DEFAULT_STORAGE_SEGMENT_CACHE_CAPACITY));
         }});

@@ -8,8 +8,8 @@ import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.server.WaltzServerConfig;
 import com.wepay.waltz.storage.WaltzStorageConfig;
 import com.wepay.waltz.storage.client.StorageAdminClient;
-import com.wepay.waltz.store.internal.metadata.StoreMetadata;
-import com.wepay.waltz.store.internal.metadata.StoreParams;
+import com.wepay.waltz.common.metadata.StoreMetadata;
+import com.wepay.waltz.common.metadata.StoreParams;
 import com.wepay.waltz.test.util.WaltzServerRunner;
 import com.wepay.waltz.test.util.WaltzStorageRunner;
 import com.wepay.waltz.test.util.ZooKeeperServerRunner;
@@ -96,8 +96,9 @@ public final class DemoServers extends DemoAppBase {
         storageProps.setProperty(WaltzStorageConfig.STORAGE_JETTY_PORT, String.valueOf(storageJettyPort));
         storageProps.setProperty(WaltzStorageConfig.SEGMENT_SIZE_THRESHOLD, String.valueOf(segmentSizeThreshold));
         storageProps.setProperty(WaltzStorageConfig.STORAGE_DIRECTORY, storageDir.toString());
-        storageProps.setProperty(WaltzStorageConfig.CLUSTER_NUM_PARTITIONS, String.valueOf(DemoConst.NUM_PARTITIONS));
-        storageProps.setProperty(WaltzStorageConfig.CLUSTER_KEY, String.valueOf(storeParams.key));
+        storageProps.setProperty(WaltzStorageConfig.ZOOKEEPER_CONNECT_STRING, zooKeeperServerRunner.connectString());
+        storageProps.setProperty(WaltzStorageConfig.ZOOKEEPER_SESSION_TIMEOUT, String.valueOf(ZK_SESSION_TIMEOUT));
+        storageProps.setProperty(WaltzStorageConfig.CLUSTER_ROOT, CLUSTER_ROOT_ZNODE.path);
         WaltzStorageConfig waltzStorageConfig = new WaltzStorageConfig(storageProps);
 
         int i = 0;

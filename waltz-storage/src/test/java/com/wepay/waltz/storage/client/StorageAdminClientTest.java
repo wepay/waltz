@@ -3,6 +3,7 @@ package com.wepay.waltz.storage.client;
 import com.wepay.riff.network.ClientSSL;
 import com.wepay.riff.util.PortFinder;
 import com.wepay.waltz.common.message.Record;
+import com.wepay.waltz.common.metadata.StoreMetadata;
 import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.storage.WaltzStorage;
 import com.wepay.waltz.storage.WaltzStorageConfig;
@@ -10,6 +11,11 @@ import com.wepay.waltz.storage.common.SessionInfo;
 import com.wepay.waltz.storage.exception.StorageRpcException;
 import com.wepay.waltz.test.util.ClientUtil;
 import com.wepay.waltz.test.util.WaltzStorageRunner;
+import com.wepay.waltz.test.util.ZooKeeperServerRunner;
+import com.wepay.waltz.tools.zk.ZooKeeperCli;
+import com.wepay.zktools.zookeeper.ZNode;
+import com.wepay.zktools.zookeeper.ZooKeeperClient;
+import com.wepay.zktools.zookeeper.internal.ZooKeeperClientImpl;
 import io.netty.handler.ssl.SslContext;
 import org.junit.After;
 import org.junit.Before;
@@ -29,6 +35,7 @@ import static org.junit.Assert.fail;
 
 public final class StorageAdminClientTest {
 
+    private static final int ZK_SESSION_TIMEOUT = 30000;
     private static final long SESSION_ID = 0;
     private static final int NUM_PARTITIONS = 2;
     private static final long segmentSizeThreshold = 400L;
@@ -39,30 +46,49 @@ public final class StorageAdminClientTest {
     private String host;
     private PortFinder portFinder;
     private Path storageDir;
+    private ZooKeeperServerRunner zkServerRunner;
     private WaltzStorageConfig waltzStorageConfig;
 
     @Before
     public void setup() throws Exception {
         sslCtx = ClientSSL.createInsecureContext();
 
-        key = UUID.randomUUID();
-
         host = InetAddress.getLocalHost().getCanonicalHostName();
 
         portFinder = new PortFinder();
         int storageJettyPort = portFinder.getPort();
 
-        storageDir = Files.createTempDirectory(workDirName).resolve("storage-" + storageJettyPort);
+        Path workDir = Files.createTempDirectory(workDirName);
+
+        storageDir = workDir.resolve("storage-" + storageJettyPort);
         if (!Files.exists(storageDir)) {
             Files.createDirectory(storageDir);
         }
+
+        zkServerRunner =
+            new ZooKeeperServerRunner(
+                portFinder.getPort(),
+                workDir.resolve("zookeeper")
+            );
+        String zkConnectString = zkServerRunner.start();
+        ZooKeeperClient zkClient = new ZooKeeperClientImpl(zkConnectString, ZK_SESSION_TIMEOUT);
+
+        String znodePath = "/storage/admin_client/test";
+        ZNode clusterRoot = new ZNode(znodePath);
+
+        ZooKeeperCli.Create.createCluster(zkClient, clusterRoot, "test cluster", NUM_PARTITIONS);
+        ZooKeeperCli.Create.createStores(zkClient, clusterRoot, NUM_PARTITIONS);
+
+        // Set cluster key
+        key = new StoreMetadata(zkClient, new ZNode(clusterRoot, StoreMetadata.STORE_ZNODE_NAME)).getStoreParams().key;
 
         Properties storageProps = new Properties();
         storageProps.setProperty(WaltzStorageConfig.STORAGE_JETTY_PORT, String.valueOf(storageJettyPort));
         storageProps.setProperty(WaltzStorageConfig.SEGMENT_SIZE_THRESHOLD, String.valueOf(segmentSizeThreshold));
         storageProps.setProperty(WaltzStorageConfig.STORAGE_DIRECTORY, storageDir.toString());
-        storageProps.setProperty(WaltzStorageConfig.CLUSTER_NUM_PARTITIONS, String.valueOf(NUM_PARTITIONS));
-        storageProps.setProperty(WaltzStorageConfig.CLUSTER_KEY, String.valueOf(key));
+        storageProps.setProperty(WaltzStorageConfig.ZOOKEEPER_CONNECT_STRING, zkConnectString);
+        storageProps.setProperty(WaltzStorageConfig.ZOOKEEPER_SESSION_TIMEOUT, String.valueOf(ZK_SESSION_TIMEOUT));
+        storageProps.setProperty(WaltzStorageConfig.CLUSTER_ROOT, clusterRoot.path);
         waltzStorageConfig = new WaltzStorageConfig(storageProps);
     }
 

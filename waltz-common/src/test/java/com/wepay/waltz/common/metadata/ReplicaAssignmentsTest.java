@@ -1,4 +1,4 @@
-package com.wepay.waltz.store.internal.metadata;
+package com.wepay.waltz.common.metadata;
 
 import org.junit.Test;
 

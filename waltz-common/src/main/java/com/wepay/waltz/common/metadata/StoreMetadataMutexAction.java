@@ -1,6 +1,6 @@
-package com.wepay.waltz.store.internal.metadata;
+package com.wepay.waltz.common.metadata;
 
-import com.wepay.waltz.store.exception.StoreMetadataException;
+import com.wepay.waltz.exception.StoreMetadataException;
 
 /**
  * This method implements the {@link com.wepay.zktools.zookeeper.MutexAction} for the store metadata.
