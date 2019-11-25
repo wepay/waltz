@@ -26,6 +26,7 @@ import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.common.message.TransactionDataRequest;
 import com.wepay.waltz.common.message.TransactionDataResponse;
 import com.wepay.waltz.common.util.QueueConsumerTask;
+import com.wepay.waltz.exception.InvalidOperationException;
 import com.wepay.waltz.exception.RpcException;
 import com.wepay.waltz.server.WaltzServerConfig;
 import com.wepay.waltz.store.StorePartition;
@@ -223,7 +224,7 @@ public class Partition {
             case MessageType.MOUNT_REQUEST:
                 if (isValid(client)) {
                     // Flush the append queue before starting the feed
-                    appendTask.flush().whenComplete((h, t) -> {
+                    flushAppendQueue().whenComplete((h, t) -> {
                         initializeFeed((MountRequest) msg, client);
                     });
                 }
@@ -248,7 +249,7 @@ public class Partition {
 
             case MessageType.FLUSH_REQUEST:
                 // Flush the append queue
-                appendTask.flush().whenComplete((h, t) -> {
+                flushAppendQueue().whenComplete((h, t) -> {
                     client.sendMessage(new FlushResponse(((FlushRequest) msg).reqId, h), true);
                 });
                 break;
@@ -352,6 +353,27 @@ public class Partition {
         REGISTRY.remove(metricsGroup, "total-catchup-feed-context-added");
         REGISTRY.remove(metricsGroup, "total-catchup-feed-context-removed");
         REGISTRY.remove(metricsGroup, "high-water-mark");
+    }
+
+    /**
+     * Invokes {@link AppendTask#flush()} on the underlying {@link #appendTask},
+     * closes the partition if it throws an {@link InvalidOperationException}.
+     *
+     * @return a {@link CompletableFuture} which will complete with result of the flush operation.
+     * @throws PartitionClosedException if this partition is closed.
+     */
+    CompletableFuture<Long> flushAppendQueue() throws PartitionClosedException {
+        try {
+            return appendTask.flush();
+        } catch (InvalidOperationException e) {
+            logger.error(e.getMessage());
+
+            while (!isClosed()) {
+                logger.error("Append task queue is closed however the Partition is still open, closing it");
+                close();
+            }
+            throw new PartitionClosedException("already closed");
+        }
     }
 
     private void pauseFeedContext(FeedContext feedContext) throws StoreException {
@@ -586,11 +608,18 @@ public class Partition {
             }
         }
 
+        /**
+         * Registers with the underlying queue a flush request that will eventually be processed by this append task,
+         * and the returned CompletableFuture will be completed with its result.
+         *
+         * @return a {@link CompletableFuture} which will complete with result of the flush operation.
+         * @throws InvalidOperationException if the append queue is already closed.
+         */
         public CompletableFuture<Long> flush() {
             FlushContext context = new FlushContext();
 
-            while (!enqueue(context)) {
-                logger.warn("Append queue is full. Retrying.");
+            if (!enqueue(context)) {
+                throw new InvalidOperationException("Append queue is closed.");
             }
 
             return context.future;
