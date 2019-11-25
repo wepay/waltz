@@ -335,6 +335,7 @@ public class Partition {
      * Sends an append request to the corresponding partition on a Waltz server.
      *
      * @param request the AppendRequest representing payload.
+     * @param context the transaciton context
      * @return a {@link TransactionFuture} which completes when the append response is received.
      */
     public TransactionFuture append(AppendRequest request, TransactionContext context) {

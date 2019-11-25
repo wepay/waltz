@@ -161,16 +161,17 @@ public abstract class AbstractClientCallbacksForJDBC implements WaltzClientCallb
                                 // Successfully updated the partition's high-water mark. We are holding the write lock.
                                 // Apply the transaction.
                                 applyTransaction(transaction, wrapConnection(connection));
+                                connection.commit();
 
                                 // Update the high-water mark cache
                                 highWaterMark.trySet(transactionId);
+
                             } else {
                                 // Skip this transaction (already applied by some other process)
                                 // Read the high-water mark from database and update the cache.
                                 selectHighWaterMark(partitionId, connection);
+                                connection.commit();
                             }
-
-                            connection.commit();
 
                             return;
 
