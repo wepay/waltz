@@ -212,6 +212,7 @@ public class WaltzClient {
     /**
      * Gets current high watermark of a partition.
      * @return High watermark of given partition.
+     * @param partitionId the partition id
      */
     public long getHighWaterMark(int partitionId) {
         try {

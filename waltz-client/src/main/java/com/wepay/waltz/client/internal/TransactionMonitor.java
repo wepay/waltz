@@ -135,6 +135,7 @@ public class TransactionMonitor {
      * waits for a maximum of registrationTimeout millis for an existing pending transaction to complete.
      *
      * @param reqId the {@code ReqId} of the transaction.
+     * @param context the transaction context
      * @param registrationTimeout the maximum wait time in millis for registration to complete.
      * @return a {@link TransactionFuture} which will complete when the corresponding transaction is {@link #committed(ReqId)}.
      *         Or, a {@code null}, if {@code registrationTimeout} has passed before registration.

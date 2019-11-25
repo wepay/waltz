@@ -19,6 +19,7 @@ public class TransactionFuture extends CompletableFuture<Boolean> {
      * Class Constructor.
      *
      * @param reqId the id of the request.
+     * @param transactionContext the transaction context
      */
     public TransactionFuture(ReqId reqId, TransactionContext transactionContext) {
         this.reqId = reqId;
