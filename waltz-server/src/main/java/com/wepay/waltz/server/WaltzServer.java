@@ -102,7 +102,8 @@ public class WaltzServer {
      * @param config The Waltz Server configuration file.
      * @throws Exception thrown in case the Waltz Server instance cannot be created.
      */
-    public WaltzServer(final int port, SslContext sslCtx, Store store, ClusterManager clusterManager, WaltzServerConfig config) throws Exception {
+    public WaltzServer(final int port, SslContext sslCtx, Store store, ClusterManager clusterManager,
+                       WaltzServerConfig config) throws Exception {
         logVersion();
         checkConfig(config);
 
@@ -112,7 +113,7 @@ public class WaltzServer {
         this.networkServer = new NetworkServer(port, sslCtx != null ? sslCtx : ServerSSL.createInsecureContext()) {
             @Override
             protected MessageHandler getMessageHandler() {
-                return new WaltzServerHandler(partitions);
+                return new WaltzServerHandler(partitions, store, port);
             }
         };
 
@@ -350,6 +351,10 @@ public class WaltzServer {
         Collections.sort(partitionIds);
 
         return partitionIds;
+    }
+
+    public NetworkServer getNetworkServer() {
+        return this.networkServer;
     }
 
     /**

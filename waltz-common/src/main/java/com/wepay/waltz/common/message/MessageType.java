@@ -19,5 +19,7 @@ public final class MessageType {
     public static final int LOCK_FAILURE = 10;
     public static final int HIGH_WATER_MARK_REQUEST = 11;
     public static final int HIGH_WATER_MARK_RESPONSE = 12;
+    public static final int CHECK_STORAGE_CONNECTIVITY_REQUEST = 13;
+    public static final int CHECK_STORAGE_CONNECTIVITY_RESPONSE = 14;
 
 }

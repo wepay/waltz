@@ -2,8 +2,14 @@ package com.wepay.waltz.client.internal;
 
 import com.wepay.waltz.client.WaltzClientCallbacks;
 import com.wepay.waltz.client.internal.network.WaltzNetworkClient;
+import com.wepay.zktools.clustermgr.Endpoint;
 import io.netty.handler.ssl.SslContext;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 /**
@@ -60,4 +66,19 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
         return getPartition(partitionId).getHighWaterMark();
     }
 
+    /**
+     * Checks the connectivity
+     * 1. to the given server endpoints and also
+     * 2. from each server endpoint to the storage nodes within the cluster.
+     * @param serverEndpoints Set of server endpoints.
+     * @return list of completable futures of each server endpoint.
+     */
+    @Override
+    public Map<Endpoint, CompletableFuture<Optional<Map<String, Boolean>>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
+        Map<Endpoint, CompletableFuture<Optional<Map<String, Boolean>>>> serverConnectivityFutures = new HashMap<>();
+        for (Endpoint endpoint : serverEndpoints) {
+            serverConnectivityFutures.put(endpoint, checkServerConnectivity(endpoint));
+        }
+        return serverConnectivityFutures;
+    }
 }

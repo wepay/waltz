@@ -1,6 +1,7 @@
 package com.wepay.waltz.store;
 
 import com.wepay.waltz.common.metadata.ReplicaId;
+import com.wepay.waltz.store.internal.ConnectionConfig;
 
 import java.util.Set;
 
@@ -30,4 +31,5 @@ public interface Store {
      */
     Set<ReplicaId> getReplicaIds();
 
+    ConnectionConfig getConnectionConfig();
 }

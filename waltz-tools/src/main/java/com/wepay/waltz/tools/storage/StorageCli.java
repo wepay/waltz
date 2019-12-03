@@ -875,6 +875,7 @@ public final class StorageCli extends SubcommandCli {
                 int port = Integer.parseInt(hostAndPortArray[1]);
                 try {
                     storageClient = openStorageClient(host, port, sslContext, zkClient, zkRoot);
+                    storageClient.awaitOpen();
                 } catch (Exception e) {
                     throw new Exception(String.format("Invalid hostname or port: %s", e.getMessage()));
                 } finally {
@@ -893,6 +894,7 @@ public final class StorageCli extends SubcommandCli {
                 int port = Integer.parseInt(hostAndPortArray[1]);
                 try {
                     storageAdminClient = openStorageAdminClient(host, port, sslContext, zkClient, zkRoot);
+                    storageAdminClient.awaitOpen();
                 } catch (Exception e) {
                     throw new Exception(String.format("Invalid hostname or admin port: %s", e.getMessage()));
                 } finally {

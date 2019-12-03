@@ -7,6 +7,9 @@ import com.wepay.riff.network.MessageCodec;
 import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.exception.RpcException;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class MessageCodecV0 implements MessageCodec {
 
     public static final short VERSION = 0;
@@ -100,6 +103,17 @@ public class MessageCodecV0 implements MessageCodec {
                 transactionId = reader.readLong();
                 return new LockFailure(reqId, transactionId);
 
+            case MessageType.CHECK_STORAGE_CONNECTIVITY_REQUEST:
+                return new CheckStorageConnectivityRequest(reqId);
+
+            case MessageType.CHECK_STORAGE_CONNECTIVITY_RESPONSE:
+                int size = reader.readInt();
+                Map<String, Boolean> storageConnectivityMap = new HashMap<>();
+                for (int i = 0; i < size; i++) {
+                    storageConnectivityMap.put(reader.readString(), reader.readBoolean());
+                }
+                return new CheckStorageConnectivityResponse(reqId, storageConnectivityMap);
+
             default:
                 throw new IllegalStateException("unknown message type: " + messageType);
         }
@@ -192,6 +206,21 @@ public class MessageCodecV0 implements MessageCodec {
             case MessageType.LOCK_FAILURE:
                 LockFailure lockFailure = (LockFailure) msg;
                 writer.writeLong(lockFailure.transactionId);
+                break;
+
+            case MessageType.CHECK_STORAGE_CONNECTIVITY_REQUEST:
+                break;
+
+            case MessageType.CHECK_STORAGE_CONNECTIVITY_RESPONSE:
+                CheckStorageConnectivityResponse checkStorageConnectivityResponse =
+                    (CheckStorageConnectivityResponse) msg;
+                int size = checkStorageConnectivityResponse.storageConnectivityMap.size();
+                writer.writeInt(size);
+                Map<String, Boolean> storageConnectivityMap = checkStorageConnectivityResponse.storageConnectivityMap;
+                for (Map.Entry<String, Boolean> storageConnectionEntry : storageConnectivityMap.entrySet()) {
+                    writer.writeString(storageConnectionEntry.getKey());
+                    writer.writeBoolean(storageConnectionEntry.getValue());
+                }
                 break;
 
             default:

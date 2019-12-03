@@ -1,5 +1,11 @@
 package com.wepay.waltz.client.internal;
 
+import com.wepay.zktools.clustermgr.Endpoint;
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 /**
@@ -13,4 +19,5 @@ public interface RpcClient {
 
     Future<Long> getHighWaterMark(int partitionId);
 
+    Map<Endpoint, CompletableFuture<Optional<Map<String, Boolean>>>>  checkServerConnections(Set<Endpoint> serverEndpoints);
 }

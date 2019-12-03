@@ -4,6 +4,8 @@ import com.wepay.riff.network.MessageHandlerCallbacks;
 import com.wepay.waltz.common.message.LockFailure;
 import com.wepay.waltz.common.message.ReqId;
 
+import java.util.Map;
+
 /**
  * The interface for WaltzClientHandler callback methods, extends {@link MessageHandlerCallbacks}.
  */
@@ -78,4 +80,5 @@ public interface WaltzClientHandlerCallbacks extends MessageHandlerCallbacks {
      */
     void onHighWaterMarkReceived(int partitionId, long highWaterMark);
 
+    void onCheckStorageConnectivityResponseReceived(Map<String, Boolean> storageConnectivityMap);
 }

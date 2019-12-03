@@ -22,7 +22,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -456,6 +458,16 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         } catch (Throwable ex) {
             logger.error("failed to set endpoints", ex);
         }
+    }
+
+    /**
+     * Checks the connectivity to the server from the given server endpoint network client.
+     * @param endpoint The server {@link Endpoint}
+     * @return Completable future with the connection status of the given server endpoint.
+     */
+    public CompletableFuture<Optional<Map<String, Boolean>>> checkServerConnectivity(Endpoint endpoint) {
+        WaltzNetworkClient networkClient = getNetworkClient(endpoint);
+        return networkClient.checkServerToStorageConnectivity();
     }
 
 }

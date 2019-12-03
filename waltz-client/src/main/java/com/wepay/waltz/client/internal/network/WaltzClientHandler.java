@@ -6,6 +6,7 @@ import com.wepay.riff.network.MessageHandler;
 import com.wepay.riff.network.MessageProcessingThreadPool;
 import com.wepay.riff.util.Logging;
 import com.wepay.waltz.common.message.AbstractMessage;
+import com.wepay.waltz.common.message.CheckStorageConnectivityResponse;
 import com.wepay.waltz.common.message.FeedData;
 import com.wepay.waltz.common.message.FlushResponse;
 import com.wepay.waltz.common.message.HighWaterMarkResponse;
@@ -116,6 +117,12 @@ public class WaltzClientHandler extends MessageHandler {
 
             case MessageType.LOCK_FAILURE:
                 handlerCallbacks.onLockFailed((LockFailure) msg);
+                break;
+
+            case MessageType.CHECK_STORAGE_CONNECTIVITY_RESPONSE:
+                CheckStorageConnectivityResponse checkStorageConnectivityResponse =
+                    (CheckStorageConnectivityResponse) msg;
+                handlerCallbacks.onCheckStorageConnectivityResponseReceived(checkStorageConnectivityResponse.storageConnectivityMap);
                 break;
 
             default:

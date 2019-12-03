@@ -5,6 +5,7 @@ import com.wepay.waltz.client.internal.mock.MockDriver;
 import com.wepay.waltz.client.internal.mock.MockServerPartition;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.test.util.StringSerializer;
+import com.wepay.zktools.clustermgr.Endpoint;
 import com.wepay.zktools.util.Uninterruptibly;
 import org.junit.Test;
 
@@ -14,8 +15,11 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
@@ -245,6 +249,11 @@ public class AbstractClientCallbacksForJDBCTest {
 
                 @Override
                 public void close() {
+                }
+
+                @Override
+                public Map<Endpoint, CompletableFuture<Optional<Map<String, Boolean>>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
+                    return new HashMap<>();
                 }
             };
 
