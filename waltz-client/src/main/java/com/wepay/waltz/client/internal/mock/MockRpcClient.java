@@ -5,7 +5,6 @@ import com.wepay.zktools.clustermgr.Endpoint;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
@@ -41,8 +40,8 @@ class MockRpcClient implements RpcClient {
     }
 
     @Override
-    public Map<Endpoint, CompletableFuture<Optional<Map<String, Boolean>>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
-        return new HashMap<>();
+    public CompletableFuture<Map<Endpoint, Map<String, Boolean>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
+        return CompletableFuture.completedFuture(new HashMap<>());
     }
 
 }

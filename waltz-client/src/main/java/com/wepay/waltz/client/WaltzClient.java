@@ -11,15 +11,10 @@ import com.wepay.waltz.client.internal.WaltzClientDriverImpl;
 import com.wepay.waltz.common.message.AppendRequest;
 import com.wepay.waltz.common.util.DaemonThreadFactory;
 import com.wepay.zktools.clustermgr.ClusterManager;
-import com.wepay.zktools.clustermgr.Endpoint;
 import com.wepay.zktools.clustermgr.ManagedClient;
 import org.slf4j.Logger;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -224,34 +219,6 @@ public class WaltzClient {
             return rpcClient.getHighWaterMark(partitionId).get();
         } catch (ExecutionException | InterruptedException e) {
             throw new WaltzClientRuntimeException("failed to get high watermark", e.getCause());
-        }
-    }
-
-    /**
-     * Checks the connectivity (via the {@link RpcClient})
-     * 1. to the given server endpoints and also
-     * 2. from each server endpoint to the storage nodes within the cluster.
-     *
-     * Waits for all the completable futures to complete.
-     * @param serverEndpoints Set of server {@link Endpoint}.
-     * @return Returns a combined completable future with the connection status per server endpoint.
-     */
-    public CompletableFuture<Map<Endpoint, Map<String, Boolean>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
-        try {
-            Map<Endpoint, CompletableFuture<Optional<Map<String, Boolean>>>> futures =
-                rpcClient.checkServerConnections(serverEndpoints);
-
-            return CompletableFuture.allOf(futures.values().toArray(new CompletableFuture[futures.size()]))
-                .thenApply(v -> {
-                    Map<Endpoint, Map<String, Boolean>> connectivityStatusMap = new HashMap<>();
-                    futures.forEach(((endpoint, future) ->
-                        connectivityStatusMap.put(endpoint,
-                            future.join().isPresent() ? future.join().get() : null)));
-                    return connectivityStatusMap;
-                });
-
-        } catch (Exception e) {
-            throw new WaltzClientRuntimeException("failed to check server connectivity.", e.getCause());
         }
     }
 

@@ -70,15 +70,28 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
      * Checks the connectivity
      * 1. to the given server endpoints and also
      * 2. from each server endpoint to the storage nodes within the cluster.
+     * Waits for all the completable futures to complete.
+     *
      * @param serverEndpoints Set of server endpoints.
-     * @return list of completable futures of each server endpoint.
+     * @return a combined completable future with the connection status per server endpoint.
      */
     @Override
-    public Map<Endpoint, CompletableFuture<Optional<Map<String, Boolean>>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
-        Map<Endpoint, CompletableFuture<Optional<Map<String, Boolean>>>> serverConnectivityFutures = new HashMap<>();
+    public CompletableFuture<Map<Endpoint, Map<String, Boolean>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
+        Map<Endpoint, CompletableFuture<Optional<Map<String, Boolean>>>> futures = new HashMap<>();
+
         for (Endpoint endpoint : serverEndpoints) {
-            serverConnectivityFutures.put(endpoint, checkServerConnectivity(endpoint));
+            WaltzNetworkClient networkClient = getNetworkClient(endpoint);
+            CompletableFuture<Optional<Map<String, Boolean>>> future = networkClient.checkServerToStorageConnectivity();
+            futures.put(endpoint, future);
         }
-        return serverConnectivityFutures;
+
+        return CompletableFuture.allOf(futures.values().toArray(new CompletableFuture[futures.size()]))
+            .thenApply(v -> {
+                Map<Endpoint, Map<String, Boolean>> connectivityStatusMap = new HashMap<>();
+                futures.forEach(((endpoint, future) ->
+                    connectivityStatusMap.put(endpoint,
+                        future.join().isPresent() ? future.join().get() : null)));
+                return connectivityStatusMap;
+            });
     }
 }

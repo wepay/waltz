@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -45,12 +43,10 @@ public class WaltzNetworkClient extends NetworkClient {
     private final MessageProcessingThreadPool messageProcessingThreadPool;
     private final Object lock = new Object();
     private final HashMap<Integer, Partition> partitions;
-    private final AtomicInteger seqNumGenerator = new AtomicInteger(0);
 
     private boolean channelReady = false;
     private volatile boolean running = true;
     private AtomicReference<CompletableFuture<Optional<Map<String, Boolean>>>> checkConnectivityRef;
-    private AtomicBoolean isConnectivityTriggered;
 
     /**
      * Class Constructor.
@@ -79,7 +75,6 @@ public class WaltzNetworkClient extends NetworkClient {
         this.messageProcessingThreadPool = messageProcessingThreadPool;
         this.partitions = new HashMap<>();
         this.checkConnectivityRef = new AtomicReference<>();
-        this.isConnectivityTriggered = new AtomicBoolean(false);
     }
 
     /**
@@ -103,8 +98,9 @@ public class WaltzNetworkClient extends NetworkClient {
 
                 CompletableFuture<Optional<Map<String, Boolean>>> future = checkConnectivityRef.get();
                 if (future != null) {
-                    future.complete(Optional.empty());
-                    this.isConnectivityTriggered.set(false);
+                    if (checkConnectivityRef.compareAndSet(future, null)) {
+                        future.complete(Optional.empty());
+                    }
                 }
             }
         }
@@ -207,33 +203,34 @@ public class WaltzNetworkClient extends NetworkClient {
      * Checks server to storage connectivity.
      *
      * Note: There is a possibility that the channel may not be up when this method gets triggered. In that case,
-     * checkServerToStorageConnectivity() gets triggered once the channel is active.
+     * CHECK_STORAGE_CONNECTIVITY_REQUEST is resent once the channel is active.
      *
      * @return Completable future with the connectivity status to the storage nodes within the cluster.
      */
     public CompletableFuture<Optional<Map<String, Boolean>>> checkServerToStorageConnectivity() {
-        ReqId dummyReqId = new ReqId(clientId, 0, 0, seqNumGenerator.incrementAndGet());
-
-        CompletableFuture<Optional<Map<String, Boolean>>> future = checkConnectivityRef.get();
-        if (future != null && isConnectivityTriggered.get()) {
-            return future;
-        }
-
-        if (future == null) {
-            future = new CompletableFuture<>();
-        }
-        if (checkConnectivityRef.compareAndSet(null, future) || !isConnectivityTriggered.get()) {
-            if (sendMessage(new CheckStorageConnectivityRequest(dummyReqId))) {
-                isConnectivityTriggered.set(true);
+        while (true) {
+            CompletableFuture<Optional<Map<String, Boolean>>> future = checkConnectivityRef.get();
+            if (future != null) {
+                return future;
+            } else {
+                future = new CompletableFuture<>();
+                if (checkConnectivityRef.compareAndSet(null, future)) {
+                    sendCheckStorageConnectivityRequest();
+                    return future;
+                }
             }
         }
-        return checkConnectivityRef.get();
     }
 
     @Override
     protected MessageHandler getMessageHandler() {
         WaltzClientHandlerCallbacks handlerCallbacks = new WaltzClientHandlerCallbacksImpl();
         return new WaltzClientHandler(handlerCallbacks, messageProcessingThreadPool);
+    }
+
+    private void sendCheckStorageConnectivityRequest() {
+        ReqId dummyReqId = new ReqId(clientId, 0, 0, 0);
+        sendMessage(new CheckStorageConnectivityRequest(dummyReqId));
     }
 
     private Partition getPartition(int partitionId) {
@@ -253,7 +250,10 @@ public class WaltzNetworkClient extends NetworkClient {
                     networkClientCallbacks.onMountingPartition(WaltzNetworkClient.this, partition);
                 }
 
-                checkServerToStorageConnectivity();
+                // re-send the check storage connectivity request if waiting for the response.
+                if (checkConnectivityRef.get() != null) {
+                    sendCheckStorageConnectivityRequest();
+                }
             }
         }
 
@@ -405,7 +405,6 @@ public class WaltzNetworkClient extends NetworkClient {
             CompletableFuture<Optional<Map<String, Boolean>>> future = checkConnectivityRef.get();
             if (future != null) {
                 if (checkConnectivityRef.compareAndSet(future, null)) {
-                    isConnectivityTriggered.set(false);
                     future.complete(Optional.of(storageConnectivityMap));
                 }
             }

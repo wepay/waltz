@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -252,8 +251,8 @@ public class AbstractClientCallbacksForJDBCTest {
                 }
 
                 @Override
-                public Map<Endpoint, CompletableFuture<Optional<Map<String, Boolean>>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
-                    return new HashMap<>();
+                public CompletableFuture<Map<Endpoint, Map<String, Boolean>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
+                    return CompletableFuture.completedFuture(new HashMap<>());
                 }
             };
 

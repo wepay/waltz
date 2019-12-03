@@ -1,5 +1,6 @@
 package com.wepay.waltz.tools.client;
 
+import com.wepay.riff.network.ClientSSL;
 import com.wepay.waltz.client.PartitionLocalLock;
 import com.wepay.waltz.client.Serializer;
 import com.wepay.waltz.client.Transaction;
@@ -8,6 +9,7 @@ import com.wepay.waltz.client.TransactionContext;
 import com.wepay.waltz.client.WaltzClient;
 import com.wepay.waltz.client.WaltzClientCallbacks;
 import com.wepay.waltz.client.WaltzClientConfig;
+import com.wepay.waltz.client.internal.InternalRpcClient;
 import com.wepay.waltz.common.util.Cli;
 import com.wepay.waltz.common.util.SubcommandCli;
 import com.wepay.waltz.exception.SubCommandFailedException;
@@ -590,7 +592,7 @@ public final class ClientCli extends SubcommandCli {
             }
         }
 
-        public Set<Endpoint> getListOfServerEndpoints(ZNode root, ZooKeeperClient zkClient) throws Exception {
+        private Set<Endpoint> getListOfServerEndpoints(ZNode root, ZooKeeperClient zkClient) throws Exception {
             ClusterManager clusterManager = new ClusterManagerImpl(zkClient, root, partitionAssignmentPolicy);
             Set<ServerDescriptor> serverDescriptors = clusterManager.serverDescriptors();
             Set<Endpoint> serverEndpoints = new HashSet<>();
@@ -604,8 +606,10 @@ public final class ClientCli extends SubcommandCli {
         private Map<Endpoint, Map<String, Boolean>> checkServerConnections(WaltzClientConfig config,
                                                                            Set<Endpoint> serverEndpoints) throws Exception {
             DummyTxnCallbacks callbacks = new DummyTxnCallbacks();
-            WaltzClient client = new WaltzClient(callbacks, config);
-            return client.checkServerConnections(serverEndpoints).get();
+            InternalRpcClient rpcClient = new InternalRpcClient(ClientSSL.createContext(config.getSSLConfig()),
+                WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, callbacks);
+
+            return rpcClient.checkServerConnections(serverEndpoints).get();
         }
 
         @Override
