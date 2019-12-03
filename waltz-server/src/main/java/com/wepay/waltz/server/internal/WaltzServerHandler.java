@@ -12,12 +12,12 @@ import com.wepay.waltz.common.message.MessageCodecV0;
 import com.wepay.waltz.common.message.MessageCodecV1;
 import com.wepay.waltz.common.message.MessageType;
 import com.wepay.waltz.common.message.MountRequest;
+import com.wepay.waltz.common.metadata.ReplicaId;
 import com.wepay.waltz.storage.client.StorageClient;
 import com.wepay.waltz.store.Store;
 import com.wepay.waltz.store.exception.StoreException;
 import com.wepay.waltz.store.exception.StorePartitionClosedException;
 import com.wepay.waltz.store.internal.ConnectionConfig;
-import com.wepay.waltz.store.internal.metadata.ReplicaId;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
@@ -44,7 +44,6 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
 
     private final Map<Integer, Partition> partitions;
     private final Store store;
-    private final int serverPort;
     private Integer clientId = null;
     private Long seqNum = null;
 
@@ -52,17 +51,16 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
      * Class constructor.
      * @param partitions Partition IDs that are part of the {@link com.wepay.waltz.server.WaltzServer} and their corresponding {@link Partition} object.
      */
-    public WaltzServerHandler(Map<Integer, Partition> partitions, Store store, int serverPort) {
-        this(partitions, new WaltzServerHandlerCallbacks(partitions), store, serverPort);
+    public WaltzServerHandler(Map<Integer, Partition> partitions, Store store) {
+        this(partitions, new WaltzServerHandlerCallbacks(partitions), store);
     }
 
     private WaltzServerHandler(Map<Integer, Partition> partitions, WaltzServerHandlerCallbacks callbacks,
-                               Store store, int serverPort) {
+                               Store store) {
         super(CODECS, HELLO_MESSAGE, callbacks, QUEUE_LOW_WATER_MARK, QUEUE_HIGH_WATER_MARK);
 
         this.partitions = partitions;
         this.store = store;
-        this.serverPort = serverPort;
         callbacks.setMessageHandler(this);
     }
 

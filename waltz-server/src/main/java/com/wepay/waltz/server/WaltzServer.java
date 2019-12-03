@@ -113,7 +113,7 @@ public class WaltzServer {
         this.networkServer = new NetworkServer(port, sslCtx != null ? sslCtx : ServerSSL.createInsecureContext()) {
             @Override
             protected MessageHandler getMessageHandler() {
-                return new WaltzServerHandler(partitions, store, port);
+                return new WaltzServerHandler(partitions, store);
             }
         };
 
