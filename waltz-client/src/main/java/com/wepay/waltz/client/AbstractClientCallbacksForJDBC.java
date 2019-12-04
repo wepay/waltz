@@ -97,8 +97,6 @@ public abstract class AbstractClientCallbacksForJDBC implements WaltzClientCallb
             try {
                 Connection connection = dataSource.getConnection();
                 try {
-                    connection.setAutoCommit(true);
-
                     // Read the high-water mark from database and update the cache .
                     return selectHighWaterMark(partitionId, connection);
 

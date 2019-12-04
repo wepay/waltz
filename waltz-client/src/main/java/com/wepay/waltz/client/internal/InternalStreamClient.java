@@ -90,7 +90,7 @@ public class InternalStreamClient extends InternalBaseClient implements StreamCl
         Partition partition = getPartition(context.partitionId(numPartitions));
         partition.ensureMounted();
 
-        return new TransactionBuilderImpl(partition.nextReqId(), callbacks.getClientHighWaterMark(partition.partitionId));
+        return new TransactionBuilderImpl(partition.nextReqId(), partition.clientHighWaterMark());
     }
 
     /**
