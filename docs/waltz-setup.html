@@ -54,7 +54,7 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle">Waltz Setup</h1></header><article><div><span><h2><a class="anchor" aria-hidden="true" id="dependency"></a><a href="#dependency" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Dependency</h2>
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Waltz Setup</h1></header><article><div><span><h2><a class="anchor" aria-hidden="true" id="dependency"></a><a href="#dependency" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Dependency</h2>
 <ul>
 <li>ZooKeeper</li>
 </ul>
@@ -145,10 +145,10 @@
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="configuration-parameters"></a><a href="#configuration-parameters" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuration Parameters</h2>
 <p>Waltz uses YAML for configuration files. Configuration parameters have the form of dot-delimited names. When assigning a value &quot;V&quot; to a parameter &quot;A.B.C&quot;, all of the following YAML is valid.</p>
-<pre><code class="hljs">A<span class="hljs-selector-class">.B</span><span class="hljs-selector-class">.C</span>: V
+<pre><code class="hljs"><span class="hljs-selector-tag">A</span><span class="hljs-selector-class">.B</span><span class="hljs-selector-class">.C</span>: <span class="hljs-selector-tag">V</span>
 </code></pre>
-<pre><code class="hljs">A<span class="hljs-selector-class">.B</span>:
-  C: V
+<pre><code class="hljs"><span class="hljs-attr">A.B:</span>
+  <span class="hljs-attr">C:</span> <span class="hljs-string">V</span>
 </code></pre>
 <pre><code class="hljs"><span class="hljs-string">A:</span>
   B.<span class="hljs-string">C:</span> V
@@ -224,7 +224,7 @@
 <h3><a class="anchor" aria-hidden="true" id="more-server-configuration-parameters"></a><a href="#more-server-configuration-parameters" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>More Server Configuration Parameters</h3>
 <p>See <em>com.wepay.waltz.server.WaltzServerConfig</em> for more configuration parameters.</p>
 <h2><a class="anchor" aria-hidden="true" id="starting-a-waltzserver-instance"></a><a href="#starting-a-waltzserver-instance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Starting a WaltzServer instance</h2>
-<pre><code class="hljs">java -cp waltz-uber-X<span class="hljs-selector-class">.Y</span><span class="hljs-selector-class">.Z</span><span class="hljs-selector-class">.jar</span> com<span class="hljs-selector-class">.wepay</span><span class="hljs-selector-class">.waltz</span><span class="hljs-selector-class">.server</span><span class="hljs-selector-class">.WaltzServer</span> &lt;config file path&gt;
+<pre><code class="hljs"><span class="hljs-selector-tag">java</span> <span class="hljs-selector-tag">-cp</span> <span class="hljs-selector-tag">waltz-uber-X</span><span class="hljs-selector-class">.Y</span><span class="hljs-selector-class">.Z</span><span class="hljs-selector-class">.jar</span> <span class="hljs-selector-tag">com</span><span class="hljs-selector-class">.wepay</span><span class="hljs-selector-class">.waltz</span><span class="hljs-selector-class">.server</span><span class="hljs-selector-class">.WaltzServer</span> &lt;<span class="hljs-selector-tag">config</span> <span class="hljs-selector-tag">file</span> <span class="hljs-selector-tag">path</span>&gt;
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="configuring-waltz-storage-server"></a><a href="#configuring-waltz-storage-server" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuring Waltz Storage Server</h2>
 <p>Create a property file as a configuration file.</p>
@@ -236,11 +236,12 @@
 </thead>
 <tbody>
 <tr><td>storage.port</td><td>storage port number</td><td></td></tr>
-<tr><td>storage.admin</td><td>port  storage admin port number</td><td></td></tr>
+<tr><td>storage.admin</td><td>storage admin port number</td><td></td></tr>
 <tr><td>storage.directory</td><td>path to data directory</td><td></td></tr>
-<tr><td>storage.segment</td><td>size.threshold    threshold of segment size (a new segment is created when a segment size exceed this value)</td><td>1000000000</td></tr>
-<tr><td>cluster.key</td><td>cluster key (which is a unique identifier for the cluster)</td><td></td></tr>
-<tr><td>cluster.numPartitions</td><td>total number of partitions in the cluster</td><td></td></tr>
+<tr><td>storage.segment.size.threshold</td><td>Threshold of segment size (a new segment is created when a segment size exceed this value)</td><td>1000000000</td></tr>
+<tr><td>zookeeper.connectString</td><td>Zookeeper connect string</td><td></td></tr>
+<tr><td>zookeeper.sessionTimeout</td><td>Zookeeper connect timeout</td><td></td></tr>
+<tr><td>cluster.root</td><td>cluster root path in Zookeeper</td><td></td></tr>
 </tbody>
 </table>
 <h3><a class="anchor" aria-hidden="true" id="parameters-for-metrics-1"></a><a href="#parameters-for-metrics-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Parameters for Metrics</h3>
@@ -278,7 +279,7 @@
 </tbody>
 </table>
 <h2><a class="anchor" aria-hidden="true" id="starting-a-waltzstorage-instance"></a><a href="#starting-a-waltzstorage-instance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Starting a WaltzStorage instance</h2>
-<pre><code class="hljs">java -cp waltz-uber-X<span class="hljs-selector-class">.Y</span><span class="hljs-selector-class">.Z</span><span class="hljs-selector-class">.jar</span> com<span class="hljs-selector-class">.wepay</span><span class="hljs-selector-class">.waltz</span><span class="hljs-selector-class">.storage</span><span class="hljs-selector-class">.WaltzStorage</span> &lt;config file path&gt;
+<pre><code class="hljs"><span class="hljs-selector-tag">java</span> <span class="hljs-selector-tag">-cp</span> <span class="hljs-selector-tag">waltz-uber-X</span><span class="hljs-selector-class">.Y</span><span class="hljs-selector-class">.Z</span><span class="hljs-selector-class">.jar</span> <span class="hljs-selector-tag">com</span><span class="hljs-selector-class">.wepay</span><span class="hljs-selector-class">.waltz</span><span class="hljs-selector-class">.storage</span><span class="hljs-selector-class">.WaltzStorage</span> &lt;<span class="hljs-selector-tag">config</span> <span class="hljs-selector-tag">file</span> <span class="hljs-selector-tag">path</span>&gt;
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="configuring-waltzclient"></a><a href="#configuring-waltzclient" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Configuring WaltzClient</h2>
 <p>Typically Waltz client is configured programatically using java.util.Properties and com.wepay.waltz.client.WaltzClientConfig. WaltzClientConfig defines symbols for configuration parameters.</p>

@@ -54,12 +54,12 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 class="postHeaderTitle">Terminology and Components</h1></header><article><div><span><ul>
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Terminology and Components</h1></header><article><div><span><ul>
 <li><strong>Waltz Client</strong>: A client code that runs in an application. It discovers Waltz servers to communicate through Zookeeper. Multiple clients can write to the same log concurrently.</li>
 <li><strong>Waltz Server</strong>: A server that works as a proxy to Waltz storages and also is responsible for concurrency control.</li>
-<li><strong>Waltz Storage</strong>: A storage server that provides persistency of data. It stores transaction data in its local disk.
-Transaction ID: A persistent unique id sequentially assigned to a committed transaction in a partition.
-Transaction Header: Transaction header is a 32-bit integer value. Its semantics is application defined. The transaction headers are streamed back to clients along with transaction IDs so that clients can do certain optimizations before fetching the transaction bodies through RPC. For example, it can be used to signify the type of transaction, and an application can fetch and process only transactions it is interested.</li>
+<li><strong>Waltz Storage</strong>: A storage server that provides persistency of data. It stores transaction data in its local disk.</li>
+<li><strong>Transaction ID</strong>: A persistent unique id sequentially assigned to a committed transaction in a partition.</li>
+<li><strong>Transaction Header</strong>: Transaction header is a 32-bit integer value. Its semantics is application defined. The transaction headers are streamed back to clients along with transaction IDs so that clients can do certain optimizations before fetching the transaction bodies through RPC. For example, it can be used to signify the type of transaction, and an application can fetch and process only transactions it is interested.</li>
 <li><strong>Transaction Data</strong>: Transaction data are opaque to Waltz. They are just byte arrays for Waltz. An application must provide a serialization method to Waltz Client.</li>
 <li><strong>High-water Mark</strong>: A high-water mark is the highest transaction ID seen. For a Waltz server it is the ID of the most recently committed transaction. For a client, it is the ID of the most recently consumed transaction.</li>
 <li><strong>Lock ID</strong>: A partition scoped id for optimistic locking. It consists of a name and long id. Waltz does not know what a lock ID represents. The scope of a lock ID is limited to the partition. Therefore, a partitioning scheme must be decided taking a lock ID scope into consideration.</li>
