@@ -225,14 +225,15 @@ Create a property file as a configuration file.
 
 The following is the minimum required configuration parameters.
 
-| Parameter Name        | Description                                                                                                | Default Value    |
-| ----------------      | -------------                                                                                              | ---------------  |
-| storage.port          | storage port number                                                                                        |                  |
-| storage.admin         | port	storage admin port number                                                                          |                    |
-| storage.directory     | path to data directory                                                                                     |                  |
-| storage.segment       | size.threshold	threshold of segment size (a new segment is created when a segment size exceed this value) | 1000000000 |
-| cluster.key           | cluster key (which is a unique identifier for the cluster)                                                 |                  |
-| cluster.numPartitions | total number of partitions in the cluster                                                                  |                  |
+| Parameter Name                  | Description                                                                                   | Default Value    |
+| ----------------                | -------------                                                                                 | ---------------  |
+| storage.port                    | storage port number                                                                           |                  |
+| storage.admin                   | storage admin port number                                                                     |                  |
+| storage.directory               | path to data directory                                                                        |                  |
+| storage.segment.size.threshold  | Threshold of segment size (a new segment is created when a segment size exceed this value)    | 1000000000       |
+| zookeeper.connectString         | Zookeeper connect string                                                                      |                  |
+| zookeeper.sessionTimeout        | Zookeeper connect timeout                                                                     |                  |
+| cluster.root                    | cluster root path in Zookeeper                                                                |                  |
 
 ### Parameters for Metrics
 
