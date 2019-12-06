@@ -13,6 +13,9 @@
       "waltz-server",
       "waltz-storage"
     ],
+    "Application Development" : [
+      "using-mock-driver"
+    ],
     "Administration": [
       "waltz-setup"
     ]
