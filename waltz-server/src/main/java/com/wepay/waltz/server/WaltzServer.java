@@ -353,8 +353,12 @@ public class WaltzServer {
         return partitionIds;
     }
 
-    public NetworkServer getNetworkServer() {
-        return this.networkServer;
+    public void closeNetworkServer() {
+        try {
+            networkServer.close();
+        } catch (Throwable ex) {
+            logger.error("failed to close the network server", ex);
+        }
     }
 
     /**

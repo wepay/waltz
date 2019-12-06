@@ -116,7 +116,9 @@ public class WaltzServerRunner extends Runner<WaltzServer> {
 
     public void closeNetworkServer() {
         try {
-            server.getNetworkServer().close();
+            if (server != null) {
+                server.closeNetworkServer();
+            }
         } catch (Exception ex) {
             logger.error("failed to close the network server", ex);
         }
