@@ -162,7 +162,7 @@ public class AbstractClientCallbacksForJDBCTest {
             @Override
             protected void applyTransaction(Transaction transaction, Connection connection) throws SQLException {
                 synchronized (results2) {
-                   results2.add(transaction.getTransactionData(StringSerializer.INSTANCE));
+                    results2.add(transaction.getTransactionData(StringSerializer.INSTANCE));
                 }
                 synchronized (resultsAll) {
                     resultsAll.add(transaction.getTransactionData(StringSerializer.INSTANCE));
@@ -232,26 +232,8 @@ public class AbstractClientCallbacksForJDBCTest {
         dataSource.makeDbDown();
 
         Thread thread = new Thread(() -> {
-            RpcClient mockRpcClient = new RpcClient() {
-                @Override
-                public Future<byte[]> getTransactionData(int partitionId, long transactionId) {
-                    return CompletableFuture.completedFuture("dummy".getBytes(StandardCharsets.UTF_8));
-                }
-
-                @Override
-                public Future<Long> getHighWaterMark(int partitionId) {
-                    return CompletableFuture.completedFuture(-1L);
-                }
-
-                @Override
-                public void close() {
-                }
-            };
-
-            Transaction transaction = new Transaction(0, 0, new ReqId(0, 0, 0, 0), mockRpcClient);
-
             try {
-                callbacks1.applyTransaction(transaction);
+                callbacks1.applyTransaction(mkTransaction());
             } catch (Exception ex) {
                 failureCount.incrementAndGet();
             } finally {
@@ -329,6 +311,85 @@ public class AbstractClientCallbacksForJDBCTest {
         }
     }
 
+    @Test
+    public void testForbiddenCommit() throws Exception {
+        testForbiddenJdbcCalls("commit", Connection::commit);
+    }
+
+    @Test
+    public void testForbiddenRollback() throws Exception {
+        testForbiddenJdbcCalls("rollback", Connection::rollback);
+    }
+
+    @Test
+    public void testForbiddenSetAutoCommit() throws Exception {
+        testForbiddenJdbcCalls("setAutoCommit", connection -> connection.setAutoCommit(false));
+    }
+
+    @Test
+    public void testForbiddenSetTransactionIsolation() throws Exception {
+        int isolation = Connection.TRANSACTION_REPEATABLE_READ;
+        testForbiddenJdbcCalls("setTransactionIsolation", connection -> connection.setTransactionIsolation(isolation)
+        );
+    }
+
+    @Test
+    public void testForbiddenSetCatalog() throws Exception {
+        testForbiddenJdbcCalls("setCatalog", connection -> connection.setCatalog("another"));
+    }
+
+    @Test
+    public void testForbiddenSetReadOnly() throws Exception {
+        testForbiddenJdbcCalls("setReadOnly", connection -> connection.setReadOnly(true));
+    }
+
+    @Test
+    public void testForbiddenUnwrap() throws Exception {
+        testForbiddenJdbcCalls("unwrap", connection -> connection.unwrap(Connection.class));
+    }
+
+    private void testForbiddenJdbcCalls(String methodName, JdbcCall jdbcCall) throws Exception {
+        TestDataSource dataSource = new TestDataSource("TEST_FORBIDDEN_" + methodName);
+        try (Connection connection = dataSource.getConnection()) {
+            dropSchema(connection);
+            createSchema(connection);
+
+            WaltzClientCallbacks callbacks = new AbstractClientCallbacksForJDBC(dataSource, CLIENT_HIGH_WATER_MARK_TABLE_NAME) {
+                @Override
+                protected void applyTransaction(Transaction transaction, Connection connection) throws SQLException {
+                    try {
+                        jdbcCall.run(connection);
+                    } catch (SQLException ex) {
+                        throw new IllegalStateException(ex);
+                    }
+                }
+
+                @Override
+                public void uncaughtException(int partitionId, long transactionId, Throwable exception) {
+                }
+            };
+
+            // set up the internal state fo the callback class
+            callbacks.getClientHighWaterMark(0);
+
+            try {
+                callbacks.applyTransaction(mkTransaction());
+                fail();
+
+            } catch (IllegalStateException ex) {
+                Throwable cause = ex.getCause();
+                if (cause instanceof AbstractClientCallbacksForJDBC.ForbiddenJdbcCallException) {
+                    assertEquals(
+                        methodName,
+                        ((AbstractClientCallbacksForJDBC.ForbiddenJdbcCallException) cause).methodName
+                    );
+                } else {
+                    throw ex;
+                }
+            }
+        }
+    }
+
     private void createSchema(Connection connection) throws SQLException {
         PreparedStatement stmt = connection.prepareStatement(
             "CREATE TABLE " + CLIENT_HIGH_WATER_MARK_TABLE_NAME + " ("
@@ -397,4 +458,29 @@ public class AbstractClientCallbacksForJDBCTest {
             }
         };
     }
+
+    private Transaction mkTransaction() {
+        RpcClient mockRpcClient = new RpcClient() {
+            @Override
+            public Future<byte[]> getTransactionData(int partitionId, long transactionId) {
+                return CompletableFuture.completedFuture("dummy".getBytes(StandardCharsets.UTF_8));
+            }
+
+            @Override
+            public Future<Long> getHighWaterMark(int partitionId) {
+                return CompletableFuture.completedFuture(-1L);
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+
+        return new Transaction(0, 0, new ReqId(0, 0, 0, 0), mockRpcClient);
+    }
+
+    private interface JdbcCall {
+        void run(Connection conn) throws SQLException;
+    }
+
 }
