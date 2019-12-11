@@ -19,7 +19,7 @@ import java.util.Random;
 
 import static org.junit.Assert.assertTrue;
 
-public class ClusterCiTest {
+public class ClusterCliTest {
     private static final String DIR_NAME = "clusterCliTest";
     private static final String CONFIG_FILE_NAME = "test-config.yml";
 
