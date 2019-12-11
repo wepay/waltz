@@ -29,6 +29,9 @@
       "terminology": {
         "title": "Terminology and Components"
       },
+      "using-mock-driver": {
+        "title": "Using MockDriver for Application Unit Tests"
+      },
       "waltz-client": {
         "title": "Waltz Client"
       },
@@ -47,6 +50,7 @@
     },
     "categories": {
       "Design": "Design",
+      "Application Development": "Application Development",
       "Administration": "Administration"
     }
   },
