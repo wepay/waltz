@@ -59,6 +59,7 @@ public class IntegrationTestHelper {
     private final Path workDir;
     private final String host;
 
+    private PortFinder portFinder;
     private int zkPort;
     private List<Integer> storagePorts = new ArrayList<>();
     private List<Integer> storageAdminPorts = new ArrayList<>();
@@ -110,7 +111,7 @@ public class IntegrationTestHelper {
         this.sslSetup.setConfigParams(props, WaltzServerConfig.SERVER_SSL_CONFIG_PREFIX);
         this.props = props;
 
-        PortFinder portFinder = new PortFinder();
+        this.portFinder = new PortFinder();
         this.zkPort = portFinder.getPort();
         this.serverPort = portFinder.getPort();
         this.serverJettyPort = portFinder.getPort();
@@ -169,6 +170,17 @@ public class IntegrationTestHelper {
             bw.write(yaml.dump(props));
             return filePath;
         }
+    }
+
+    /**
+     * Returns a port using {@link this#portFinder} instance.
+     * If in need of a port, the clients of this class should use this method
+     * instead of another {@link PortFinder} instance to avoid a possible port collision.
+     *
+     * @return a port.
+     */
+    public int getPort() {
+        return portFinder.getPort();
     }
 
     public void startZooKeeperServer() throws Exception {

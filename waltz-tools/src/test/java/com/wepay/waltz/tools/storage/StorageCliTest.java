@@ -446,10 +446,9 @@ public final class StorageCliTest {
 
         helper.startZooKeeperServer();
 
-        PortFinder portFinder = new PortFinder();
-        int destinationPort = portFinder.getPort();
-        int destinationAdminPort = portFinder.getPort();
-        int destinationJettyPort = portFinder.getPort();
+        int destinationPort = helper.getPort();
+        int destinationAdminPort = helper.getPort();
+        int destinationJettyPort = helper.getPort();
         WaltzStorageRunner destinationStorageRunner = helper.getWaltzStorageRunner(destinationPort, destinationAdminPort, destinationJettyPort);
         WaltzStorageRunner sourceStorageRunner = helper.getWaltzStorageRunner();
 
