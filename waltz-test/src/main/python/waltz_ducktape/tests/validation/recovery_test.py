@@ -1,6 +1,7 @@
 from random import randrange
 from ducktape.mark import parametrize
 from ducktape.mark.resource import cluster
+from ducktape.cluster.cluster_spec import ClusterSpec
 from ducktape.utils.util import wait_until
 from waltz_ducktape.tests.produce_consume_validate import ProduceConsumeValidateTest
 
@@ -11,10 +12,15 @@ class RecoveryTest(ProduceConsumeValidateTest):
     including recover dirty replicas, bring up offline replica, and
     so on.
     """
+    MIN_CLUSTER_SPEC = ClusterSpec.from_list([
+        {'cpu':1, 'mem':'1GB', 'disk':'25GB', 'additional_disks':{'/dev/sdb':'100GB'}, 'num_nodes':3},
+        {'cpu':1, 'mem':'3GB', 'disk':'15GB', 'num_nodes':2},
+        {'cpu':1, 'mem':'1GB', 'disk':'25GB', 'num_nodes':1}])
+
     def __init__(self, test_context):
         super(RecoveryTest, self).__init__(test_context=test_context)
 
-    @cluster(nodes_spec={'storage':3, 'server':2, 'client':1})
+    @cluster(cluster_spec=MIN_CLUSTER_SPEC)
     @parametrize(num_active_partitions=1, txn_per_client=250, num_clients=1, interval=100, timeout=240)
     def test_recover_dirty_replica(self, num_active_partitions, txn_per_client, num_clients, interval, timeout):
         src_replica_idx = 0
@@ -22,7 +28,7 @@ class RecoveryTest(ProduceConsumeValidateTest):
         self.run_produce_consume_validate(lambda: self.recover_dirty_replica(src_replica_idx, dst_replica_idx, num_active_partitions,
                                                                              txn_per_client, num_clients, interval, timeout))
 
-    @cluster(nodes_spec={'storage':3, 'server':2, 'client':1})
+    @cluster(cluster_spec=MIN_CLUSTER_SPEC)
     @parametrize(num_active_partitions=1, txn_per_client=250, num_clients=1, interval=100, timeout=240)
     def test_bring_replica_back_online(self, num_active_partitions, txn_per_client, num_clients, interval, timeout):
         offline_replica_idx = 0

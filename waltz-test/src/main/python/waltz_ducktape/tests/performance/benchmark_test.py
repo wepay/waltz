@@ -9,12 +9,15 @@ class BenchmarkTest(ProduceConsumeValidateTest):
     """
     A benchmark of Waltz producer/consumer performance.
     """
+    MIN_CLUSTER_SPEC = ClusterSpec.from_list([
+        {'cpu':1, 'mem':'1GB', 'disk':'25GB', 'additional_disks':{'/dev/sdb':'100GB'}, 'num_nodes':3},
+        {'cpu':1, 'mem':'3GB', 'disk':'15GB', 'num_nodes':2},
+        {'cpu':1, 'mem':'1GB', 'disk':'25GB', 'num_nodes':1}])
+
     def __init__(self, test_context):
         super(BenchmarkTest, self).__init__(test_context=test_context)
 
-    @cluster(cluster_spec=ClusterSpec.from_list([{'cpu':1, 'mem':'1GB', 'disk':'25GB', 'additional_disks':{'/dev/sdb':'100GB'}, 'num_nodes':3},
-                                                 {'cpu':1, 'mem':'3GB', 'disk':'15GB', 'num_nodes':2},
-                                                 {'cpu':1, 'mem':'1GB', 'disk':'25GB', 'num_nodes':1}]))
+    @cluster(cluster_spec=MIN_CLUSTER_SPEC)
     @parametrize(txn_size=512, txn_per_thread=1000, num_thread=100, interval=10, lock_pool_size=0, num_active_partitions=1, timeout=360)
     @parametrize(txn_size=512, txn_per_thread=1000, num_thread=100, interval=20, lock_pool_size=0, num_active_partitions=1, timeout=360)
     @parametrize(txn_size=512, txn_per_thread=2000, num_thread=50, interval=10, lock_pool_size=0, num_active_partitions=1, timeout=360)
@@ -27,9 +30,7 @@ class BenchmarkTest(ProduceConsumeValidateTest):
         test_output = self.run_produce_consume_validate(lambda: self.simple_validation_func(test_cmd, timeout))
         self.print_producer_performance(test_output)
 
-    @cluster(cluster_spec=ClusterSpec.from_list([{'cpu':1, 'mem':'1GB', 'disk':'25GB', 'additional_disks':{'/dev/sdb':'100GB'}, 'num_nodes':3},
-                                                 {'cpu':1, 'mem':'3GB', 'disk':'15GB', 'num_nodes':2},
-                                                 {'cpu':1, 'mem':'1GB', 'disk':'25GB', 'num_nodes':1}]))
+    @cluster(cluster_spec=MIN_CLUSTER_SPEC)
     @parametrize(txn_size=512, num_txn=100000, num_active_partitions=1, timeout=360)
     @parametrize(txn_size=512, num_txn=100000, num_active_partitions=4, timeout=360)
     @parametrize(txn_size=1024, num_txn=100000, num_active_partitions=1, timeout=360)

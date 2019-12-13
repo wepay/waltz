@@ -1,6 +1,7 @@
 from random import randrange
 from ducktape.mark import parametrize
 from ducktape.mark.resource import cluster
+from ducktape.cluster.cluster_spec import ClusterSpec
 from ducktape.utils.util import wait_until
 from waltz_ducktape.tests.produce_consume_validate import ProduceConsumeValidateTest
 
@@ -9,10 +10,15 @@ class ScalabilityTest(ProduceConsumeValidateTest):
     """
     Test Waltz scalability by scaling up and scaling down replicas.
     """
+    MIN_CLUSTER_SPEC = ClusterSpec.from_list([
+        {'cpu':1, 'mem':'1GB', 'disk':'25GB', 'additional_disks':{'/dev/sdb':'100GB'}, 'num_nodes':4},
+        {'cpu':1, 'mem':'3GB', 'disk':'15GB', 'num_nodes':2},
+        {'cpu':1, 'mem':'1GB', 'disk':'25GB', 'num_nodes':1}])
+
     def __init__(self, test_context):
         super(ScalabilityTest, self).__init__(test_context=test_context, num_storage_nodes=4)
 
-    @cluster(nodes_spec={'storage':4, 'server':2, 'client':1})
+    @cluster(cluster_spec=MIN_CLUSTER_SPEC)
     @parametrize(num_active_partitions=1, txn_per_client=500, num_clients=1, interval=100, timeout=240)
     def test_scale_up_replica(self, num_active_partitions, txn_per_client, num_clients, interval, timeout):
         src_node_idx = 0
