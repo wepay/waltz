@@ -104,7 +104,7 @@ ducktape <path_to_test>[::SomeTestClass[.test_method]]  # e.g. ducktape dir/test
 The results will be stored in a `results` directory in the Waltz repository root.
 
 #### Check VM service log (optional)
-Ssh to GCE virtual machine, e.g sever-0, storage-1
+SSH to GCE virtual machine, e.g server-0, storage-1
 ```
 ssh <gce_vm_instance_name_defined_in_vagrantfile]
 ```
@@ -124,7 +124,7 @@ vagrant destroy
 
 ## What's going on here?
 
-There are two componenets to the integration tests:
+There are two components to the integration tests:
 
 * Vagrant
 * Ducktape
