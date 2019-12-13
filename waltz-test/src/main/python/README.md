@@ -1,50 +1,32 @@
-## Waltz performance and integration tests
+## Waltz Integration & Performance Tests
 
-This package contains Python-based Waltz integration and performance tests. Waltz uses [ducktape](https://ducktape-docs.readthedocs.io) as its integration test framework, and Vagrant as its test environment.
+This package contains Python-based Waltz integration & performance tests. Waltz uses [ducktape](https://ducktape-docs.readthedocs.io) as its integration test framework, and Vagrant as its test environment.
 
-### Setup
+### Run Waltz Tests
 
-Set up a virtual environment, and activate it.
-
-```
-virtualenv <some path>/waltz-test
-source <some path>/waltz-test/bin/activate
-```
-
-Install [ducktape](https://ducktape-docs.readthedocs.io).
+#### Set up Virtual Environment
 
 ```
-pip install ducktape
+virtualenv <destination_directory>=
+source <destination_directory>/bin/activate
 ```
 
-(If you have problems, see the [ducktape installation](https://ducktape-docs.readthedocs.io/en/latest/install.html) page.)
-
-#### Install Vagrant
-
-From the Waltz root, run:
+#### Install [ducktape](https://github.com/wepay/ducktape)
 
 ```
-vagrant status
+git clone git@github.com:wepay/ducktape.git
+python setup.py install
 ```
 
-If you don't have Vagrant or vagrant-google plugin installed, then install them:
+#### Install [Vagrant](https://www.vagrantup.com/docs/)
 
-Install [Vagrant](https://www.vagrantup.com/downloads.html).
+First, install vagrant from [here](https://www.vagrantup.com/downloads.html)
 
-Install vagrant-google plugin:
+Then, install vagrant plugins and hostmanager
 
 ```
 vagrant plugin install vagrant-google
-```
-Install inifile plugin:
-
-```
 vagrant plugin install inifile
-```
-
-Install Vagrant hostmanager:
-
-```
 vagrant plugin install vagrant-hostmanager
 ```
 
@@ -61,53 +43,58 @@ waltz
     └─waltz/vagrant/sync/storage
       ├─waltz/vagrant/sync/storage/keystore.jks
       └─waltz/vagrant/sync/storage/truststore.jks
-
 ```
 #### Set configuration file
 
-To create VM instance in `poc`, fill in the missing fields from `waltz-test/src/main/python/waltz_ducktape/config.ini`.
+To create VM instance in Google Cloud, fill in missing fields from `waltz-test/src/main/python/waltz_ducktape/config.ini`.
+See guidance [here](https://github.com/mitchellh/vagrant-google#google-cloud-platform-setup).
 ```
 GoogleJsonKeyLocation=
 WaltzSshUsername=
 WaltzSshPrivateKeyPath=
 ```
-To create VM instance in other environment, some other fields need to be reset.
 
 #### Start Vagrant
 
-From the Waltz root, run:
+Start and provision Vagrant environment
 
 ```
+cd <path_to_waltz_directory>
 vagrant up --provider=google --no-parallel
 ```
 
-#### Running the tests
+Check if all Vagrant machines are up
+```
+vagrant status
+```
 
-Run all the tests:
+#### Run integration test
+
+Ducktape discovers and runs tests in the path provided, here are some ways to run tests:
 
 ```
-ducktape waltz-test/src/main/python
+ducktape <relative_path_to_testdirectory>               # e.g. ducktape dir/tests
+ducktape <relative_path_to_file>                        # e.g. ducktape dir/tests/my_test.py
+ducktape <path_to_test>[::SomeTestClass]                # e.g. ducktape dir/tests/my_test.py::TestA
+ducktape <path_to_test>[::SomeTestClass[.test_method]]  # e.g. ducktape dir/tests/my_test.py::TestA.test_a
 ```
 
 The results will be stored in a `results` directory in the Waltz repository root.
 
 #### Check VM service log (optional)
-To ssh to GCE virtual machine:
+Ssh to GCE virtual machine, e.g sever-0, storage-1
 ```
-ssh [gce-vm-instance-name]
+ssh <gce_vm_instance_name_defined_in_vagrantfile]
 ```
-To view service log:
+View service log
 ```
 journalctl -u [waltz-storage | waltz-server] -e -f
-```
-or
-```
 systemctl status [waltz-storage | waltz-server]
 ```
 
 #### Destroy Vagrant
 
-From the Waltz root, run:
+Stops and deletes all traces of the vagrant machine
 
 ```
 vagrant destroy
