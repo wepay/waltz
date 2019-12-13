@@ -25,7 +25,7 @@ Vagrant.configure("2") do |config|
         # gce image config
         google.image = cfg['WaltzStorageImage']
         google.image_project_id = cfg['GoogleProjectId']
-        google.disk_size = Integer(cfg['WaltzStorageBootDiskSize'])
+        google.disk_size = Integer(cfg['WaltzStorageBootDiskSizeGb'])
 
         # additional image config
         google.additional_disks = JSON.parse(cfg['WaltzStorageAdditionalDisks'], {:symbolize_names => true})
@@ -65,7 +65,7 @@ Vagrant.configure("2") do |config|
         # gce image config
         google.image = cfg['WaltzServerImage']
         google.image_project_id = cfg['GoogleProjectId']
-        google.disk_size = Integer(cfg['WaltzServerBootDiskSize'])
+        google.disk_size = Integer(cfg['WaltzServerBootDiskSizeGb'])
 
         google.external_ip = false
         google.use_private_ip = true
@@ -101,7 +101,7 @@ Vagrant.configure("2") do |config|
         # gce image config
         google.image = cfg['WaltzClientImage']
         google.image_project_id = cfg['GoogleProjectId']
-        google.disk_size = Integer(cfg['WaltzClientBootDiskSize'])
+        google.disk_size = Integer(cfg['WaltzClientBootDiskSizeGb'])
 
         google.external_ip = false
         google.use_private_ip = true

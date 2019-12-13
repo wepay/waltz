@@ -46,12 +46,34 @@ waltz
 ```
 #### Set configuration file
 
-To create VM instance in Google Cloud, fill in missing fields from `waltz-test/src/main/python/waltz_ducktape/config.ini`.
-See guidance [here](https://github.com/mitchellh/vagrant-google#google-cloud-platform-setup).
+Fill in missing fields from `waltz-test/src/main/python/waltz_ducktape/config.ini`.
+
 ```
+# Waltz common GCE configuration (Please fill in all fields)
+# see guidance at https://github.com/mitchellh/vagrant-google#google-cloud-platform-setup
+GoogleProjectId=
+GoogleClientEmail=
 GoogleJsonKeyLocation=
+GoogleNetwork=
+GoogleSubnetwork=
+
+# GCE SSH configuration (Please fill in all fields)
 WaltzSshUsername=
 WaltzSshPrivateKeyPath=
+
+# Waltz storage GCE configuration (Please fill in all fields)
+WaltzStorageImage=
+WaltzStorageBootDiskSizeGb=
+# e.g. [{"image_family": [STRING], "image_project_id": [STRING], "disk_size": [NUMBERS_OF_GB]}]
+WaltzStorageAdditionalDisks=
+
+# Waltz server GCE configuration (Please fill in all fields)
+WaltzServerImage=
+WaltzServerBootDiskSizeGb=
+
+# Waltz client GCE configuration (Please fill in all fields)
+WaltzClientImage=
+WaltzClientBootDiskSizeGb=
 ```
 
 #### Start Vagrant
