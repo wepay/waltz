@@ -36,8 +36,6 @@ public class InternalClientTestBase {
     private final PartitionInfo partitionInfo2 = new PartitionInfo(2, 99);
     private final AtomicInteger clientId = new AtomicInteger(0);
 
-    protected final TransactionResultHandler handler = new TransactionResultHandler();
-
     protected final Set<Integer> allPartitions = Utils.set(0, 1, 2);
     protected final List<InternalBaseClient> clients = new LinkedList<>();
 

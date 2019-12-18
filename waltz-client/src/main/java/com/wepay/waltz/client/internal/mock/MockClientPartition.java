@@ -243,6 +243,10 @@ final class MockClientPartition {
                     if (feedData.transactionId == clientHighWaterMark.get() + 1) {
                         TransactionContext context = transactionMonitor.committed(feedData.reqId);
 
+                        if (context != null) {
+                            context.onCompletion(true);
+                        }
+
                         Transaction transaction = new Transaction(
                             feedData.transactionId,
                             feedData.header,

@@ -10,7 +10,6 @@ import com.wepay.waltz.client.internal.RpcClient;
 import com.wepay.waltz.client.internal.StreamClient;
 import com.wepay.waltz.client.internal.TransactionBuilderImpl;
 import com.wepay.waltz.client.internal.TransactionFuture;
-import com.wepay.waltz.client.internal.TransactionResultHandler;
 import com.wepay.waltz.common.message.AppendRequest;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.test.mock.MockWaltzClientCallbacks;
@@ -40,7 +39,6 @@ public class MockDriverTest {
 
     private final WaltzClientConfig config = new WaltzClientConfig(new Properties());
     private final Random rand = new Random();
-    private final TransactionResultHandler handler = new TransactionResultHandler();
 
     @Test
     public void testBasic1() throws Exception {

@@ -310,6 +310,10 @@ public class Partition {
                 if (expectedTransactionId == transactionId) {
                     TransactionContext context = transactionMonitor.committed(reqId);
 
+                    if (context != null) {
+                        context.onCompletion(true);
+                    }
+
                     networkClientCallbacks.onTransactionReceived(transactionId, header, reqId);
                     // The transaction is successfully applied to the application state
                     // Increment the client high-water mark
