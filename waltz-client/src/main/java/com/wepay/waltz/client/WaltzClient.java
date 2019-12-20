@@ -4,7 +4,6 @@ import com.wepay.riff.util.Logging;
 import com.wepay.waltz.client.internal.RpcClient;
 import com.wepay.waltz.client.internal.StreamClient;
 import com.wepay.waltz.client.internal.TransactionBuilderImpl;
-import com.wepay.waltz.client.internal.TransactionResultHandler;
 import com.wepay.waltz.client.internal.TransactionRetryQueue;
 import com.wepay.waltz.client.internal.WaltzClientDriver;
 import com.wepay.waltz.client.internal.WaltzClientDriverImpl;
@@ -148,8 +147,14 @@ public class WaltzClient {
             AppendRequest request = build(context);
 
             if (request != null) {
-                streamClient.append(request, context)
-                    .whenComplete(new TransactionResultHandlerImpl(context));
+                streamClient.append(request, context).whenComplete((success, exception) -> {
+                    if (exception != null) {
+                        context.onException(exception);
+                    } else if (!success) {
+                        // Retry the execution.
+                        executeAsync(context);
+                    }
+                });
             } else {
                 // Completed with no append. There will be no retry.
                 context.onCompletion(false);
@@ -237,31 +242,6 @@ public class WaltzClient {
         driver.initialize(callbacks, config);
 
         return driver;
-    }
-
-    private class TransactionResultHandlerImpl extends TransactionResultHandler {
-
-        private final TransactionContext context;
-
-        TransactionResultHandlerImpl(TransactionContext context) {
-            this.context = context;
-        }
-
-        @Override
-        protected void onSuccess() {
-            context.onCompletion(true);
-        }
-
-        @Override
-        protected void onFailure() {
-            executeAsync(context);
-        }
-
-        @Override
-        protected void onException(Throwable exception) {
-            context.onException(exception);
-        }
-
     }
 
 }
