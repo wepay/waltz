@@ -43,6 +43,7 @@ public class Partition {
 
     private final Object lock = new Object();
     private final Object transactionApplicationLock = new Object();
+    private final HashMap<ReqId, TransactionContext> transactionApplicationFailed = new HashMap<>();
     private final TransactionMonitor transactionMonitor;
     private final PriorityQueue<LockFailure> lockFailureQueue;
     private final LinkedList<FlushPoint> flushPointQueue = new LinkedList<>();
@@ -311,10 +312,32 @@ public class Partition {
                     TransactionContext context = transactionMonitor.committed(reqId);
 
                     if (context != null) {
+                        // Notify the context that the transction was persisted successfully.
                         context.onCompletion(true);
+
+                    } else {
+                        // Recover the context in case that the transaction application previously failed
+                        context = transactionApplicationFailed.remove(reqId);
+
+                        if (!transactionApplicationFailed.isEmpty()) {
+                            // This should never happen.
+                            logger.error("Failed context map not cleared by retry. This should NEVER happen:"
+                                + " partitionId=" + partitionId
+                                + " transactionId=" + transactionId
+                                + " reqIds=" + transactionApplicationFailed.keySet()
+                            );
+                        }
                     }
 
-                    networkClientCallbacks.onTransactionReceived(transactionId, header, reqId);
+                    try {
+                        networkClientCallbacks.onTransactionReceived(transactionId, header, reqId);
+
+                    } catch (Throwable ex) {
+                        // Transaction application failed. Save the context for retry.
+                        transactionApplicationFailed.put(reqId, context);
+                        throw ex;
+                    }
+
                     // The transaction is successfully applied to the application state
                     // Increment the client high-water mark
                     clientHighWaterMark.incrementAndGet();
@@ -326,7 +349,9 @@ public class Partition {
                 } else {
                     if (logger.isDebugEnabled()) {
                         logger.debug("unexpected transaction received in applyTransaction, ignoring:"
-                            + " transactionId=" + transactionId + " expected=" + expectedTransactionId);
+                            + " partitionId=" + partitionId
+                            + " transactionId=" + transactionId
+                            + " expectedTransactionId=" + expectedTransactionId);
                     }
                 }
             }
