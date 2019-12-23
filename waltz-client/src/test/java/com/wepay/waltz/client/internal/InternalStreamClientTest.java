@@ -1,18 +1,24 @@
 package com.wepay.waltz.client.internal;
 
+import com.wepay.waltz.client.Transaction;
 import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.exception.InvalidOperationException;
 import com.wepay.waltz.exception.PartitionInactiveException;
 import com.wepay.waltz.test.mock.MockContext;
+import com.wepay.waltz.test.mock.MockWaltzClientCallbacks;
 import com.wepay.zktools.util.Uninterruptibly;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
@@ -21,6 +27,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class InternalStreamClientTest extends InternalClientTestBase {
+    private static final long TIMEOUT = 10000;
 
     @Test
     public void testAutoMountOn() throws Exception {
@@ -131,7 +138,7 @@ public class InternalStreamClientTest extends InternalClientTestBase {
     @Test
     public void testWriteToInactivePartition() throws Exception {
         final int numTransactions = 2000;
-        List<TransactionFuture> futures = new ArrayList<>();
+        Queue<TransactionFuture> futures = new ConcurrentLinkedQueue<>();
 
         InternalRpcClient internalRpcClient = getInternalRpcClient(WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS);
         InternalStreamClient internalStreamClient = getInternalStreamClient(false, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, internalRpcClient);
@@ -169,6 +176,66 @@ public class InternalStreamClientTest extends InternalClientTestBase {
             } catch (ExecutionException ex) {
                 assertTrue(ex.getCause().toString().contains("partition inactive"));
             }
+        }
+    }
+
+    @Test
+    public void testOnApplicationWithRetry() throws Exception {
+        final int numTransactions = 50;
+        Queue<CompletableFuture<Boolean>> applicationFutures = new ConcurrentLinkedQueue<>();
+
+        MockWaltzClientCallbacks callbacks = new MockWaltzClientCallbacks() {
+            private volatile long transactionId = -1;
+            @Override
+            protected void process(Transaction transaction) {
+                if (transaction.transactionId > transactionId) {
+                    transactionId = transaction.transactionId;
+                    throw new RuntimeException(
+                        "intentionally failing the first call of applyTransaction for the current transaction"
+                    );
+                } else {
+                    super.process(transaction);
+                }
+            }
+        };
+        initClientHighWaterMarks(callbacks);
+
+        InternalRpcClient internalRpcClient = getInternalRpcClient(WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS);
+        InternalStreamClient internalStreamClient = getInternalStreamClient(
+            true, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, internalRpcClient, callbacks
+        );
+
+        Thread thread = new Thread(() -> {
+            for (int i = 0; i < numTransactions; i++) {
+                String data = "transaction" + i;
+                MockContext context = MockContext.builder().header(0).data(data).build();
+                TransactionFuture future = null;
+
+                while (future == null) {
+                    TransactionBuilderImpl transactionBuilder = internalStreamClient.getTransactionBuilder(context);
+                    context.execute(transactionBuilder);
+                    future = internalStreamClient.append(transactionBuilder.buildRequest(), context);
+
+                    try {
+                        if (future.get()) {
+                            break;
+                        }
+                    } catch (Exception ex) {
+                        // Connection loss was induced by transaction application failure,
+                        // and it caused a write failure. Retry.
+                        future = null;
+                    }
+                }
+
+                applicationFutures.add(context.applicationFuture);
+            }
+        });
+
+        thread.start();
+        thread.join();
+
+        for (CompletableFuture<Boolean> future : applicationFutures) {
+            assertTrue(future.get(TIMEOUT, TimeUnit.MILLISECONDS));
         }
     }
 

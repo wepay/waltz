@@ -2,6 +2,7 @@ package com.wepay.waltz.client.internal;
 
 import com.wepay.riff.network.ClientSSL;
 import com.wepay.riff.util.PortFinder;
+import com.wepay.waltz.client.WaltzClientCallbacks;
 import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.server.WaltzServerConfig;
 import com.wepay.waltz.store.Store;
@@ -84,8 +85,12 @@ public class InternalClientTestBase {
 
     protected MockWaltzClientCallbacks getCallbacks() {
         MockWaltzClientCallbacks callbacks = new MockWaltzClientCallbacks();
-        callbacks.setClientHighWaterMark(0, -1L).setClientHighWaterMark(1, -1L).setClientHighWaterMark(2, -1L);
+        initClientHighWaterMarks(callbacks);
         return callbacks;
+    }
+
+    protected void initClientHighWaterMarks(MockWaltzClientCallbacks callbacks) {
+        callbacks.setClientHighWaterMark(0, -1L).setClientHighWaterMark(1, -1L).setClientHighWaterMark(2, -1L);
     }
 
     protected InternalRpcClient getInternalRpcClient(int maxConcurrentTransactions) {
@@ -99,8 +104,22 @@ public class InternalClientTestBase {
         return internalRpcClient;
     }
 
-    protected InternalStreamClient getInternalStreamClient(boolean autoMount, int maxConcurrentTransactions, InternalRpcClient rpcClient) {
-        InternalStreamClient internalStreamClient = new InternalStreamClient(autoMount, clientSslCtx, maxConcurrentTransactions, getCallbacks(), rpcClient, null);
+    protected InternalStreamClient getInternalStreamClient(
+        boolean autoMount,
+        int maxConcurrentTransactions,
+        InternalRpcClient rpcClient
+    ) {
+        return getInternalStreamClient(autoMount, maxConcurrentTransactions, rpcClient, getCallbacks());
+    }
+
+    protected InternalStreamClient getInternalStreamClient(
+        boolean autoMount,
+        int maxConcurrentTransactions,
+        InternalRpcClient rpcClient,
+        WaltzClientCallbacks callbacks
+    ) {
+        InternalStreamClient internalStreamClient =
+            new InternalStreamClient(autoMount, clientSslCtx, maxConcurrentTransactions, callbacks, rpcClient, null);
         clients.add(internalStreamClient);
 
         internalStreamClient.setClientId(clientId.incrementAndGet());
