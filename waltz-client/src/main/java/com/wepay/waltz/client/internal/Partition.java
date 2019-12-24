@@ -333,8 +333,10 @@ public class Partition {
                         networkClientCallbacks.onTransactionReceived(transactionId, header, reqId);
 
                     } catch (Throwable ex) {
-                        // Transaction application failed. Save the context for retry.
-                        transactionApplicationFailed.put(reqId, context);
+                        if (context != null) {
+                            // Transaction application failed. Save the context for retry.
+                            transactionApplicationFailed.put(reqId, context);
+                        }
                         throw ex;
                     }
 

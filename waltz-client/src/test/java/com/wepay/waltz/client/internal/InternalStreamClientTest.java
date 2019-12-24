@@ -211,20 +211,23 @@ public class InternalStreamClientTest extends InternalClientTestBase {
                 MockContext context = MockContext.builder().header(0).data(data).build();
                 TransactionFuture future = null;
 
-                while (future == null) {
-                    TransactionBuilderImpl transactionBuilder = internalStreamClient.getTransactionBuilder(context);
-                    context.execute(transactionBuilder);
-                    future = internalStreamClient.append(transactionBuilder.buildRequest(), context);
+                try {
+                    while (future == null) {
+                        TransactionBuilderImpl transactionBuilder = internalStreamClient.getTransactionBuilder(context);
+                        context.execute(transactionBuilder);
+                        future = internalStreamClient.append(transactionBuilder.buildRequest(), context);
 
-                    try {
                         if (future.get()) {
                             break;
+                        } else {
+                            // A write failure may have caused by connection loss induced by transaction application
+                            // failure. Retry.
+                            future = null;
                         }
-                    } catch (Exception ex) {
-                        // Connection loss was induced by transaction application failure,
-                        // and it caused a write failure. Retry.
-                        future = null;
                     }
+                } catch (Exception ex) {
+                    // This is an unexpected exception. Propagate it thorough applicationFuture.
+                    context.applicationFuture.completeExceptionally(ex);
                 }
 
                 applicationFutures.add(context.applicationFuture);
@@ -233,6 +236,8 @@ public class InternalStreamClientTest extends InternalClientTestBase {
 
         thread.start();
         thread.join();
+
+        assertEquals(numTransactions, applicationFutures.size());
 
         for (CompletableFuture<Boolean> future : applicationFutures) {
             assertTrue(future.get(TIMEOUT, TimeUnit.MILLISECONDS));
