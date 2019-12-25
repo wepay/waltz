@@ -92,16 +92,23 @@ public class AbstractClientCallbacksForJDBCTest {
             @Override
             protected void applyTransaction(Transaction transaction, Connection connection) throws SQLException {
                 if (executionCount.incrementAndGet() < MAX_ATTEMPTS) {
+                    // SQLException is caught by AbstractClientCallbacksForJDBC.applyTransaction(Transaction).
+                    // This method, applyTransaction(Transaction, Connection), will be retried.
                     throw new SQLException("test");
-                } else {
+
+                } else if (executionCount.get() == MAX_ATTEMPTS) {
+                    // This exception is not caught by AbstractClientCallbacksForJDBC.applyTransaction(Transaction),
+                    // thus, uncaughtException will be called.
                     throw new RuntimeException("test");
+
+                } else {
+                    latch.countDown();
                 }
             }
 
             @Override
             public void uncaughtException(int partitionId, long transactionId, Throwable exception) {
                 failureCount.incrementAndGet();
-                latch.countDown();
             }
         };
 
@@ -111,7 +118,7 @@ public class AbstractClientCallbacksForJDBCTest {
 
         latch.await();
 
-        assertEquals(MAX_ATTEMPTS, executionCount.get());
+        assertEquals(MAX_ATTEMPTS + 1, executionCount.get());
         assertEquals(1, failureCount.get());
     }
 

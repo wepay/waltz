@@ -188,6 +188,7 @@ final class MockClientPartition {
 
         private final MessageReader messageReader;
         private final RpcClient rpcClient;
+        private final Map<ReqId, TransactionContext> transactionApplicationFailed = new HashMap<>();
 
         private boolean suspended = false;
 
@@ -240,31 +241,46 @@ final class MockClientPartition {
                 if (message instanceof FeedData) {
                     FeedData feedData = (FeedData) message;
 
-                    if (feedData.transactionId == clientHighWaterMark.get() + 1) {
-                        TransactionContext context = transactionMonitor.committed(feedData.reqId);
+                    while (true) {
+                        if (feedData.transactionId == clientHighWaterMark.get() + 1) {
+                            TransactionContext context = transactionMonitor.committed(feedData.reqId);
 
-                        if (context != null) {
-                            context.onCompletion(true);
-                        }
+                            if (context != null) {
+                                context.onCompletion(true);
+                            } else {
+                                context = transactionApplicationFailed.remove(feedData.reqId);
+                            }
 
-                        Transaction transaction = new Transaction(
-                            feedData.transactionId,
-                            feedData.header,
-                            feedData.reqId,
-                            rpcClient
-                        );
+                            Transaction transaction = new Transaction(
+                                feedData.transactionId,
+                                feedData.header,
+                                feedData.reqId,
+                                rpcClient
+                            );
 
-                        try {
-                            callbacks.applyTransaction(transaction);
-                            clientHighWaterMark.incrementAndGet();
+                            try {
+                                callbacks.applyTransaction(transaction);
+                                clientHighWaterMark.incrementAndGet();
+
+                            } catch (Exception ex) {
+                                if (context != null) {
+                                    transactionApplicationFailed.put(transaction.reqId, context);
+                                }
+
+                                try {
+                                    callbacks.uncaughtException(transaction.reqId.partitionId(), transaction.transactionId, ex);
+                                } catch (Throwable t) {
+                                    // Ignore
+                                }
+
+                                continue;
+                            }
 
                             if (context != null) {
                                 context.onApplication();
                             }
-
-                        } catch (Exception ex) {
-                            callbacks.uncaughtException(transaction.reqId.partitionId(), transaction.transactionId, ex);
                         }
+                        break;
                     }
 
                 } else if (message instanceof FlushResponse) {
