@@ -103,4 +103,12 @@ public class StoreImpl implements Store {
         return replicaSessionManager.getReplicaIds();
     }
 
+    /**
+     * Returns {@link ConnectionConfig}
+     * @return {@code ConnectionConfig}
+     */
+    public ConnectionConfig getConnectionConfig() {
+        return replicaSessionManager.getConnectionConfig();
+    }
+
 }

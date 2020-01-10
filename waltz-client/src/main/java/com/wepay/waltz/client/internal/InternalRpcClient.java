@@ -2,8 +2,14 @@ package com.wepay.waltz.client.internal;
 
 import com.wepay.waltz.client.WaltzClientCallbacks;
 import com.wepay.waltz.client.internal.network.WaltzNetworkClient;
+import com.wepay.zktools.clustermgr.Endpoint;
 import io.netty.handler.ssl.SslContext;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 /**
@@ -60,4 +66,32 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
         return getPartition(partitionId).getHighWaterMark();
     }
 
+    /**
+     * Checks the connectivity
+     * 1. to the given server endpoints and also
+     * 2. from each server endpoint to the storage nodes within the cluster.
+     * Waits for all the completable futures to complete.
+     *
+     * @param serverEndpoints Set of server endpoints.
+     * @return a combined completable future with the connection status per server endpoint.
+     */
+    @Override
+    public CompletableFuture<Map<Endpoint, Map<String, Boolean>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
+        Map<Endpoint, CompletableFuture<Optional<Map<String, Boolean>>>> futures = new HashMap<>();
+
+        for (Endpoint endpoint : serverEndpoints) {
+            WaltzNetworkClient networkClient = getNetworkClient(endpoint);
+            CompletableFuture<Optional<Map<String, Boolean>>> future = networkClient.checkServerToStorageConnectivity();
+            futures.put(endpoint, future);
+        }
+
+        return CompletableFuture.allOf(futures.values().toArray(new CompletableFuture[futures.size()]))
+            .thenApply(v -> {
+                Map<Endpoint, Map<String, Boolean>> connectivityStatusMap = new HashMap<>();
+                futures.forEach(((endpoint, future) ->
+                    connectivityStatusMap.put(endpoint,
+                        future.join().isPresent() ? future.join().get() : null)));
+                return connectivityStatusMap;
+            });
+    }
 }

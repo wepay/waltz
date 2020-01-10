@@ -50,7 +50,6 @@ public class ClientCliTest {
 
     @Test
     public void testSubmit() throws Exception {
-        int numActivePartitions = 1;
         Properties properties = new Properties();
         properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/client/cli/test");
 
@@ -190,4 +189,5 @@ public class ClientCliTest {
             StorageCli.testMain(args);
         }
     }
+
 }

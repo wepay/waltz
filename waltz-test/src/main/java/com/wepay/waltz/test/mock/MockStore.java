@@ -3,8 +3,10 @@ package com.wepay.waltz.test.mock;
 import com.wepay.waltz.store.Store;
 import com.wepay.waltz.store.StorePartition;
 import com.wepay.waltz.common.metadata.ReplicaId;
+import com.wepay.waltz.store.internal.ConnectionConfig;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
 
 public class MockStore implements Store {
@@ -29,7 +31,10 @@ public class MockStore implements Store {
     }
 
     public Set<ReplicaId> getReplicaIds() {
-        throw new UnsupportedOperationException();
+        return new HashSet<>();
     }
 
+    public ConnectionConfig getConnectionConfig() {
+        throw new UnsupportedOperationException();
+    }
 }

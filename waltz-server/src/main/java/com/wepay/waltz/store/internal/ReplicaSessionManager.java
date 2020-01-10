@@ -97,6 +97,16 @@ public class ReplicaSessionManager {
         }
     }
 
+    /**
+     * Returns {@link ConnectionConfig}
+     * @return {@code ConnectionConfig}
+     */
+    public ConnectionConfig getConnectionConfig() {
+        synchronized (this) {
+            return config;
+        }
+    }
+
     protected ReplicaConnectionFactory createReplicaConnectionFactory(String connectString, ConnectionConfig config) {
         return new ReplicaConnectionFactoryImpl(connectString, config);
     }

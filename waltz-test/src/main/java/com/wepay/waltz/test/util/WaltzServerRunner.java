@@ -113,4 +113,14 @@ public class WaltzServerRunner extends Runner<WaltzServer> {
 
         return new StoreImpl(zkClient, storeRoot, config);
     }
+
+    public void closeNetworkServer() {
+        try {
+            if (server != null) {
+                server.closeNetworkServer();
+            }
+        } catch (Exception ex) {
+            logger.error("failed to close the network server", ex);
+        }
+    }
 }

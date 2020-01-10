@@ -5,6 +5,7 @@ import com.wepay.riff.network.MessageProcessingThreadPool;
 import com.wepay.riff.network.NetworkClient;
 import com.wepay.riff.util.Logging;
 import com.wepay.waltz.client.internal.Partition;
+import com.wepay.waltz.common.message.CheckStorageConnectivityRequest;
 import com.wepay.waltz.common.message.FeedRequest;
 import com.wepay.waltz.common.message.HighWaterMarkRequest;
 import com.wepay.waltz.common.message.LockFailure;
@@ -20,6 +21,10 @@ import org.slf4j.Logger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A {@link NetworkClient} implementation for waltz clients to communicate with Waltz cluster.
@@ -41,6 +46,7 @@ public class WaltzNetworkClient extends NetworkClient {
 
     private boolean channelReady = false;
     private volatile boolean running = true;
+    private AtomicReference<CompletableFuture<Optional<Map<String, Boolean>>>> checkConnectivityRef;
 
     /**
      * Class Constructor.
@@ -68,10 +74,15 @@ public class WaltzNetworkClient extends NetworkClient {
         this.networkClientCallbacks = networkClientCallbacks;
         this.messageProcessingThreadPool = messageProcessingThreadPool;
         this.partitions = new HashMap<>();
+        this.checkConnectivityRef = new AtomicReference<>();
     }
 
     /**
-     * Shuts down this instance by un-mounting all partitions and setting {@link #running} to {@code false}.
+     * Shuts down this instance by
+     *  - un-mounting all partitions,
+     *  - setting {@link #running} to {@code false} and
+     *  - completing the {@link #checkConnectivityRef}.future (with empty value) if its not already complete. This
+     *  might be called if the server is down or if there is any network error.
      */
     @Override
     protected void shutdown() {
@@ -83,6 +94,13 @@ public class WaltzNetworkClient extends NetworkClient {
 
                 for (Partition partition : partitions.values()) {
                     partition.unmounted(this);
+                }
+
+                CompletableFuture<Optional<Map<String, Boolean>>> future = checkConnectivityRef.get();
+                if (future != null) {
+                    if (checkConnectivityRef.compareAndSet(future, null)) {
+                        future.complete(Optional.empty());
+                    }
                 }
             }
         }
@@ -181,10 +199,38 @@ public class WaltzNetworkClient extends NetworkClient {
         }
     }
 
+    /**
+     * Checks server to storage connectivity.
+     *
+     * Note: There is a possibility that the channel may not be up when this method gets triggered. In that case,
+     * CHECK_STORAGE_CONNECTIVITY_REQUEST is resent once the channel is active.
+     *
+     * @return Completable future with the connectivity status to the storage nodes within the cluster.
+     */
+    public CompletableFuture<Optional<Map<String, Boolean>>> checkServerToStorageConnectivity() {
+        while (true) {
+            CompletableFuture<Optional<Map<String, Boolean>>> future = checkConnectivityRef.get();
+            if (future != null) {
+                return future;
+            } else {
+                future = new CompletableFuture<>();
+                if (checkConnectivityRef.compareAndSet(null, future)) {
+                    sendCheckStorageConnectivityRequest();
+                    return future;
+                }
+            }
+        }
+    }
+
     @Override
     protected MessageHandler getMessageHandler() {
         WaltzClientHandlerCallbacks handlerCallbacks = new WaltzClientHandlerCallbacksImpl();
         return new WaltzClientHandler(handlerCallbacks, messageProcessingThreadPool);
+    }
+
+    private void sendCheckStorageConnectivityRequest() {
+        ReqId dummyReqId = new ReqId(clientId, 0, 0, 0);
+        sendMessage(new CheckStorageConnectivityRequest(dummyReqId));
     }
 
     private Partition getPartition(int partitionId) {
@@ -202,6 +248,11 @@ public class WaltzNetworkClient extends NetworkClient {
                 // Actually starting to mount partitions. Call onMountingPartition
                 for (Partition partition : partitions.values()) {
                     networkClientCallbacks.onMountingPartition(WaltzNetworkClient.this, partition);
+                }
+
+                // re-send the check storage connectivity request if waiting for the response.
+                if (checkConnectivityRef.get() != null) {
+                    sendCheckStorageConnectivityRequest();
                 }
             }
         }
@@ -341,6 +392,20 @@ public class WaltzNetworkClient extends NetworkClient {
             } else {
                 if (logger.isDebugEnabled()) {
                     logger.debug("partition not found: event=onHighWaterMarkReceived partitionId=" + partitionId);
+                }
+            }
+        }
+
+        /**
+         * Handles the check connectivity response message received.
+         * @param storageConnectivityMap Connectivity status map of all storage nodes within the cluster.
+         */
+        @Override
+        public void onCheckStorageConnectivityResponseReceived(Map<String, Boolean> storageConnectivityMap) {
+            CompletableFuture<Optional<Map<String, Boolean>>> future = checkConnectivityRef.get();
+            if (future != null) {
+                if (checkConnectivityRef.compareAndSet(future, null)) {
+                    future.complete(Optional.of(storageConnectivityMap));
                 }
             }
         }

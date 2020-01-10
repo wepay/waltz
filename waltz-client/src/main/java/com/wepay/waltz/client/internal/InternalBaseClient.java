@@ -392,7 +392,7 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         }
     }
 
-    private WaltzNetworkClient getNetworkClient(Endpoint endpoint) {
+    protected WaltzNetworkClient getNetworkClient(Endpoint endpoint) {
         WaltzNetworkClient networkClient = networkClients.get(endpoint);
         if (networkClient == null) {
             networkClient = new WaltzNetworkClient(clientId, endpoint, sslCtx, 0, this, messageProcessingThreadPool);
