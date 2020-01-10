@@ -13,7 +13,7 @@ project.ext {
     junitVersion = '4.11'
     assertjVersion = '3.8.0'
     mockitoVersion = '2.23.0'
-    nettyVersion = '4.1.15.Final'
+    nettyVersion = '4.1.44.Final'
     slf4jVersion = '1.7.21'
     zkToolsVersion = '0.5.0'
     jacksonVersion = '2.9.6'
