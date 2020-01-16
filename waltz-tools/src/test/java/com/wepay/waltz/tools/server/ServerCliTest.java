@@ -1,9 +1,11 @@
 package com.wepay.waltz.tools.server;
 
 import com.wepay.waltz.test.util.IntegrationTestHelper;
+import com.wepay.waltz.test.util.SeparateClassLoaderJUnitRunner;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -12,6 +14,7 @@ import java.util.Properties;
 
 import static junit.framework.TestCase.assertTrue;
 
+@RunWith(SeparateClassLoaderJUnitRunner.class)
 public final class ServerCliTest {
 
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();

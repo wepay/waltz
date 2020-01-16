@@ -381,6 +381,7 @@ project(':waltz-test') {
             project(':waltz-storage'),
             project(':waltz-tools'),
 
+            "junit:junit:$junitVersion",
             "com.wepay.zktools:zktools:$zkToolsVersion",
             "io.netty:netty-all:$nettyVersion"
         )
