@@ -19,7 +19,7 @@ public class Locks {
     private final BitSet locks;
     private final int numHashFuncs;
 
-    private int numActiveLocks = 0;
+    private int numActiveLockRequests = 0;
 
     /**
      * Class contsructor.
@@ -37,15 +37,16 @@ public class Locks {
     /**
      * Returns True if the locks doesn't overlap with the locks that are currently in use, otherwise returns False.
      * Also acquires the write locks while returning True.
-     * @param request List of write locks and read locks to use.
+     * @param request Locks to use.
      * @return True if the locks doesn't overlap with the locks that are currently in use, otherwise returns False.
      */
     public boolean begin(LockRequest request) {
         synchronized (locks) {
-            if (begin(request.writeLocks) && begin(request.readLocks)) {
-                // Mark entries for write locks
+            if (begin(request.writeLocks) && begin(request.readLocks) && begin(request.appendLocks)) {
+                // Mark entries for write locks and append locks
                 mark(request.writeLocks);
-                numActiveLocks++;
+                mark(request.appendLocks);
+                numActiveLockRequests++;
                 return true;
             } else {
                 return false;
@@ -74,7 +75,8 @@ public class Locks {
     public void end(LockRequest request) {
         synchronized (locks) {
             unmark(request.writeLocks);
-            numActiveLocks--;
+            unmark(request.appendLocks);
+            numActiveLockRequests--;
         }
     }
 
@@ -100,7 +102,7 @@ public class Locks {
 
     /**
      * Returns the estimated transaction ID of the last successful transaction for the given lock.
-     * @param request Lock for which last successful transaction ID is to be determined.
+     * @param request Locks for which last successful transaction ID is to be determined.
      * @return the estimated transaction ID of the last successful transaction for the given lock.
      */
     public long getLockHighWaterMark(LockRequest request) {
@@ -129,11 +131,16 @@ public class Locks {
 
     /**
      * Updates the transaction ID in the locks table.
-     * @param request The write locks for which the transaction ID has to be updated.
+     * @param request Locks for which the transaction ID has to be updated.
      * @param transactionId The new transaction ID of the lock.
      */
     public void commit(LockRequest request, long transactionId) {
-        for (int hash : request.writeLocks) {
+        commit(request.writeLocks, transactionId);
+        commit(request.appendLocks, transactionId);
+    }
+
+    private void commit(int[] locks, long transactionId) {
+        for (int hash : locks) {
             for (int i = 0; i < numHashFuncs; i++) {
                 // linear congruential generator
                 hash = nextHash(hash);
@@ -150,7 +157,7 @@ public class Locks {
         synchronized (locks) {
             Arrays.fill(highWaterMarks, defaultHighWaterMark);
             locks.clear();
-            numActiveLocks = 0;
+            numActiveLockRequests = 0;
         }
     }
 
@@ -160,7 +167,7 @@ public class Locks {
      */
     public int numActiveLocks() {
         synchronized (locks) {
-            return numActiveLocks;
+            return numActiveLockRequests;
         }
     }
 
@@ -177,10 +184,11 @@ public class Locks {
      * Returns the lock request which contains an array of write locks and read locks.
      * @param writeLocks Array of write locks to use.
      * @param readLocks Array of read locks to use.
+     * @param appendLocks Array of read locks to use.
      * @return the lock request which contains an array of write locks and read locks.
      */
-    public static LockRequest createRequest(int[] writeLocks, int[] readLocks) {
-        return new LockRequest(writeLocks, readLocks);
+    public static LockRequest createRequest(int[] writeLocks, int[] readLocks, int[] appendLocks) {
+        return new LockRequest(writeLocks, readLocks, appendLocks);
     }
 
     /**
@@ -189,10 +197,12 @@ public class Locks {
     public static class LockRequest {
         private final int[] writeLocks;
         private final int[] readLocks;
+        private final int[] appendLocks;
 
-        LockRequest(int[] writeLocks, int[] readLocks) {
+        LockRequest(int[] writeLocks, int[] readLocks, int[] appendLocks) {
             this.writeLocks = writeLocks;
             this.readLocks = readLocks;
+            this.appendLocks = appendLocks;
         }
     }
 

@@ -18,6 +18,7 @@ public class TransactionBuilderImplTest {
             .data("good transaction")
             .writeLocks(1, 2, 3)
             .readLocks(4, 5, 6)
+            .appendLocks(7, 8, 9)
             .build();
 
         TransactionBuilderImpl builder = new TransactionBuilderImpl(new ReqId(111, 222, 333, 444), 999);
@@ -43,8 +44,15 @@ public class TransactionBuilderImplTest {
             MockContext.makeLock(6).hashCode()
         };
 
+        int[] expectedAppendLockRequest = new int[]{
+            MockContext.makeLock(7).hashCode(),
+            MockContext.makeLock(8).hashCode(),
+            MockContext.makeLock(9).hashCode()
+        };
+
         assertArrayEquals(expectedWriteLockRequest, request.writeLockRequest);
         assertArrayEquals(expectedReadLockRequest, request.readLockRequest);
+        assertArrayEquals(expectedAppendLockRequest, request.appendLockRequest);
     }
 
 }

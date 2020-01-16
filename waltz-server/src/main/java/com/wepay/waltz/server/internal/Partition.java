@@ -532,7 +532,7 @@ public class Partition {
             } else {
                 AppendRequest request = context.request;
 
-                Locks.LockRequest lockRequest = Locks.createRequest(request.writeLockRequest, request.readLockRequest);
+                Locks.LockRequest lockRequest = Locks.createRequest(request.writeLockRequest, request.readLockRequest, request.appendLockRequest);
                 // Begin locking
                 while (!locks.begin(lockRequest)) {
                     if (storePartition.numPendingAppends() == 0) {

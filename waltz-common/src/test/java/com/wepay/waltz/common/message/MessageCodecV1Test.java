@@ -16,21 +16,22 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-public class MessageCodecV0Test {
+public class MessageCodecV1Test {
 
-    private final MessageCodecV0 codec = new MessageCodecV0();
+    private final MessageCodecV1 codec = new MessageCodecV1();
     private final Random rand = new Random();
 
     @Test
     public void test() {
-        assertEquals(0, codec.version());
+        assertEquals(1, codec.version());
 
-        int[] lockRequest = lock();
+        int[] writeLockRequest = lock();
+        int[] readLockRequest = lock();
         int header = rand.nextInt();
         byte[] data;
 
         data = data();
-        AppendRequest appendRequest1 = new AppendRequest(reqId(), rand.nextLong(), lockRequest, new int[0], new int[0], header, data, Utils.checksum(data));
+        AppendRequest appendRequest1 = new AppendRequest(reqId(), rand.nextLong(), writeLockRequest, readLockRequest, new int[0], header, data, Utils.checksum(data));
         AppendRequest appendRequest2 = encodeThenDecode(appendRequest1);
         assertEquals(MessageType.APPEND_REQUEST, appendRequest1.type());
         assertEquals(appendRequest1.type(), appendRequest2.type());
@@ -138,22 +139,8 @@ public class MessageCodecV0Test {
     }
 
     @Test(expected = UnsupportedOperationException.class)
-    public void testUnsupported1() {
-        assertEquals(0, codec.version());
-
-        int[] readLocks = {1};
-        int header = rand.nextInt();
-        byte[] data;
-
-        data = data();
-        AppendRequest appendRequest = new AppendRequest(reqId(), rand.nextLong(), new int[0], readLocks, new int[0], header, data, Utils.checksum(data));
-        ByteArrayMessageAttributeWriter writer = new ByteArrayMessageAttributeWriter();
-        codec.encode(appendRequest, writer);
-    }
-
-    @Test(expected = UnsupportedOperationException.class)
-    public void testUnsupported2() {
-        assertEquals(0, codec.version());
+    public void testUnsupported() {
+        assertEquals(1, codec.version());
 
         int[] appendLocks = {1};
         int header = rand.nextInt();

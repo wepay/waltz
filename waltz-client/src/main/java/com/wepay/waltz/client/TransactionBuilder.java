@@ -37,4 +37,11 @@ public interface TransactionBuilder {
      */
     void setReadLocks(List<PartitionLocalLock> partitionLocalLocks);
 
+    /**
+     * Sets optimistic append locks.
+     *
+     * @param partitionLocalLocks a list of {@link PartitionLocalLock}
+     */
+    void setAppendLocks(List<PartitionLocalLock> partitionLocalLocks);
+
 }

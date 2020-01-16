@@ -593,7 +593,7 @@ public class PartitionTest {
         for (int i = 0; i < numTransactions; i++) {
             byte[] data = data();
             partition.receiveMessage(
-                new AppendRequest(reqId(partitionClient.clientId()), -1L, NO_LOCK, NO_LOCK, HEADER, data, Utils.checksum(data)),
+                new AppendRequest(reqId(partitionClient.clientId()), -1L, NO_LOCK, NO_LOCK, NO_LOCK, HEADER, data, Utils.checksum(data)),
                 partitionClient
             );
         }
