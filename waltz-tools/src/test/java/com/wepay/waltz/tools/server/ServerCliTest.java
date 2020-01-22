@@ -1,6 +1,7 @@
 package com.wepay.waltz.tools.server;
 
 import com.wepay.waltz.test.util.IntegrationTestHelper;
+import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,6 +39,9 @@ public final class ServerCliTest {
         properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, "3");
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
 
+        String metricGroup = "waltz-server-" + UUID.randomUUID().toString();
+        properties.setProperty(IntegrationTestHelper.Config.METRIC_GROUP, metricGroup);
+
         IntegrationTestHelper helper = new IntegrationTestHelper(properties);
         int jettyPort = helper.getServerJettyPort();
 
@@ -48,7 +52,9 @@ public final class ServerCliTest {
             String[] args = {
                     "list",
                     "--server",
-                    helper.getHost() + ":" + jettyPort
+                    helper.getHost() + ":" + jettyPort,
+                    "--metric_group",
+                    metricGroup
             };
             ServerCli.testMain(args);
             String expectedCmdOutput = "There are " + helper.getNumPartitions() + " partitions for current server";

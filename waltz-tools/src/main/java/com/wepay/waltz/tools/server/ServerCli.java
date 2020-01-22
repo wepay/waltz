@@ -34,8 +34,9 @@ public final class ServerCli extends SubcommandCli {
      */
     private static final class ListPartition extends Cli {
         private static final String PATH = "metrics";
-        private static final String SERVER_PARTITION_METRIC_KEY = "waltz-server.waltz-server-num-partitions";
-        private static final String SERVER_REPLICA_METRIC_KEY = "waltz-server.replica-info";
+        private static final String DEFAULT_SERVER_METRIC_GROUP = "waltz-server";
+        private static final String SERVER_PARTITION_METRIC_KEY = "waltz-server-num-partitions";
+        private static final String SERVER_REPLICA_METRIC_KEY = "replica-info";
         private final ObjectMapper mapper = new ObjectMapper();
 
         protected static final String NAME = "list";
@@ -52,13 +53,22 @@ public final class ServerCli extends SubcommandCli {
                     .desc("Specify server in format of host:port, where port is the jetty port")
                     .hasArg()
                     .build();
+
+            Option metricGroupOption = Option.builder("m")
+                    .longOpt("metric_group")
+                    .desc("Specify the metrics group from where client needs to pull metrics information")
+                    .hasArg()
+                    .build();
             serverOption.setRequired(true);
+            metricGroupOption.setRequired(false);
             options.addOption(serverOption);
+            options.addOption(metricGroupOption);
         }
 
         @Override
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             String hostAndPort = cmd.getOptionValue("server");
+            String metricsGroup = cmd.getOptionValue("metric_group", DEFAULT_SERVER_METRIC_GROUP);
 
             try {
                 String[] hostAndPortArray = hostAndPort.split(":");
@@ -73,14 +83,17 @@ public final class ServerCli extends SubcommandCli {
                 Integer numPartitions = 0;
                 Map<Integer, List<String>> replicaInfo = new HashMap<>();
 
-                if (metricsNode.path(SERVER_PARTITION_METRIC_KEY) != null) {
+                String metricKeyPath = metricsGroup + "." + SERVER_PARTITION_METRIC_KEY;
+
+                if (metricsNode.path(metricKeyPath) != null) {
                     // retrieve server partition info
-                    numPartitions = metricsNode.path(SERVER_PARTITION_METRIC_KEY).path("value").asInt();
+                    numPartitions = metricsNode.path(metricKeyPath).path("value").asInt();
                 }
 
-                if (metricsNode.path(SERVER_REPLICA_METRIC_KEY) != null) {
+                String metricReplicaKey = metricsGroup + "." + SERVER_REPLICA_METRIC_KEY;
+                if (metricsNode.path(metricReplicaKey) != null) {
                     // retrieve replica info
-                    String connectStringsJson = metricsNode.path(SERVER_REPLICA_METRIC_KEY).path("value").toString();
+                    String connectStringsJson = metricsNode.path(metricReplicaKey).path("value").toString();
                     replicaInfo = mapper.readValue(connectStringsJson, new TypeReference<Map<Integer, List<String>>>() {
                     });
                 }

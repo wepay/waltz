@@ -535,6 +535,7 @@ public class IntegrationTestHelper {
         public static final String NUM_STORAGES = "numStorages";
         public static final String ZK_SESSION_TIMEOUT = "zookeeper.sessionTimeout";
         public static final String ZNODE_PATH = "zookeeper.znodePath";
+        public static final String METRIC_GROUP = "metric.group";
     }
 
 }

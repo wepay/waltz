@@ -3,6 +3,7 @@ package com.wepay.waltz.server;
 import com.wepay.riff.config.ConfigException;
 import com.wepay.riff.config.validator.UniqueValidator;
 import com.wepay.riff.config.validator.Validator;
+import com.wepay.riff.metrics.core.MetricGroup;
 import com.wepay.riff.metrics.graphite.GraphiteReporterConfig;
 import com.wepay.riff.network.SSLConfig;
 import com.wepay.riff.config.AbstractConfig;
@@ -89,6 +90,8 @@ public class WaltzServerConfig extends AbstractConfig {
     /** Waltz server jetty port. */
     public static final String SERVER_JETTY_PORT = "server.jetty.port";
 
+    public static final String METRIC_GROUP = "metric.group";
+
     /**
      * Class constructor.
      * @param configValues Configuration values.
@@ -137,6 +140,9 @@ public class WaltzServerConfig extends AbstractConfig {
 
             // Jetty
             put(SERVER_JETTY_PORT, intParser.withValidator(portValidator));
+
+            // Metrics
+            put(METRIC_GROUP, stringParser.withDefault(MetricGroup.WALTZ_SERVER_METRIC_GROUP));
         }});
     }
 

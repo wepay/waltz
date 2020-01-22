@@ -3,7 +3,6 @@ package com.wepay.waltz.server;
 import com.wepay.riff.config.ConfigException;
 import com.wepay.riff.metrics.core.Gauge;
 import com.wepay.riff.metrics.core.Meter;
-import com.wepay.riff.metrics.core.MetricGroup;
 import com.wepay.riff.metrics.core.MetricRegistry;
 import com.wepay.riff.metrics.graphite.GraphiteReporter;
 import com.wepay.riff.metrics.graphite.GraphiteReporterConfig;
@@ -86,7 +85,7 @@ public class WaltzServer {
     private final NetworkServer networkServer;
     private final Endpoint endpoint;
     private final Map<Integer, Partition> partitions;
-    private final String metricsGroup = MetricGroup.WALTZ_SERVER_METRIC_GROUP;
+    private final String metricsGroup;
     private String clusterName = null;
     private int serverId;
     private Server jettyServer;
@@ -125,6 +124,8 @@ public class WaltzServer {
         }
 
         this.store = store;
+
+        metricsGroup = (String) config.get(WaltzServerConfig.METRIC_GROUP);
 
         Meter feedCacheMissMeter = REGISTRY.meter(metricsGroup, "feed-cache-miss");
 
