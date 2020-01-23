@@ -10,13 +10,12 @@ import com.wepay.waltz.exception.RpcException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MessageCodecV1 implements MessageCodec {
+public class MessageCodecV2 implements MessageCodec {
 
-    public static final short VERSION = 1;
-    public static final MessageCodecV1 INSTANCE = new MessageCodecV1();
+    public static final short VERSION = 2;
+    public static final MessageCodecV2 INSTANCE = new MessageCodecV2();
 
     private static final byte MAGIC_BYTE = 'L';
-    private static final int[] NO_LOCKS = new int[0];
 
     @Override
     public byte magicByte() {
@@ -52,11 +51,21 @@ public class MessageCodecV1 implements MessageCodec {
                 transactionId = reader.readLong(); // client High-water mark
                 int[] writeLockRequest = reader.readIntArray();
                 int[] readLockRequest = reader.readIntArray();
+                int[] appendLockRequest = reader.readIntArray();
                 header = reader.readInt();
                 data = reader.readByteArray();
                 checksum = reader.readInt();
                 Utils.verifyChecksum(messageType, data, checksum);
-                return new AppendRequest(reqId, transactionId, writeLockRequest, readLockRequest, NO_LOCKS, header, data, checksum);
+                return new AppendRequest(
+                    reqId,
+                    transactionId,
+                    writeLockRequest,
+                    readLockRequest,
+                    appendLockRequest,
+                    header,
+                    data,
+                    checksum
+                );
 
             case MessageType.FEED_REQUEST:
                 transactionId = reader.readLong(); // client High-water mark
@@ -140,16 +149,10 @@ public class MessageCodecV1 implements MessageCodec {
 
             case MessageType.APPEND_REQUEST:
                 AppendRequest appendRequest = (AppendRequest) msg;
-
-                if (appendRequest.appendLockRequest.length > 0) {
-                    throw new UnsupportedOperationException(
-                        "append locks not supported, upgrade servers"
-                    );
-                }
-
                 writer.writeLong(appendRequest.clientHighWaterMark);
                 writer.writeIntArray(appendRequest.writeLockRequest);
                 writer.writeIntArray(appendRequest.readLockRequest);
+                writer.writeIntArray(appendRequest.appendLockRequest);
                 writer.writeInt(appendRequest.header);
                 writer.writeByteArray(appendRequest.data);
                 writer.writeInt(appendRequest.checksum);

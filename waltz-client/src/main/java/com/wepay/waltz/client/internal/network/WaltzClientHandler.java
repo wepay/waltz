@@ -13,6 +13,7 @@ import com.wepay.waltz.common.message.HighWaterMarkResponse;
 import com.wepay.waltz.common.message.LockFailure;
 import com.wepay.waltz.common.message.MessageCodecV0;
 import com.wepay.waltz.common.message.MessageCodecV1;
+import com.wepay.waltz.common.message.MessageCodecV2;
 import com.wepay.waltz.common.message.MessageType;
 import com.wepay.waltz.common.message.MountRequest;
 import com.wepay.waltz.common.message.MountResponse;
@@ -35,6 +36,7 @@ public class WaltzClientHandler extends MessageHandler {
     static {
         CODECS.put(MessageCodecV0.VERSION, MessageCodecV0.INSTANCE);
         CODECS.put(MessageCodecV1.VERSION, MessageCodecV1.INSTANCE);
+        CODECS.put(MessageCodecV2.VERSION, MessageCodecV2.INSTANCE);
     }
 
     private static final String HELLO_MESSAGE = "Waltz Client";

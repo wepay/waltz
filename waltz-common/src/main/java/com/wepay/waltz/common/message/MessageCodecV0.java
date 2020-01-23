@@ -13,7 +13,7 @@ public class MessageCodecV0 implements MessageCodec {
     public static final MessageCodecV0 INSTANCE = new MessageCodecV0();
 
     private static final byte MAGIC_BYTE = 'L';
-    private static final int[] NO_READ_LOCKS = new int[0];
+    private static final int[] NO_LOCKS = new int[0];
 
     @Override
     public byte magicByte() {
@@ -52,7 +52,7 @@ public class MessageCodecV0 implements MessageCodec {
                 data = reader.readByteArray();
                 checksum = reader.readInt();
                 Utils.verifyChecksum(messageType, data, checksum);
-                return new AppendRequest(reqId, transactionId, writeLockRequest, NO_READ_LOCKS, header, data, checksum);
+                return new AppendRequest(reqId, transactionId, writeLockRequest, NO_LOCKS, NO_LOCKS, header, data, checksum);
 
             case MessageType.FEED_REQUEST:
                 transactionId = reader.readLong(); // client High-water mark
@@ -129,6 +129,11 @@ public class MessageCodecV0 implements MessageCodec {
                 if (appendRequest.readLockRequest.length > 0) {
                     throw new UnsupportedOperationException(
                         "read locks not supported, upgrade servers"
+                    );
+                }
+                if (appendRequest.appendLockRequest.length > 0) {
+                    throw new UnsupportedOperationException(
+                        "append locks not supported, upgrade servers"
                     );
                 }
 

@@ -20,7 +20,7 @@ public class LocksTest {
 
         // A write lock
         for (int i = 0; i < 10; i++) {
-            lockRequest = Locks.createRequest(array(rand.nextInt(Integer.MAX_VALUE)), noLocks);
+            lockRequest = Locks.createRequest(array(rand.nextInt(Integer.MAX_VALUE)), noLocks, noLocks);
 
             assertTrue(locks.begin(lockRequest));
             assertTrue(locks.getLockHighWaterMark(lockRequest) <= transactionId);
@@ -38,26 +38,50 @@ public class LocksTest {
             transactionId++;
         }
 
+        // A read lock
         for (int i = 0; i < 10; i++) {
             // Get the lock high water mark using a write lock. (Do not commit)
             int lock = rand.nextInt(Integer.MAX_VALUE);
-            lockRequest = Locks.createRequest(array(lock), noLocks);
+            lockRequest = Locks.createRequest(array(lock), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             long lockHighWaterMark = locks.getLockHighWaterMark(lockRequest);
             locks.end(lockRequest);
 
             // Get the lock high-water make using a read lock, and compare. Do commit.
-            lockRequest = Locks.createRequest(noLocks, array(lock));
+            lockRequest = Locks.createRequest(noLocks, array(lock), noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(lockHighWaterMark, locks.getLockHighWaterMark(lockRequest));
             locks.commit(lockRequest, transactionId);
             locks.end(lockRequest);
 
             // Repeat. Commit should not have change the lock high-water mark.
-            lockRequest = Locks.createRequest(noLocks, array(lock));
+            lockRequest = Locks.createRequest(noLocks, array(lock), noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(lockHighWaterMark, locks.getLockHighWaterMark(lockRequest));
             locks.commit(lockRequest, transactionId);
+            locks.end(lockRequest);
+        }
+
+        // An append lock
+        for (int i = 0; i < 10; i++) {
+            // Get the lock high water mark using a write lock. (Do not commit)
+            int lock = rand.nextInt(Integer.MAX_VALUE);
+            lockRequest = Locks.createRequest(array(lock), noLocks, noLocks);
+            assertTrue(locks.begin(lockRequest));
+            long lockHighWaterMark = locks.getLockHighWaterMark(lockRequest);
+            locks.end(lockRequest);
+
+            // Get the lock high-water make using an append lock, and compare. Do commit.
+            lockRequest = Locks.createRequest(noLocks, noLocks, array(lock));
+            assertTrue(locks.begin(lockRequest));
+            assertEquals(-1L, locks.getLockHighWaterMark(lockRequest));
+            locks.commit(lockRequest, transactionId);
+            locks.end(lockRequest);
+
+            // Get the lock high-water make using a read lock, and compare.
+            lockRequest = Locks.createRequest(noLocks, array(lock), noLocks);
+            assertTrue(locks.begin(lockRequest));
+            assertEquals(transactionId, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
         }
     }
@@ -75,76 +99,76 @@ public class LocksTest {
             Locks.LockRequest lockRequest;
 
             // Commit accountId & paymentId at transactionId1
-            lockRequest = Locks.createRequest(array(accountId, paymentId), noLocks);
+            lockRequest = Locks.createRequest(array(accountId, paymentId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertTrue(locks.getLockHighWaterMark(lockRequest) <= transactionId1);
             locks.commit(lockRequest, transactionId1);
             locks.end(lockRequest);
 
             // The lock high-water mark for accountId is at transactionId1
-            lockRequest = Locks.createRequest(array(accountId), noLocks);
+            lockRequest = Locks.createRequest(array(accountId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId1, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // The lock high-water mark for paymentId is at transactionId1
-            lockRequest = Locks.createRequest(array(paymentId), noLocks);
+            lockRequest = Locks.createRequest(array(paymentId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId1, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // The lock high-water mark for accountId & paymentId is at transactionId1
-            lockRequest = Locks.createRequest(array(accountId, paymentId), noLocks);
+            lockRequest = Locks.createRequest(array(accountId, paymentId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId1, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // Commit just accountId at transactionId2
-            lockRequest = Locks.createRequest(array(accountId), noLocks);
+            lockRequest = Locks.createRequest(array(accountId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertTrue(locks.getLockHighWaterMark(lockRequest) < transactionId2);
             locks.commit(lockRequest, transactionId2);
             locks.end(lockRequest);
 
             // The lock high-water mark for accountId is advanced to transactionId2
-            lockRequest = Locks.createRequest(array(accountId), noLocks);
+            lockRequest = Locks.createRequest(array(accountId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId2, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // The lock high-water mark for paymentId is still at transactionId1
-            lockRequest = Locks.createRequest(array(paymentId), noLocks);
+            lockRequest = Locks.createRequest(array(paymentId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId1, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // The lock high-water mark for accountId & paymentId is advanced to transactionId2
-            lockRequest = Locks.createRequest(array(accountId, paymentId), noLocks);
+            lockRequest = Locks.createRequest(array(accountId, paymentId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId2, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // Commit just paymentId at transactionId3
-            lockRequest = Locks.createRequest(array(paymentId), noLocks);
+            lockRequest = Locks.createRequest(array(paymentId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertTrue(locks.getLockHighWaterMark(lockRequest) < transactionId3);
             locks.commit(lockRequest, transactionId3);
             locks.end(lockRequest);
 
             // The lock high-water mark for accountId is still at transactionId2
-            lockRequest = Locks.createRequest(array(accountId), noLocks);
+            lockRequest = Locks.createRequest(array(accountId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId2, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // The lock high-water mark for paymentId is is advanced to transactionId3
-            lockRequest = Locks.createRequest(array(paymentId), noLocks);
+            lockRequest = Locks.createRequest(array(paymentId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId3, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // The lock high-water mark for accountId & paymentId is advanced to transactionId3
-            lockRequest = Locks.createRequest(array(accountId, paymentId), noLocks);
+            lockRequest = Locks.createRequest(array(accountId, paymentId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId3, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
@@ -168,85 +192,85 @@ public class LocksTest {
             Locks.LockRequest lockRequest;
 
             // Commit accountId & paymentId at transactionId1
-            lockRequest = Locks.createRequest(array(accountId, paymentId), noLocks);
+            lockRequest = Locks.createRequest(array(accountId, paymentId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertTrue(locks.getLockHighWaterMark(lockRequest) <= transactionId1);
             locks.commit(lockRequest, transactionId1);
             locks.end(lockRequest);
 
             // The lock high-water mark for accountId is at transactionId1
-            lockRequest = Locks.createRequest(noLocks, array(accountId));
+            lockRequest = Locks.createRequest(noLocks, array(accountId), noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId1, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // The lock high-water mark for paymentId is at transactionId1
-            lockRequest = Locks.createRequest(noLocks, array(paymentId));
+            lockRequest = Locks.createRequest(noLocks, array(paymentId), noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId1, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // The lock high-water mark for accountId & paymentId is at transactionId1
-            lockRequest = Locks.createRequest(noLocks, array(accountId, paymentId));
+            lockRequest = Locks.createRequest(noLocks, array(accountId, paymentId), noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId1, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
-            lockRequest = Locks.createRequest(array(accountId), array(paymentId));
+            lockRequest = Locks.createRequest(array(accountId), array(paymentId), noLocks);
             assertEquals(transactionId1, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // Commit just accountId at transactionId2
-            lockRequest = Locks.createRequest(array(accountId), noLocks);
+            lockRequest = Locks.createRequest(array(accountId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertTrue(locks.getLockHighWaterMark(lockRequest) < transactionId2);
             locks.commit(lockRequest, transactionId2);
             locks.end(lockRequest);
 
             // The lock high-water mark for accountId is advanced to transactionId2
-            lockRequest = Locks.createRequest(noLocks, array(accountId));
+            lockRequest = Locks.createRequest(noLocks, array(accountId), noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId2, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // The lock high-water mark for paymentId is still at transactionId1
-            lockRequest = Locks.createRequest(noLocks, array(paymentId));
+            lockRequest = Locks.createRequest(noLocks, array(paymentId), noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId1, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // The lock high-water mark for accountId & paymentId is advanced to transactionId2
-            lockRequest = Locks.createRequest(noLocks, array(accountId, paymentId));
+            lockRequest = Locks.createRequest(noLocks, array(accountId, paymentId), noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId2, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // Commit just paymentId at transactionId3
-            lockRequest = Locks.createRequest(array(paymentId), noLocks);
+            lockRequest = Locks.createRequest(array(paymentId), noLocks, noLocks);
             assertTrue(locks.begin(lockRequest));
             assertTrue(locks.getLockHighWaterMark(lockRequest) < transactionId3);
             locks.commit(lockRequest, transactionId3);
             locks.end(lockRequest);
 
             // The lock high-water mark for accountId is still at transactionId2
-            lockRequest = Locks.createRequest(noLocks, array(accountId));
+            lockRequest = Locks.createRequest(noLocks, array(accountId), noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId2, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // The lock high-water mark for paymentId is is advanced to transactionId3
-            lockRequest = Locks.createRequest(noLocks, array(paymentId));
+            lockRequest = Locks.createRequest(noLocks, array(paymentId), noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId3, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
             // The lock high-water mark for accountId & paymentId is advanced to transactionId3
-            lockRequest = Locks.createRequest(noLocks, array(accountId, paymentId));
+            lockRequest = Locks.createRequest(noLocks, array(accountId, paymentId), noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId3, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
 
-            lockRequest = Locks.createRequest(array(accountId), array(paymentId));
+            lockRequest = Locks.createRequest(array(accountId), array(paymentId), noLocks);
             assertTrue(locks.begin(lockRequest));
             assertEquals(transactionId3, locks.getLockHighWaterMark(lockRequest));
             locks.end(lockRequest);
@@ -255,6 +279,50 @@ public class LocksTest {
             transactionId2 += 3;
             transactionId3 += 3;
         }
+    }
+
+    @Test
+    public void testHierarchicalResourceScenario() {
+        Locks locks = new Locks(100, 3, -1L);
+        long getResourceFirstTime = rand.nextInt(Integer.MAX_VALUE);
+        long modifyChildResourceFirstTime = getResourceFirstTime + 1;
+        long modifyChildResourceSecondTime = getResourceFirstTime + 2;
+        long getParentResourceSecondTime = getResourceFirstTime + 3;
+        Locks.LockRequest lockRequest;
+
+        final int parent = 12345; // a parent resource
+        final int child = 6789;   // a child resource
+
+        // get the resource
+        lockRequest = Locks.createRequest(array(parent, child), noLocks, noLocks);
+        assertTrue(locks.begin(lockRequest));
+        assertEquals(-1L, locks.getLockHighWaterMark(lockRequest));
+        locks.commit(lockRequest, getResourceFirstTime);
+        locks.end(lockRequest);
+
+        // first modification of the child resource
+        lockRequest = Locks.createRequest(noLocks, array(parent), array(child));
+        assertTrue(locks.begin(lockRequest));
+        // Lock high water-mark be getResourceFirstTime
+        assertEquals(getResourceFirstTime, locks.getLockHighWaterMark(lockRequest));
+        locks.commit(lockRequest, modifyChildResourceFirstTime);
+        locks.end(lockRequest);
+
+        // second modification of the child resource
+        lockRequest = Locks.createRequest(noLocks, array(parent), array(child));
+        assertTrue(locks.begin(lockRequest));
+        // Lock high water-mark should be getResourceFirstTime
+        assertEquals(getResourceFirstTime, locks.getLockHighWaterMark(lockRequest));
+        locks.commit(lockRequest, modifyChildResourceSecondTime);
+        locks.end(lockRequest);
+
+        // get the resource
+        lockRequest = Locks.createRequest(array(parent, child), noLocks, noLocks);
+        assertTrue(locks.begin(lockRequest));
+        // Lock high water-mark should be modifyChildResourceSecondTime.
+        assertEquals(modifyChildResourceSecondTime, locks.getLockHighWaterMark(lockRequest));
+        locks.commit(lockRequest, getParentResourceSecondTime);
+        locks.end(lockRequest);
     }
 
     @Test
@@ -270,7 +338,7 @@ public class LocksTest {
         int numLockFailures = 0;
         while (numLockFailures == 0) {
             int accountId = rand.nextInt(Integer.MAX_VALUE);
-            Locks.LockRequest lockRequest = Locks.createRequest(array(accountId), noLocks);
+            Locks.LockRequest lockRequest = Locks.createRequest(array(accountId), noLocks, noLocks);
 
             assertTrue(locks.begin(lockRequest));
             if (locks.getLockHighWaterMark(lockRequest) <= clientHighWaterMark) {
