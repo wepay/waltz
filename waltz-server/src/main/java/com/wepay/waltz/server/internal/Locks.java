@@ -22,7 +22,7 @@ public class Locks {
     private int numActiveLockRequests = 0;
 
     /**
-     * Class contsructor.
+     * Class constructor.
      * @param size The size of the optimistic lock table.
      * @param numHashFuncs The number of hash functions to use inorder to reduce the false positives.
      * @param defaultHighWaterMark The default high-water mark to set initially.
@@ -43,7 +43,8 @@ public class Locks {
     public boolean begin(LockRequest request) {
         synchronized (locks) {
             if (begin(request.writeLocks) && begin(request.readLocks) && begin(request.appendLocks)) {
-                // Mark entries for write locks and append locks
+                // Mark entries for write locks and append locks.
+                // Entries for Read locks are not marked since they won't change the high-water marks.
                 mark(request.writeLocks);
                 mark(request.appendLocks);
                 numActiveLockRequests++;
