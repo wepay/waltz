@@ -23,6 +23,7 @@ public class TransactionBuilderImpl implements TransactionBuilder {
     private byte[] data = null;
     private List<PartitionLocalLock> writeLocks;
     private List<PartitionLocalLock> readLocks;
+    private List<PartitionLocalLock> appendLocks;
 
     /**
      * Class Constructor.
@@ -54,6 +55,11 @@ public class TransactionBuilderImpl implements TransactionBuilder {
         this.readLocks = locks;
     }
 
+    @Override
+    public void setAppendLocks(List<PartitionLocalLock> locks) {
+        this.appendLocks = locks;
+    }
+
     /**
      * @return a new instance of {@link AppendRequest} to send to Waltz cluster.
      */
@@ -63,6 +69,7 @@ public class TransactionBuilderImpl implements TransactionBuilder {
             clientHighWaterMark,
             compileLockRequest(writeLocks),
             compileLockRequest(readLocks),
+            compileLockRequest(appendLocks),
             header,
             data,
             Utils.checksum(data)

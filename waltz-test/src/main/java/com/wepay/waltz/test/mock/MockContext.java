@@ -22,19 +22,21 @@ public class MockContext extends TransactionContext {
     private final String data;
     private final List<PartitionLocalLock> writeLocks;
     private final List<PartitionLocalLock> readLocks;
+    private final List<PartitionLocalLock> appendLocks;
     private final boolean retry;
 
     public static Builder builder() {
         return new Builder();
     }
 
-    MockContext(int partitionId, int header, String data, List<PartitionLocalLock> writeLocks, List<PartitionLocalLock> readLocks, boolean retry) {
+    MockContext(int partitionId, int header, String data, List<PartitionLocalLock> writeLocks, List<PartitionLocalLock> readLocks, List<PartitionLocalLock> appendLocks, boolean retry) {
         super();
         this.partitionId = partitionId;
         this.header = header;
         this.data = data;
         this.writeLocks = writeLocks;
         this.readLocks = readLocks;
+        this.appendLocks = appendLocks;
         this.retry = retry;
     }
 
@@ -53,6 +55,7 @@ public class MockContext extends TransactionContext {
             builder.setTransactionData(data, StringSerializer.INSTANCE);
             builder.setWriteLocks(writeLocks);
             builder.setReadLocks(readLocks);
+            builder.setAppendLocks(appendLocks);
             return true;
 
         } else {
@@ -86,6 +89,7 @@ public class MockContext extends TransactionContext {
         private String data = null;
         private List<PartitionLocalLock> writeLocks = new ArrayList<>();
         private List<PartitionLocalLock> readLocks = new ArrayList<>();
+        private List<PartitionLocalLock> appendLocks = new ArrayList<>();
         private boolean retry = true;
 
         public Builder partitionId(int partitionId) {
@@ -117,13 +121,20 @@ public class MockContext extends TransactionContext {
             return this;
         }
 
+        public Builder appendLocks(int... locks) {
+            for (int lock : locks) {
+                this.appendLocks.add(makeLock(lock));
+            }
+            return this;
+        }
+
         public Builder retry(boolean retry) {
             this.retry = retry;
             return this;
         }
 
         public MockContext build() {
-            return new MockContext(partitionId, header, data, writeLocks, readLocks, retry);
+            return new MockContext(partitionId, header, data, writeLocks, readLocks, appendLocks, retry);
         }
     }
 
