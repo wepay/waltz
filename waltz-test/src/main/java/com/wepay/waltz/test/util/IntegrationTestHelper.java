@@ -173,7 +173,7 @@ public class IntegrationTestHelper {
     }
 
     /**
-     * Returns a port using {@link this#portFinder} instance.
+     * Returns a port using {@link IntegrationTestHelper#portFinder} instance.
      * If in need of a port, the clients of this class should use this method
      * instead of another {@link PortFinder} instance to avoid a possible port collision.
      *
