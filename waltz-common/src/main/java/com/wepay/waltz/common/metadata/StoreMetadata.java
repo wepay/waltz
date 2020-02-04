@@ -373,6 +373,13 @@ public class StoreMetadata {
 
             final NodeData<GroupDescriptor> groupNodeData = session.getGroupDescriptorNodeData();
             Map<String, Integer> groups = groupNodeData.value.groups;
+
+            if (!groups.containsKey(storage)) {
+                throw new IllegalArgumentException(
+                    String.format("Storage node %s is not part of any of the storage groups", storage)
+                );
+            }
+
             int groupToValidate = groups.get(storage);
 
             // create a newReplicas excluding partition to remove
