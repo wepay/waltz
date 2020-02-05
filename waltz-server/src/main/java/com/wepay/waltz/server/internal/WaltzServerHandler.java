@@ -13,6 +13,8 @@ import com.wepay.waltz.common.message.MessageCodecV1;
 import com.wepay.waltz.common.message.MessageCodecV2;
 import com.wepay.waltz.common.message.MessageType;
 import com.wepay.waltz.common.message.MountRequest;
+import com.wepay.waltz.common.message.ServerPartitionsAssignmentRequest;
+import com.wepay.waltz.common.message.ServerPartitionsAssignmentResponse;
 import com.wepay.waltz.common.metadata.ReplicaId;
 import com.wepay.waltz.storage.client.StorageClient;
 import com.wepay.waltz.store.Store;
@@ -24,7 +26,10 @@ import org.slf4j.Logger;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
+
 
 /**
  * Implements {@link com.wepay.waltz.server.WaltzServer} message handler.
@@ -81,6 +86,7 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
         if (clientId == null) {
             clientId = ((AbstractMessage) msg).reqId.clientId();
         }
+        LOGGER.info("Receiving message of type: " + msg.type());
 
         switch (msg.type()) {
             case MessageType.CHECK_STORAGE_CONNECTIVITY_REQUEST:
@@ -110,6 +116,12 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
                 }
                 sendMessage(new CheckStorageConnectivityResponse(((CheckStorageConnectivityRequest) msg).reqId,
                     storageConnectivityMap), true);
+                break;
+
+            case MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST:
+                List<Integer> partitionsAssigned = new ArrayList<>(partitions.keySet());
+                sendMessage(new ServerPartitionsAssignmentResponse(((ServerPartitionsAssignmentRequest) msg).reqId,
+                        partitionsAssigned), true);
                 break;
 
             default:

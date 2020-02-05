@@ -112,4 +112,54 @@ public class ClusterCliTest {
             helper.closeAll();
         }
     }
+
+    @Test
+    public void testVerifyCommand() throws Exception {
+        int numPartitions = 3;
+        int numStorageNodes = 3;
+        Properties properties =  new Properties();
+        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/cluster/cli/test");
+        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, String.valueOf(numPartitions));
+        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
+        properties.setProperty(IntegrationTestHelper.Config.NUM_STORAGES, String.valueOf(numStorageNodes));
+        IntegrationTestHelper helper = new IntegrationTestHelper(properties);
+
+        Properties configProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
+                helper.getZkSessionTimeout(), helper.getSslSetup());
+        String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME,
+                configProperties);
+
+        try {
+            helper.startZooKeeperServer();
+            for (int i = 0; i < numStorageNodes; i++) {
+                WaltzStorageRunner storageRunner = helper.getWaltzStorageRunner(i);
+                storageRunner.startAsync();
+                storageRunner.awaitStart();
+            }
+            helper.startWaltzServer(true);
+
+            String[] args1 = {
+                    "verify",
+                    "--cli-config-path", configFilePath
+            };
+            ClusterCli.testMain(args1);
+            String expectedCmdOutput = "SUCCESS";
+            assertTrue(outContent.toString("UTF-8").contains(expectedCmdOutput));
+
+
+            // Close the server network connection
+            WaltzServerRunner waltzServerRunner = helper.getWaltzServerRunner(helper.getServerPort(),
+                    helper.getServerJettyPort());
+            waltzServerRunner.closeNetworkServer();
+            String[] args3 = {
+                    "verify",
+                    "--cli-config-path", configFilePath
+            };
+            ClusterCli.testMain(args3);
+            expectedCmdOutput = "FAILURE";
+            assertTrue(outContent.toString("UTF-8").contains(expectedCmdOutput));
+        } finally {
+            helper.closeAll();
+        }
+    }
 }

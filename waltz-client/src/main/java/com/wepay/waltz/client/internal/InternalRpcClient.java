@@ -94,4 +94,18 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
                 return connectivityStatusMap;
             });
     }
+
+    /**
+     * Gets the list of partitions assigned to the server with serverEndpoint
+     *
+     * @param serverEndpoint Server from which to fetch the assigned partitions
+     * @return Future which will contain the list of partitions when complete
+     * @throws InterruptedException If thread interrupted while waiting for channel with Waltz server to be ready
+     */
+    @Override
+    public Future<Object> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException {
+        WaltzNetworkClient networkClient = getNetworkClient(serverEndpoint);
+        return networkClient.getServerPartitionAssignments();
+    }
+
 }

@@ -12,6 +12,8 @@ import com.wepay.waltz.common.message.LockFailure;
 import com.wepay.waltz.common.message.MountRequest;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.common.message.TransactionDataRequest;
+import com.wepay.waltz.common.message.ServerPartitionsAssignmentRequest;
+import com.wepay.waltz.common.message.MessageType;
 import com.wepay.waltz.exception.NetworkClientClosedException;
 import com.wepay.zktools.clustermgr.Endpoint;
 import com.wepay.zktools.util.Uninterruptibly;
@@ -24,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -45,8 +48,10 @@ public class WaltzNetworkClient extends NetworkClient {
     private final HashMap<Integer, Partition> partitions;
 
     private boolean channelReady = false;
+    private static final int CHANNEL_NOT_READY_TIMEOUT = 5000;
     private volatile boolean running = true;
     private AtomicReference<CompletableFuture<Optional<Map<String, Boolean>>>> checkConnectivityRef;
+    private Map<Integer, CompletableFuture<Object>> outputFuturesPerMessageType;
 
     /**
      * Class Constructor.
@@ -75,6 +80,7 @@ public class WaltzNetworkClient extends NetworkClient {
         this.messageProcessingThreadPool = messageProcessingThreadPool;
         this.partitions = new HashMap<>();
         this.checkConnectivityRef = new AtomicReference<>();
+        this.outputFuturesPerMessageType = new ConcurrentHashMap<>();
     }
 
     /**
@@ -102,6 +108,10 @@ public class WaltzNetworkClient extends NetworkClient {
                         future.complete(Optional.empty());
                     }
                 }
+
+                outputFuturesPerMessageType.values().forEach(futureOutput -> futureOutput.completeExceptionally(
+                        new Exception("waltz network client instance shutting down")
+                ));
             }
         }
         networkClientCallbacks.onNetworkClientDisconnected(this);
@@ -222,6 +232,45 @@ public class WaltzNetworkClient extends NetworkClient {
         }
     }
 
+    /**
+     * Requests list of partitions assigned on that server
+     *
+     * @return Completable future that will container the list of partitions assigned on that server
+     * @throws InterruptedException If thread interrupted while waiting for channel to be ready
+     */
+    public CompletableFuture<Object> getServerPartitionAssignments() throws InterruptedException {
+        synchronized (lock) {
+            if (running && !channelReady) {
+                lock.wait(CHANNEL_NOT_READY_TIMEOUT);
+            }
+
+            if (!channelReady) {
+                CompletableFuture<Object> future = new CompletableFuture<>();
+                future.completeExceptionally(new Exception("Cannot reach server, channel not ready"));
+                return future;
+            }
+            CompletableFuture<Object> future = outputFuturesPerMessageType.get(MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST);
+
+            while (true) {
+                if (future != null && !(future.isDone())) {
+                    return future;
+                } else {
+                    future = new CompletableFuture<>();
+                    CompletableFuture<Object> oldFuture = outputFuturesPerMessageType.put(MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST, future);
+                    if (oldFuture == null || oldFuture.isDone()) {
+                        ReqId dummyReqId = new ReqId(clientId, 0, 0, 0);
+                        boolean sent = sendMessage(new ServerPartitionsAssignmentRequest(dummyReqId));
+
+                        if (!sent) {
+                            future.completeExceptionally(new Exception("Couldn't send message"));
+                        }
+                        return future;
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     protected MessageHandler getMessageHandler() {
         WaltzClientHandlerCallbacks handlerCallbacks = new WaltzClientHandlerCallbacksImpl();
@@ -232,6 +281,7 @@ public class WaltzNetworkClient extends NetworkClient {
         ReqId dummyReqId = new ReqId(clientId, 0, 0, 0);
         sendMessage(new CheckStorageConnectivityRequest(dummyReqId));
     }
+
 
     private Partition getPartition(int partitionId) {
         synchronized (lock) {
@@ -254,6 +304,8 @@ public class WaltzNetworkClient extends NetworkClient {
                 if (checkConnectivityRef.get() != null) {
                     sendCheckStorageConnectivityRequest();
                 }
+
+                lock.notifyAll();
             }
         }
 
@@ -406,6 +458,19 @@ public class WaltzNetworkClient extends NetworkClient {
             if (future != null) {
                 if (checkConnectivityRef.compareAndSet(future, null)) {
                     future.complete(Optional.of(storageConnectivityMap));
+                }
+            }
+        }
+
+        @Override
+        public void onServerPartitionsAssignmentResponseReceived(List<Integer> partitions) {
+            CompletableFuture<Object> future = outputFuturesPerMessageType.get(MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST);
+
+            if (future != null && !future.isDone()) {
+                CompletableFuture<Object> oldValue = outputFuturesPerMessageType.put(MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST, CompletableFuture.completedFuture(Optional.empty()));
+
+                if (oldValue != null) {
+                    future.complete(partitions);
                 }
             }
         }

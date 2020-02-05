@@ -21,5 +21,6 @@ public final class MessageType {
     public static final int HIGH_WATER_MARK_RESPONSE = 12;
     public static final int CHECK_STORAGE_CONNECTIVITY_REQUEST = 13;
     public static final int CHECK_STORAGE_CONNECTIVITY_RESPONSE = 14;
-
+    public static final int SERVER_PARTITIONS_ASSIGNMENT_REQUEST = 15;
+    public static final int SERVER_PARTITIONS_ASSIGNMENT_RESPONSE = 16;
 }

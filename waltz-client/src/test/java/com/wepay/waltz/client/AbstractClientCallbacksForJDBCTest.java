@@ -489,6 +489,11 @@ public class AbstractClientCallbacksForJDBCTest {
             public CompletableFuture<Map<Endpoint, Map<String, Boolean>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
                 return CompletableFuture.completedFuture(new HashMap<>());
             }
+
+            @Override
+            public Future<Object> getServerPartitionAssignments(Endpoint serverEndpoint) {
+                return CompletableFuture.completedFuture(new ArrayList<>());
+            }
         };
 
         return new Transaction(0, 0, new ReqId(0, 0, 0, 0), mockRpcClient);
