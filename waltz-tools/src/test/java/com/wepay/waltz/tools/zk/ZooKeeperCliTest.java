@@ -465,6 +465,48 @@ public final class ZooKeeperCliTest {
     }
 
     @Test
+    public void testUnassignPartitionNonExistentStorageShouldFail() throws Exception {
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(errContent, false, "UTF-8"));
+
+        ZooKeeperServerRunner zooKeeperServerRunner = new ZooKeeperServerRunner(0);
+        String connectString = zooKeeperServerRunner.start();
+        String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, createProperties(connectString, CLUSTER_ROOT));
+
+        try {
+            ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
+            ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
+            ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
+            ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
+
+            int partitionToRemove = 0;
+            String storageNodeRemoveFrom = "fakehostnonexistent:6000";
+
+            int[] prevPartitions = zkClient.getData(assignmentNode, ReplicaAssignmentsSerializer.INSTANCE).value.replicas.get(storageNodeRemoveFrom);
+            // replicas does not contain such storage node
+            assertNull(prevPartitions);
+
+            removePartition(partitionToRemove, storageNodeRemoveFrom, configFilePath);
+
+            String expectedCmdOutput =
+                "Error: java.lang.IllegalArgumentException: "
+                    + String.format("Storage node %s is not part of any of the storage groups", storageNodeRemoveFrom);
+
+            assertTrue(errContent.toString("UTF-8").contains(expectedCmdOutput));
+        } finally {
+            // restore streams
+            System.setErr(originalErr);
+            errContent.close();
+
+            zooKeeperServerRunner.stop();
+            zooKeeperServerRunner.clear();
+        }
+    }
+
+    @Test
     public void testUnassignNonExistingPartitionShouldFail() throws Exception {
         ZooKeeperServerRunner zooKeeperServerRunner = new ZooKeeperServerRunner(0);
         String connectString = zooKeeperServerRunner.start();
