@@ -86,7 +86,6 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
         if (clientId == null) {
             clientId = ((AbstractMessage) msg).reqId.clientId();
         }
-        LOGGER.info("Receiving message of type: " + msg.type());
 
         switch (msg.type()) {
             case MessageType.CHECK_STORAGE_CONNECTIVITY_REQUEST:
