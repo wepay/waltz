@@ -290,11 +290,10 @@ public final class ClusterCli extends SubcommandCli {
                                                                                     ClusterManager clusterManager,
                                                                                     List<PartitionValidationResults> partitionValidationResultsList)
                 throws InterruptedException, ClusterManagerException {
-            CompletableFuture<Object> futureResponse = (CompletableFuture<Object>) rpcClient.getServerPartitionAssignments(server.endpoint);
+            CompletableFuture<List<Integer>> futureResponse = (CompletableFuture<List<Integer>>) rpcClient.getServerPartitionAssignments(server.endpoint);
             List<PartitionInfo> zookeeperAssignments = clusterManager.partitionAssignment().partitionsFor(server.serverId);
             return futureResponse
-                    .thenAccept(v -> {
-                        List<Integer> serverAssignments = (List<Integer>) v;
+                    .thenAccept(serverAssignments -> {
                         Map<Integer, AssignmentMatch> assignmentMatchMap = verifyAssignments(zookeeperAssignments, serverAssignments);
 
                         assignmentMatchMap.forEach((partitionId, match) -> {

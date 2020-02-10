@@ -2,6 +2,7 @@ package com.wepay.waltz.client.internal;
 
 import com.wepay.zktools.clustermgr.Endpoint;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -20,5 +21,5 @@ public interface RpcClient {
 
     CompletableFuture<Map<Endpoint, Map<String, Boolean>>>  checkServerConnections(Set<Endpoint> serverEndpoints);
 
-    Future<Object> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException;
+    Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException;
 }

@@ -14,6 +14,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -491,7 +492,7 @@ public class AbstractClientCallbacksForJDBCTest {
             }
 
             @Override
-            public Future<Object> getServerPartitionAssignments(Endpoint serverEndpoint) {
+            public Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) {
                 return CompletableFuture.completedFuture(new ArrayList<>());
             }
         };

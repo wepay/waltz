@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -238,14 +239,14 @@ public class WaltzNetworkClient extends NetworkClient {
      * @return Completable future that will container the list of partitions assigned on that server
      * @throws InterruptedException If thread interrupted while waiting for channel to be ready
      */
-    public CompletableFuture<Object> getServerPartitionAssignments() throws InterruptedException {
+    public Future<List<Integer>> getServerPartitionAssignments() throws InterruptedException {
         synchronized (lock) {
             if (running && !channelReady) {
                 lock.wait(CHANNEL_NOT_READY_TIMEOUT);
             }
 
             if (!channelReady) {
-                CompletableFuture<Object> future = new CompletableFuture<>();
+                CompletableFuture<List<Integer>> future = new CompletableFuture<>();
                 future.completeExceptionally(new Exception("Cannot reach server, channel not ready"));
                 return future;
             }
@@ -253,7 +254,7 @@ public class WaltzNetworkClient extends NetworkClient {
 
             while (true) {
                 if (future != null && !(future.isDone())) {
-                    return future;
+                    return future.thenApply(f -> (List) f);
                 } else {
                     future = new CompletableFuture<>();
                     CompletableFuture<Object> oldFuture = outputFuturesPerMessageType.put(MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST, future);
@@ -264,7 +265,7 @@ public class WaltzNetworkClient extends NetworkClient {
                         if (!sent) {
                             future.completeExceptionally(new Exception("Couldn't send message"));
                         }
-                        return future;
+                        return future.thenApply(f -> (List) f);
                     }
                 }
             }

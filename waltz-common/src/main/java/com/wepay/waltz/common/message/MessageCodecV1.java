@@ -7,9 +7,7 @@ import com.wepay.riff.network.MessageCodec;
 import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.exception.RpcException;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class MessageCodecV1 implements MessageCodec {
@@ -117,16 +115,6 @@ public class MessageCodecV1 implements MessageCodec {
                 }
                 return new CheckStorageConnectivityResponse(reqId, storageConnectivityMap);
 
-            case MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST:
-                return new ServerPartitionsAssignmentRequest(reqId);
-
-            case MessageType.SERVER_PARTITIONS_ASSIGNMENT_RESPONSE:
-                int listSize = reader.readInt();
-                List<Integer> partitionsAssigned = new ArrayList<>(listSize);
-                for (int i = 0; i < listSize; i++) {
-                    partitionsAssigned.add(reader.readInt());
-                }
-                return new ServerPartitionsAssignmentResponse(reqId, partitionsAssigned);
             default:
                 throw new IllegalStateException("unknown message type: " + messageType);
         }
@@ -234,19 +222,6 @@ public class MessageCodecV1 implements MessageCodec {
                 for (Map.Entry<String, Boolean> storageConnectionEntry : storageConnectivityMap.entrySet()) {
                     writer.writeString(storageConnectionEntry.getKey());
                     writer.writeBoolean(storageConnectionEntry.getValue());
-                }
-                break;
-
-            case MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST:
-                break;
-
-            case MessageType.SERVER_PARTITIONS_ASSIGNMENT_RESPONSE:
-                ServerPartitionsAssignmentResponse serverPartitionsAssignmentResponse =
-                        (ServerPartitionsAssignmentResponse) msg;
-                List<Integer> partitionsAssigned = serverPartitionsAssignmentResponse.serverPartitionAssignments;
-                writer.writeInt(partitionsAssigned.size());
-                for (Integer partition : partitionsAssigned) {
-                    writer.writeInt(partition);
                 }
                 break;
 

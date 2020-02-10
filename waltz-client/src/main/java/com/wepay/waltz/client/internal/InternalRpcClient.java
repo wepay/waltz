@@ -6,6 +6,7 @@ import com.wepay.zktools.clustermgr.Endpoint;
 import io.netty.handler.ssl.SslContext;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -103,7 +104,7 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
      * @throws InterruptedException If thread interrupted while waiting for channel with Waltz server to be ready
      */
     @Override
-    public Future<Object> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException {
+    public Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException {
         WaltzNetworkClient networkClient = getNetworkClient(serverEndpoint);
         return networkClient.getServerPartitionAssignments();
     }
