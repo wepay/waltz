@@ -245,11 +245,16 @@ public class WaltzNetworkClient extends NetworkClient {
                 lock.wait(CHANNEL_NOT_READY_TIMEOUT);
             }
 
-            if (!channelReady) {
+            if (!running) {
+                CompletableFuture<List<Integer>> future = new CompletableFuture<>();
+                future.completeExceptionally(new Exception("Cannot reach server, network client instance shutdown"));
+                return future;
+            } else if (!channelReady) {
                 CompletableFuture<List<Integer>> future = new CompletableFuture<>();
                 future.completeExceptionally(new Exception("Cannot reach server, channel not ready"));
                 return future;
             }
+
             CompletableFuture<Object> future = outputFuturesPerMessageType.get(MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST);
 
             while (true) {
@@ -282,7 +287,6 @@ public class WaltzNetworkClient extends NetworkClient {
         ReqId dummyReqId = new ReqId(clientId, 0, 0, 0);
         sendMessage(new CheckStorageConnectivityRequest(dummyReqId));
     }
-
 
     private Partition getPartition(int partitionId) {
         synchronized (lock) {

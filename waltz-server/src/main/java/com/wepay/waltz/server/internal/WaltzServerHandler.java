@@ -118,7 +118,11 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
                 break;
 
             case MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST:
-                List<Integer> partitionsAssigned = new ArrayList<>(partitions.keySet());
+                List<Integer> partitionsAssigned;
+
+                synchronized (partitions) {
+                    partitionsAssigned = new ArrayList<>(partitions.keySet());
+                }
                 sendMessage(new ServerPartitionsAssignmentResponse(((ServerPartitionsAssignmentRequest) msg).reqId,
                         partitionsAssigned), true);
                 break;

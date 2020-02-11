@@ -199,7 +199,7 @@ public final class ClusterCli extends SubcommandCli {
                 }
 
                 // Step1: validate all partitions on zk
-                buildZookeeperPartitionAssignmentsValidation(zkClient, zkRoot, partitionsValidationResultList);
+                buildZookeeperPartitionAssignmentsValidation(clusterManager, partitionsValidationResultList);
                 verifyValidation(ValidationResults.ValidationType.PARTITION_ASSIGNMENT_ZK_VALIDITY, partitionsValidationResultList);
 
                 // Step2: validate zk and servers partition assignment consistency
@@ -209,7 +209,6 @@ public final class ClusterCli extends SubcommandCli {
                 buildServersZKPartitionAssignmentsConsistencyValidation(rpcClient, clusterManager, partitionsValidationResultList).get();
 
                 for (PartitionValidationResults results : partitionsValidationResultList) {
-                    System.out.println(results);
                     if (!results.validationResultsMap.containsKey(ValidationResults.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY)) {
                         ValidationResults validationResults = new ValidationResults(ValidationResults.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
                                 ValidationResults.Status.FAILURE, "Timeout exception");
@@ -266,7 +265,7 @@ public final class ClusterCli extends SubcommandCli {
             ValidationResults partitionZkResults = partitionResult.validationResultsMap.get(type);
             if (partitionZkResults.status.equals(ValidationResults.Status.FAILURE)) {
                 System.out.println("Validation " + type.name() + " failed for partition " + partitionId);
-                System.out.println("Error is: " + partitionZkResults.error);
+                System.out.println("Validation error is: " + partitionZkResults.error);
                 return false;
             }
             return true;
@@ -277,8 +276,8 @@ public final class ClusterCli extends SubcommandCli {
          * versus on Zookeeper metadata.
          *
          * @param rpcClient Client used to connect to Waltz server to fetch partition assignments
-         * @param server Actual server to run the validation for
-         * @param clusterManager Contains zkclient used to fetch partition assignments of Zookeeper
+         * @param serverDescriptor Actual server to run the validation for
+         * @param clusterManager Contains zkclient used to fetch partition assignments from Zookeeper
          * @param partitionValidationResultsList List indexed by partition in which validation outputs are inserted
          * @return Completable future that complete once the partitionValidationResultsList is filled with validation data
          *          from all partitions from that server
@@ -286,12 +285,12 @@ public final class ClusterCli extends SubcommandCli {
          * @throws ClusterManagerException Thrown if Zookeeper is missing some ZNodes or ZNode values
          */
         private CompletableFuture<Void> buildServerZKPartitionAssignmentsValidation(InternalRpcClient rpcClient,
-                                                                                    ServerDescriptor server,
+                                                                                    ServerDescriptor serverDescriptor,
                                                                                     ClusterManager clusterManager,
                                                                                     List<PartitionValidationResults> partitionValidationResultsList)
                 throws InterruptedException, ClusterManagerException {
-            CompletableFuture<List<Integer>> futureResponse = (CompletableFuture<List<Integer>>) rpcClient.getServerPartitionAssignments(server.endpoint);
-            List<PartitionInfo> zookeeperAssignments = clusterManager.partitionAssignment().partitionsFor(server.serverId);
+            CompletableFuture<List<Integer>> futureResponse = (CompletableFuture<List<Integer>>) rpcClient.getServerPartitionAssignments(serverDescriptor.endpoint);
+            List<PartitionInfo> zookeeperAssignments = clusterManager.partitionAssignment().partitionsFor(serverDescriptor.serverId);
             return futureResponse
                     .thenAccept(serverAssignments -> {
                         Map<Integer, AssignmentMatch> assignmentMatchMap = verifyAssignments(zookeeperAssignments, serverAssignments);
@@ -329,7 +328,7 @@ public final class ClusterCli extends SubcommandCli {
          * versus on Zookeeper metadata.
          *
          * @param rpcClient Client used to connect to Waltz servers to fetch partition assignments
-         * @param clusterManager Contains zkclient used to fetch partition assignments of Zookeeper
+         * @param clusterManager Contains zkclient used to fetch partition assignments from Zookeeper
          * @param partitionValidationResultsList List indexed by partition in which validation outputs are inserted
          * @return Completable future that complete once the partitionValidationResultsList is filled with validation data
          * from all partitions
@@ -340,14 +339,14 @@ public final class ClusterCli extends SubcommandCli {
                                                                                                 ClusterManager clusterManager,
                                                                                                 List<PartitionValidationResults> partitionValidationResultsList)
                                                                     throws ClusterManagerException, InterruptedException {
-            Set<CompletableFuture> set = new HashSet<>();
+            Set<CompletableFuture> futures = new HashSet<>();
 
-            for (ServerDescriptor server : clusterManager.serverDescriptors()) {
-                CompletableFuture<Void> future = buildServerZKPartitionAssignmentsValidation(rpcClient, server, clusterManager,
+            for (ServerDescriptor serverDescriptor : clusterManager.serverDescriptors()) {
+                CompletableFuture<Void> future = buildServerZKPartitionAssignmentsValidation(rpcClient, serverDescriptor, clusterManager,
                          partitionValidationResultsList);
-                set.add(future);
+                futures.add(future);
             }
-            return CompletableFuture.allOf(set.toArray(new CompletableFuture[set.size()]));
+            return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
         }
 
         /**
@@ -388,16 +387,12 @@ public final class ClusterCli extends SubcommandCli {
          * Parses the zookeeper servers partition assignments ZNode and insert the validation result into
          * the partitionValidationResultsList for each partition
          *
-         * @param zkClient Zookeeper client used to fetch Zookeeper partition assignment from
-         * @param zkRoot Zookeeper root path for cluster
+         * @param clusterManager Contains zkclient used to fetch partition assignments from Zookeeper
          * @param partitionValidationResultsList List indexed by partition in which validation outputs are inserted
          * @throws ClusterManagerException Thrown if Zookeeper is missing some ZNodes or ZNode values
          */
-        private void buildZookeeperPartitionAssignmentsValidation(ZooKeeperClient zkClient,
-                                                                  String zkRoot,
+        private void buildZookeeperPartitionAssignmentsValidation(ClusterManager clusterManager,
                                                                   List<PartitionValidationResults> partitionValidationResultsList) throws ClusterManagerException {
-
-            ClusterManager clusterManager = new ClusterManagerImpl(zkClient, new ZNode(zkRoot), partitionAssignmentPolicy);
             PartitionAssignment partitionAssignment = clusterManager.partitionAssignment();
             int[] partitionToServerMap = new int[clusterManager.numPartitions()];
 
@@ -431,7 +426,6 @@ public final class ClusterCli extends SubcommandCli {
                             "Error: Partition " + partitionId + " not handled by any server");
                     PartitionValidationResults partitionValidationResults = partitionValidationResultsList.get(partitionId);
                     partitionValidationResults.validationResultsMap.put(validationResults.type, validationResults);
-                    partitionValidationResultsList.add(partitionValidationResults);
                 }
             }
         }
