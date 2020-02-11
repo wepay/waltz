@@ -6,6 +6,7 @@ import com.wepay.zktools.clustermgr.Endpoint;
 import io.netty.handler.ssl.SslContext;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -94,4 +95,18 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
                 return connectivityStatusMap;
             });
     }
+
+    /**
+     * Gets the list of partitions assigned to the server with serverEndpoint
+     *
+     * @param serverEndpoint Server from which to fetch the assigned partitions
+     * @return Future which will contain the list of partitions when complete
+     * @throws InterruptedException If thread interrupted while waiting for channel with Waltz server to be ready
+     */
+    @Override
+    public Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException {
+        WaltzNetworkClient networkClient = getNetworkClient(serverEndpoint);
+        return networkClient.getServerPartitionAssignments();
+    }
+
 }

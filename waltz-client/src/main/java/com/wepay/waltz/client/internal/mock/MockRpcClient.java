@@ -3,6 +3,8 @@ package com.wepay.waltz.client.internal.mock;
 import com.wepay.waltz.client.internal.RpcClient;
 import com.wepay.zktools.clustermgr.Endpoint;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -42,6 +44,11 @@ class MockRpcClient implements RpcClient {
     @Override
     public CompletableFuture<Map<Endpoint, Map<String, Boolean>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
         return CompletableFuture.completedFuture(new HashMap<>());
+    }
+
+    @Override
+    public Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) {
+        return CompletableFuture.completedFuture(new ArrayList<>());
     }
 
 }

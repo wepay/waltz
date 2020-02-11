@@ -19,6 +19,7 @@ import com.wepay.waltz.common.message.MountRequest;
 import com.wepay.waltz.common.message.MountResponse;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.common.message.TransactionDataResponse;
+import com.wepay.waltz.common.message.ServerPartitionsAssignmentResponse;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
@@ -125,6 +126,12 @@ public class WaltzClientHandler extends MessageHandler {
                 CheckStorageConnectivityResponse checkStorageConnectivityResponse =
                     (CheckStorageConnectivityResponse) msg;
                 handlerCallbacks.onCheckStorageConnectivityResponseReceived(checkStorageConnectivityResponse.storageConnectivityMap);
+                break;
+
+            case MessageType.SERVER_PARTITIONS_ASSIGNMENT_RESPONSE:
+                ServerPartitionsAssignmentResponse serverPartitionsAssignmentResponse =
+                        (ServerPartitionsAssignmentResponse) msg;
+                handlerCallbacks.onServerPartitionsAssignmentResponseReceived(serverPartitionsAssignmentResponse.serverPartitionAssignments);
                 break;
 
             default:
