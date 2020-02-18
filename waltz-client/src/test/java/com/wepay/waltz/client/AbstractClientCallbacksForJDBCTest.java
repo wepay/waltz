@@ -495,6 +495,16 @@ public class AbstractClientCallbacksForJDBCTest {
             public Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) {
                 return CompletableFuture.completedFuture(new ArrayList<>());
             }
+
+            @Override
+            public CompletableFuture<Boolean> addPreferredPartition(Endpoint serverEndpoint, int partitionId) throws InterruptedException {
+                return CompletableFuture.completedFuture(true);
+            }
+
+            @Override
+            public CompletableFuture<Boolean> removePreferredPartition(Endpoint serverEndpoint, int partitionId) throws InterruptedException {
+                return CompletableFuture.completedFuture(true);
+            }
         };
 
         return new Transaction(0, 0, new ReqId(0, 0, 0, 0), mockRpcClient);

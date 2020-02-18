@@ -84,4 +84,9 @@ public interface WaltzClientHandlerCallbacks extends MessageHandlerCallbacks {
     void onCheckStorageConnectivityResponseReceived(Map<String, Boolean> storageConnectivityMap);
 
     void onServerPartitionsAssignmentResponseReceived(List<Integer> partitions);
+
+    void onAddPreferredPartitionResponseReceived(Boolean result);
+
+    void onRemovePreferredPartitionResponseReceived(Boolean result);
+
 }

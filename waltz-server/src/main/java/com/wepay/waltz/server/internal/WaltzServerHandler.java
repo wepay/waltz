@@ -6,6 +6,8 @@ import com.wepay.riff.network.MessageHandler;
 import com.wepay.riff.network.MessageHandlerCallbacks;
 import com.wepay.riff.util.Logging;
 import com.wepay.waltz.common.message.AbstractMessage;
+import com.wepay.waltz.common.message.AddPreferredPartitionRequest;
+import com.wepay.waltz.common.message.AddPreferredPartitionResponse;
 import com.wepay.waltz.common.message.CheckStorageConnectivityRequest;
 import com.wepay.waltz.common.message.CheckStorageConnectivityResponse;
 import com.wepay.waltz.common.message.MessageCodecV0;
@@ -13,6 +15,8 @@ import com.wepay.waltz.common.message.MessageCodecV1;
 import com.wepay.waltz.common.message.MessageCodecV2;
 import com.wepay.waltz.common.message.MessageType;
 import com.wepay.waltz.common.message.MountRequest;
+import com.wepay.waltz.common.message.RemovePreferredPartitionRequest;
+import com.wepay.waltz.common.message.RemovePreferredPartitionResponse;
 import com.wepay.waltz.common.message.ServerPartitionsAssignmentRequest;
 import com.wepay.waltz.common.message.ServerPartitionsAssignmentResponse;
 import com.wepay.waltz.common.metadata.ReplicaId;
@@ -21,9 +25,12 @@ import com.wepay.waltz.store.Store;
 import com.wepay.waltz.store.exception.StoreException;
 import com.wepay.waltz.store.exception.StorePartitionClosedException;
 import com.wepay.waltz.store.internal.ConnectionConfig;
+import com.wepay.zktools.clustermgr.ClusterManager;
+import com.wepay.zktools.clustermgr.ManagedServer;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.List;
@@ -50,7 +57,10 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
     private static final String HELLO_MESSAGE = "Waltz Server";
 
     private final Map<Integer, Partition> partitions;
+    private final HashSet<Integer> preferredPartitions;
     private final Store store;
+    private final ClusterManager clusterManager;
+    private final ManagedServer managedServer;
     private Integer clientId = null;
     private Long seqNum = null;
 
@@ -58,16 +68,23 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
      * Class constructor.
      * @param partitions Partition IDs that are part of the {@link com.wepay.waltz.server.WaltzServer} and their corresponding {@link Partition} object.
      */
-    public WaltzServerHandler(Map<Integer, Partition> partitions, Store store) {
-        this(partitions, new WaltzServerHandlerCallbacks(partitions), store);
+    public WaltzServerHandler(Map<Integer, Partition> partitions, HashSet<Integer> preferredPartitions, Store store,
+                              ClusterManager clusterManager,
+                              ManagedServer managedServer) {
+        this(partitions, new WaltzServerHandlerCallbacks(partitions), preferredPartitions, store, clusterManager,
+            managedServer);
     }
 
     private WaltzServerHandler(Map<Integer, Partition> partitions, WaltzServerHandlerCallbacks callbacks,
-                               Store store) {
+                               HashSet<Integer> preferredPartitions, Store store, ClusterManager clusterManager,
+                               ManagedServer managedServer) {
         super(CODECS, HELLO_MESSAGE, callbacks, QUEUE_LOW_WATER_MARK, QUEUE_HIGH_WATER_MARK);
 
         this.partitions = partitions;
+        this.preferredPartitions = preferredPartitions;
         this.store = store;
+        this.clusterManager = clusterManager;
+        this.managedServer = managedServer;
         callbacks.setMessageHandler(this);
     }
 
@@ -87,6 +104,7 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
             clientId = ((AbstractMessage) msg).reqId.clientId();
         }
 
+        int partitionId = 0;
         switch (msg.type()) {
             case MessageType.CHECK_STORAGE_CONNECTIVITY_REQUEST:
                 Set<ReplicaId> replicaIds = store.getReplicaIds();
@@ -127,6 +145,32 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
                         partitionsAssigned), true);
                 break;
 
+            case MessageType.ADD_PREFERRED_PARTITION_REQUEST:
+                partitionId = ((AddPreferredPartitionRequest) msg).partitionId;
+                if (partitionId < clusterManager.numPartitions()) {
+                    addPreferredPartition(partitionId);
+                    clusterManager.manage(managedServer);
+                    sendMessage(new AddPreferredPartitionResponse(((AddPreferredPartitionRequest) msg).reqId, true),
+                        true);
+                } else {
+                    sendMessage(new AddPreferredPartitionResponse(((AddPreferredPartitionRequest) msg).reqId, false),
+                        true);
+                }
+                break;
+
+            case MessageType.REMOVE_PREFERRED_PARTITION_REQUEST:
+                partitionId = ((RemovePreferredPartitionRequest) msg).partitionId;
+                if (partitionId < clusterManager.numPartitions()) {
+                    removePreferredPartition(partitionId);
+                    clusterManager.manage(managedServer);
+                    sendMessage(new RemovePreferredPartitionResponse(((RemovePreferredPartitionRequest) msg).reqId,
+                        true), true);
+                } else {
+                    sendMessage(new RemovePreferredPartitionResponse(((RemovePreferredPartitionRequest) msg).reqId,
+                        false), true);
+                }
+                break;
+
             default:
                 Partition partition = getPartition(((AbstractMessage) msg).reqId.partitionId());
                 if (partition != null) {
@@ -152,6 +196,19 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
     private Partition getPartition(int partitionId) {
         synchronized (partitions) {
             return partitions.get(partitionId);
+        }
+    }
+
+    private void addPreferredPartition(Integer partitionId) {
+        synchronized (preferredPartitions) {
+            preferredPartitions.add(partitionId);
+        }
+
+    }
+
+    private void removePreferredPartition(Integer partitionId) {
+        synchronized (preferredPartitions) {
+            preferredPartitions.remove(partitionId);
         }
     }
 
