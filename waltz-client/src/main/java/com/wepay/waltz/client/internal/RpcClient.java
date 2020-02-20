@@ -22,4 +22,8 @@ public interface RpcClient {
     CompletableFuture<Map<Endpoint, Map<String, Boolean>>>  checkServerConnections(Set<Endpoint> serverEndpoints);
 
     Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException;
+
+    CompletableFuture<Boolean> addPreferredPartition(Endpoint serverEndpoint, int partitionId) throws InterruptedException;
+
+    CompletableFuture<Boolean> removePreferredPartition(Endpoint serverEndpoint, int partitionId) throws InterruptedException;
 }

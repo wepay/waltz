@@ -64,8 +64,8 @@ public class IntegrationTestHelper {
     private List<Integer> storagePorts = new ArrayList<>();
     private List<Integer> storageAdminPorts = new ArrayList<>();
     private List<Integer> storageJettyPorts = new ArrayList<>();
-    private int serverPort;
-    private int serverJettyPort;
+    private List<Integer> serverPort = new ArrayList<>();
+    private List<Integer> serverJettyPort = new ArrayList<>();
 
     private final Map<String, Integer> storageGroupMap;
     private final Map<String, Integer> storageConnectionMap;
@@ -75,6 +75,7 @@ public class IntegrationTestHelper {
     private final String znodePath;
     private final int numPartitions;
     private final int numStorages;
+    private final int numServers;
     private final int zkSessionTimeout;
     private final long segmentSizeThreshold;
 
@@ -102,6 +103,7 @@ public class IntegrationTestHelper {
         this.znodePath = props.getProperty(Config.ZNODE_PATH);
         this.numPartitions = Integer.parseInt(props.getProperty(Config.NUM_PARTITIONS));
         this.numStorages = Integer.parseInt(props.getProperty(Config.NUM_STORAGES, "1"));
+        this.numServers = Integer.parseInt(props.getProperty(Config.NUM_SERVERS, "1"));
         this.zkSessionTimeout = Integer.parseInt(props.getProperty(Config.ZK_SESSION_TIMEOUT));
         this.root = new ZNode(znodePath);
 
@@ -113,8 +115,10 @@ public class IntegrationTestHelper {
 
         this.portFinder = new PortFinder();
         this.zkPort = portFinder.getPort();
-        this.serverPort = portFinder.getPort();
-        this.serverJettyPort = portFinder.getPort();
+        for  (int i = 0; i < numServers; i++) {
+            this.serverPort.add(portFinder.getPort());
+            this.serverJettyPort.add(portFinder.getPort());
+        }
 
         this.host = InetAddress.getLocalHost().getCanonicalHostName();
         this.zkConnectString = host + ":" + zkPort;
@@ -202,7 +206,27 @@ public class IntegrationTestHelper {
         }
     }
 
+    /**
+     * Starts the Waltz Server with serverPort[0] and serverJettyPort[0]
+     * @param awaitStart If true, wait for the server to start.
+     * @throws Exception if failed to start the server.
+     */
     public void startWaltzServer(boolean awaitStart) throws Exception {
+        WaltzServerRunner waltzServerRunner = getWaltzServerRunner();
+        waltzServerRunner.startAsync();
+        if (awaitStart) {
+            waltzServerRunner.awaitStart();
+        }
+    }
+
+    /**
+     * Starts the Waltz Server with the given server port and server jetty port.
+     * @param awaitStart If true, wait for the server to start.
+     * @param serverPort The Server Port.
+     * @param serverJettyPort The Server Jetty port.
+     * @throws Exception if failed to start the server.
+     */
+    public void startWaltzServer(boolean awaitStart, int serverPort, int serverJettyPort) throws Exception {
         WaltzServerRunner waltzServerRunner = getWaltzServerRunner(serverPort, serverJettyPort);
         waltzServerRunner.startAsync();
         if (awaitStart) {
@@ -248,7 +272,14 @@ public class IntegrationTestHelper {
      * Return WaltzServerRunner with auto-assigned serverPort and serverJettyPort
      */
     public WaltzServerRunner getWaltzServerRunner() throws Exception {
-        return getWaltzServerRunner(serverPort, serverJettyPort);
+        return getWaltzServerRunner(0);
+    }
+
+    /**
+     * Return WaltzServerRunner with auto-assigned serverPort and serverJettyPort
+     */
+    public WaltzServerRunner getWaltzServerRunner(int portsIndex) throws Exception {
+        return getWaltzServerRunner(serverPort.get(portsIndex), serverJettyPort.get(portsIndex));
     }
 
     /**
@@ -487,11 +518,19 @@ public class IntegrationTestHelper {
     }
 
     public int getServerPort() {
-        return serverPort;
+        return getServerPort(0);
+    }
+
+    public int getServerPort(int portIndex) {
+        return serverPort.get(portIndex);
     }
 
     public int getServerJettyPort() {
-        return serverJettyPort;
+        return getServerJettyPort(0);
+    }
+
+    public int getServerJettyPort(int portIndex) {
+        return serverJettyPort.get(portIndex);
     }
 
     public String getZkConnectString() {
@@ -533,6 +572,7 @@ public class IntegrationTestHelper {
     public static class Config {
         public static final String NUM_PARTITIONS = "numPartitions";
         public static final String NUM_STORAGES = "numStorages";
+        public static final String NUM_SERVERS = "numServers";
         public static final String ZK_SESSION_TIMEOUT = "zookeeper.sessionTimeout";
         public static final String ZNODE_PATH = "zookeeper.znodePath";
     }
