@@ -12,13 +12,17 @@ import com.wepay.zktools.clustermgr.ClusterManagerException;
 import com.wepay.zktools.clustermgr.PartitionInfo;
 import com.wepay.zktools.clustermgr.internal.ClusterManagerImpl;
 import com.wepay.zktools.clustermgr.internal.DynamicPartitionAssignmentPolicy;
+import com.wepay.zktools.clustermgr.internal.PartitionAssignment;
 import com.wepay.zktools.clustermgr.internal.PartitionAssignmentPolicy;
+import com.wepay.zktools.clustermgr.internal.ServerDescriptor;
 import com.wepay.zktools.zookeeper.ZNode;
 import com.wepay.zktools.zookeeper.ZooKeeperClient;
 import com.wepay.zktools.zookeeper.ZooKeeperClientException;
 import com.wepay.zktools.zookeeper.internal.ZooKeeperClientImpl;
 import io.netty.handler.ssl.SslContext;
 import org.slf4j.Logger;
+
+import java.util.Set;
 
 public class WaltzServerRunner extends Runner<WaltzServer> {
 
@@ -122,5 +126,13 @@ public class WaltzServerRunner extends Runner<WaltzServer> {
         } catch (Exception ex) {
             logger.error("failed to close the network server", ex);
         }
+    }
+
+    public Set<ServerDescriptor> getServerDescriptors() throws ClusterManagerException {
+        return this.clusterManager.serverDescriptors();
+    }
+
+    public PartitionAssignment getPartitionAssignment() throws ClusterManagerException {
+        return this.clusterManager.partitionAssignment();
     }
 }

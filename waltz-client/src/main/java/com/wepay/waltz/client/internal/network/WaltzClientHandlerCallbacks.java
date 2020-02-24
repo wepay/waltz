@@ -92,4 +92,16 @@ public interface WaltzClientHandlerCallbacks extends MessageHandlerCallbacks {
      * @param partitions List of all the partitions this server is assigned to.
      */
     void onServerPartitionsAssignmentResponseReceived(List<Integer> partitions);
+
+    /**
+     * Handles the add preferred partition response message received.
+     * @param result true if preferred partition addition was successful, otherwise false.
+     */
+    void onAddPreferredPartitionResponseReceived(Boolean result);
+
+    /**
+     * Handles the remove preferred partition response message received.
+     * @param result true if preferred partition removal was successful, otherwise false.
+     */
+    void onRemovePreferredPartitionResponseReceived(Boolean result);
 }

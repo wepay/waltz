@@ -6,15 +6,17 @@ import com.wepay.riff.network.NetworkClient;
 import com.wepay.riff.util.Logging;
 import com.wepay.waltz.client.internal.Partition;
 import com.wepay.waltz.common.message.AbstractMessage;
+import com.wepay.waltz.common.message.AddPreferredPartitionRequest;
 import com.wepay.waltz.common.message.CheckStorageConnectivityRequest;
+import com.wepay.waltz.common.message.RemovePreferredPartitionRequest;
 import com.wepay.waltz.common.message.FeedRequest;
 import com.wepay.waltz.common.message.HighWaterMarkRequest;
 import com.wepay.waltz.common.message.LockFailure;
+import com.wepay.waltz.common.message.MessageType;
 import com.wepay.waltz.common.message.MountRequest;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.common.message.TransactionDataRequest;
 import com.wepay.waltz.common.message.ServerPartitionsAssignmentRequest;
-import com.wepay.waltz.common.message.MessageType;
 import com.wepay.waltz.exception.NetworkClientClosedException;
 import com.wepay.zktools.clustermgr.Endpoint;
 import com.wepay.zktools.util.Uninterruptibly;
@@ -238,6 +240,42 @@ public class WaltzNetworkClient extends NetworkClient {
         return responseFuture.thenApply(response -> (List<Integer>) response);
     }
 
+    /**
+     * Adds the given partition Id as a preferred partition on the server.
+     * The current thread waits for channel readiness before sending the request to the server. If this client
+     * is shutdown before that, an exceptionally completed CompletableFuture is returned.
+     *
+     * @param partitionId The partition Id to be added.
+     * @return a CompletableFuture which will complete with a {@code true} if the preferred partition is added
+     * successfully, a {@code false} otherwise, or an exception if any.
+     * @throws InterruptedException If thread interrupted while waiting for the channel to be ready.
+     */
+    public CompletableFuture<Boolean> addPreferredPartition(int partitionId) throws InterruptedException {
+        ReqId dummyReqId = new ReqId(clientId, 0, partitionId, 0);
+        CompletableFuture<Object> responseFuture =
+            sendRequestOnChannelActive(new AddPreferredPartitionRequest(dummyReqId, partitionId));
+
+        return responseFuture.thenApply(response -> (Boolean) response);
+    }
+
+    /**
+     * Removes the given partition Id as a preferred partition on the server.
+     * The current thread waits for channel readiness before sending the request to the server. If this client
+     * is shutdown before that, an exceptionally completed CompletableFuture is returned.
+     *
+     * @param partitionId The partition Id to be removed.
+     * @return a CompletableFuture which will complete with a {@code true} if the preferred partition is removed
+     * successfully, a {@code false} otherwise, or an exception if any.
+     * @throws InterruptedException If thread interrupted while waiting for the channel to be ready.
+     */
+    public CompletableFuture<Boolean> removePreferredPartition(int partitionId) throws InterruptedException {
+        ReqId dummyReqId = new ReqId(clientId, 0, partitionId, 0);
+        CompletableFuture<Object> responseFuture =
+            sendRequestOnChannelActive(new RemovePreferredPartitionRequest(dummyReqId, partitionId));
+
+        return responseFuture.thenApply(response -> (Boolean) response);
+    }
+
     private CompletableFuture<Object> sendRequestOnChannelActive(AbstractMessage requestMessage) throws InterruptedException {
         synchronized (lock) {
             while (running && !channelReady) {
@@ -455,6 +493,32 @@ public class WaltzNetworkClient extends NetworkClient {
                 (keyMessageType, valueFuture) -> {
                     if (!valueFuture.isDone()) {
                         valueFuture.complete(partitions);
+                    }
+                    return CompletableFuture.completedFuture(Optional.empty());
+                }
+            );
+        }
+
+        @Override
+        public void onAddPreferredPartitionResponseReceived(Boolean result) {
+            outputFuturesPerMessageType.computeIfPresent(
+                MessageType.ADD_PREFERRED_PARTITION_REQUEST,
+                (keyMessageType, valueFuture) -> {
+                    if (!valueFuture.isDone()) {
+                        valueFuture.complete(result);
+                    }
+                    return CompletableFuture.completedFuture(Optional.empty());
+                }
+            );
+        }
+
+        @Override
+        public void onRemovePreferredPartitionResponseReceived(Boolean result) {
+            outputFuturesPerMessageType.computeIfPresent(
+                MessageType.REMOVE_PREFERRED_PARTITION_REQUEST,
+                (keyMessageType, valueFuture) -> {
+                    if (!valueFuture.isDone()) {
+                        valueFuture.complete(result);
                     }
                     return CompletableFuture.completedFuture(Optional.empty());
                 }

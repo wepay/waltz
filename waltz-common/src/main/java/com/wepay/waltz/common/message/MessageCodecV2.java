@@ -38,6 +38,8 @@ public class MessageCodecV2 implements MessageCodec {
         int header;
         byte[] data;
         int checksum;
+        int partitionId;
+        boolean result;
 
         switch (messageType) {
             case MessageType.MOUNT_REQUEST:
@@ -136,6 +138,23 @@ public class MessageCodecV2 implements MessageCodec {
                     partitionsAssigned.add(reader.readInt());
                 }
                 return new ServerPartitionsAssignmentResponse(reqId, partitionsAssigned);
+
+            case MessageType.ADD_PREFERRED_PARTITION_REQUEST:
+                partitionId = reader.readInt();
+                return new AddPreferredPartitionRequest(reqId, partitionId);
+
+            case MessageType.ADD_PREFERRED_PARTITION_RESPONSE:
+                result = reader.readBoolean();
+                return new AddPreferredPartitionResponse(reqId, result);
+
+            case MessageType.REMOVE_PREFERRED_PARTITION_REQUEST:
+                partitionId = reader.readInt();
+                return new RemovePreferredPartitionRequest(reqId, partitionId);
+
+            case MessageType.REMOVE_PREFERRED_PARTITION_RESPONSE:
+                result = reader.readBoolean();
+                return new RemovePreferredPartitionResponse(reqId, result);
+
             default:
                 throw new IllegalStateException("unknown message type: " + messageType);
         }
@@ -252,6 +271,28 @@ public class MessageCodecV2 implements MessageCodec {
                     writer.writeInt(partition);
                 }
                 break;
+
+            case MessageType.ADD_PREFERRED_PARTITION_REQUEST:
+                AddPreferredPartitionRequest addPreferredPartitionRequest = (AddPreferredPartitionRequest) msg;
+                writer.writeInt(addPreferredPartitionRequest.partitionId);
+                break;
+
+            case MessageType.ADD_PREFERRED_PARTITION_RESPONSE:
+                AddPreferredPartitionResponse addPreferredPartitionResponse = (AddPreferredPartitionResponse) msg;
+                writer.writeBoolean(addPreferredPartitionResponse.result);
+                break;
+
+            case MessageType.REMOVE_PREFERRED_PARTITION_REQUEST:
+                RemovePreferredPartitionRequest removePreferredPartitionRequest = (RemovePreferredPartitionRequest) msg;
+                writer.writeInt(removePreferredPartitionRequest.partitionId);
+                break;
+
+            case MessageType.REMOVE_PREFERRED_PARTITION_RESPONSE:
+                RemovePreferredPartitionResponse removePreferredPartitionResponse =
+                    (RemovePreferredPartitionResponse) msg;
+                writer.writeBoolean(removePreferredPartitionResponse.result);
+                break;
+
             default:
                 throw new IllegalStateException("unknown message type: " + msg.type());
         }

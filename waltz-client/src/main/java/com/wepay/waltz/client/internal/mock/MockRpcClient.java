@@ -51,4 +51,14 @@ class MockRpcClient implements RpcClient {
         return CompletableFuture.completedFuture(new ArrayList<>());
     }
 
+    @Override
+    public CompletableFuture<Boolean> addPreferredPartition(Endpoint serverEndpoint, int partitionId) throws InterruptedException {
+        return CompletableFuture.completedFuture(true);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> removePreferredPartition(Endpoint serverEndpoint, int partitionId) throws InterruptedException {
+        return CompletableFuture.completedFuture(true);
+
+    }
 }

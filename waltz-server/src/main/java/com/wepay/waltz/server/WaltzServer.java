@@ -86,6 +86,7 @@ public class WaltzServer {
     private final NetworkServer networkServer;
     private final Endpoint endpoint;
     private final Map<Integer, Partition> partitions;
+    private final HashSet<Integer> preferredPartitions;
     private final String metricsGroup = MetricGroup.WALTZ_SERVER_METRIC_GROUP;
     private String clusterName = null;
     private int serverId;
@@ -110,12 +111,7 @@ public class WaltzServer {
         this.port = port;
         this.config = config;
         this.partitions = new HashMap<>();
-        this.networkServer = new NetworkServer(port, sslCtx != null ? sslCtx : ServerSSL.createInsecureContext()) {
-            @Override
-            protected MessageHandler getMessageHandler() {
-                return new WaltzServerHandler(partitions, store);
-            }
-        };
+        this.preferredPartitions = new HashSet<>();
 
         try {
             endpoint = new Endpoint(InetAddress.getLocalHost().getCanonicalHostName(), port);
@@ -188,10 +184,22 @@ public class WaltzServer {
                     logger.info("partition assigned: " + getPartitionIds() + " endpoint=" + endpoint);
                 }
             }
+
+            @Override
+            public List<Integer> getPreferredPartitions() {
+                return new ArrayList<>(preferredPartitions);
+            }
         };
 
         this.clusterManager = clusterManager;
         clusterManager.manage(managedServer);
+
+        this.networkServer = new NetworkServer(port, sslCtx != null ? sslCtx : ServerSSL.createInsecureContext()) {
+            @Override
+            protected MessageHandler getMessageHandler() {
+                return new WaltzServerHandler(partitions, preferredPartitions, store, clusterManager, managedServer);
+            }
+        };
 
         registerMetrics();
 

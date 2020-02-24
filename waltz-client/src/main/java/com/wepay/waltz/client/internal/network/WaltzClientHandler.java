@@ -6,6 +6,7 @@ import com.wepay.riff.network.MessageHandler;
 import com.wepay.riff.network.MessageProcessingThreadPool;
 import com.wepay.riff.util.Logging;
 import com.wepay.waltz.common.message.AbstractMessage;
+import com.wepay.waltz.common.message.AddPreferredPartitionResponse;
 import com.wepay.waltz.common.message.CheckStorageConnectivityResponse;
 import com.wepay.waltz.common.message.FeedData;
 import com.wepay.waltz.common.message.FlushResponse;
@@ -17,6 +18,7 @@ import com.wepay.waltz.common.message.MessageCodecV2;
 import com.wepay.waltz.common.message.MessageType;
 import com.wepay.waltz.common.message.MountRequest;
 import com.wepay.waltz.common.message.MountResponse;
+import com.wepay.waltz.common.message.RemovePreferredPartitionResponse;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.common.message.TransactionDataResponse;
 import com.wepay.waltz.common.message.ServerPartitionsAssignmentResponse;
@@ -132,6 +134,17 @@ public class WaltzClientHandler extends MessageHandler {
                 ServerPartitionsAssignmentResponse serverPartitionsAssignmentResponse =
                         (ServerPartitionsAssignmentResponse) msg;
                 handlerCallbacks.onServerPartitionsAssignmentResponseReceived(serverPartitionsAssignmentResponse.serverPartitionAssignments);
+                break;
+
+            case MessageType.ADD_PREFERRED_PARTITION_RESPONSE:
+                AddPreferredPartitionResponse addPreferredPartitionResponse =  (AddPreferredPartitionResponse) msg;
+                handlerCallbacks.onAddPreferredPartitionResponseReceived(addPreferredPartitionResponse.result);
+                break;
+
+            case MessageType.REMOVE_PREFERRED_PARTITION_RESPONSE:
+                RemovePreferredPartitionResponse removePreferredPartitionResponse =
+                    (RemovePreferredPartitionResponse) msg;
+                handlerCallbacks.onRemovePreferredPartitionResponseReceived(removePreferredPartitionResponse.result);
                 break;
 
             default:

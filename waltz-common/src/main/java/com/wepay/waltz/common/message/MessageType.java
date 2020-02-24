@@ -23,4 +23,9 @@ public final class MessageType {
     public static final int CHECK_STORAGE_CONNECTIVITY_RESPONSE = 14;
     public static final int SERVER_PARTITIONS_ASSIGNMENT_REQUEST = 15;
     public static final int SERVER_PARTITIONS_ASSIGNMENT_RESPONSE = 16;
+    public static final int ADD_PREFERRED_PARTITION_REQUEST = 17;
+    public static final int ADD_PREFERRED_PARTITION_RESPONSE = 18;
+    public static final int REMOVE_PREFERRED_PARTITION_REQUEST = 19;
+    public static final int REMOVE_PREFERRED_PARTITION_RESPONSE = 20;
+
 }
