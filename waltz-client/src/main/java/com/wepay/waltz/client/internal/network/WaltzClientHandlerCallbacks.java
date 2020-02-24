@@ -81,7 +81,15 @@ public interface WaltzClientHandlerCallbacks extends MessageHandlerCallbacks {
      */
     void onHighWaterMarkReceived(int partitionId, long highWaterMark);
 
+    /**
+     * Handles the received check connectivity response message.
+     * @param storageConnectivityMap Connectivity status map of all storage nodes within the cluster.
+     */
     void onCheckStorageConnectivityResponseReceived(Map<String, Boolean> storageConnectivityMap);
 
+    /**
+     * Handles the received partition assignment response message.
+     * @param partitions List of all the partitions this server is assigned to.
+     */
     void onServerPartitionsAssignmentResponseReceived(List<Integer> partitions);
 }

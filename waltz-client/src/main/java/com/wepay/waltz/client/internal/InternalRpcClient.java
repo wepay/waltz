@@ -8,7 +8,6 @@ import io.netty.handler.ssl.SslContext;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
@@ -75,25 +74,28 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
      *
      * @param serverEndpoints Set of server endpoints.
      * @return a combined completable future with the connection status per server endpoint.
+     * @throws InterruptedException if thrown by the {@code WaltzNetworkClient}
      */
     @Override
-    public CompletableFuture<Map<Endpoint, Map<String, Boolean>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
-        Map<Endpoint, CompletableFuture<Optional<Map<String, Boolean>>>> futures = new HashMap<>();
-
+    public Future<Map<Endpoint, Map<String, Boolean>>> checkServerConnections(Set<Endpoint> serverEndpoints) throws InterruptedException {
+        Map<Endpoint, CompletableFuture<Map<String, Boolean>>> futures = new HashMap<>();
         for (Endpoint endpoint : serverEndpoints) {
             WaltzNetworkClient networkClient = getNetworkClient(endpoint);
-            CompletableFuture<Optional<Map<String, Boolean>>> future = networkClient.checkServerToStorageConnectivity();
+            CompletableFuture<Map<String, Boolean>> future = networkClient.checkServerToStorageConnectivity();
             futures.put(endpoint, future);
         }
 
-        return CompletableFuture.allOf(futures.values().toArray(new CompletableFuture[futures.size()]))
-            .thenApply(v -> {
-                Map<Endpoint, Map<String, Boolean>> connectivityStatusMap = new HashMap<>();
-                futures.forEach(((endpoint, future) ->
-                    connectivityStatusMap.put(endpoint,
-                        future.join().isPresent() ? future.join().get() : null)));
-                return connectivityStatusMap;
-            });
+        return CompletableFuture
+                .allOf(futures.values().toArray(new CompletableFuture[futures.size()]))
+                .handle((v, t) -> {
+                    Map<Endpoint, Map<String, Boolean>> connectivityStatusMap = new HashMap<>();
+                    futures
+                        .entrySet()
+                        .stream()
+                        .filter(entry -> !entry.getValue().isCompletedExceptionally())
+                        .forEach((entry) -> connectivityStatusMap.put(entry.getKey(), entry.getValue().join()));
+                    return connectivityStatusMap;
+                });
     }
 
     /**
@@ -101,12 +103,11 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
      *
      * @param serverEndpoint Server from which to fetch the assigned partitions
      * @return Future which will contain the list of partitions when complete
-     * @throws InterruptedException If thread interrupted while waiting for channel with Waltz server to be ready
+     * @throws InterruptedException if thrown by the {@code WaltzNetworkClient}
      */
     @Override
     public Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException {
         WaltzNetworkClient networkClient = getNetworkClient(serverEndpoint);
         return networkClient.getServerPartitionAssignments();
     }
-
 }

@@ -6,6 +6,8 @@ import com.wepay.waltz.client.WaltzClient;
 import com.wepay.waltz.client.WaltzClientCallbacks;
 import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.client.internal.InternalRpcClient;
+import com.wepay.waltz.common.metadata.ReplicaAssignments;
+import com.wepay.waltz.common.metadata.StoreMetadata;
 import com.wepay.waltz.common.util.Cli;
 import com.wepay.waltz.common.util.SubcommandCli;
 import com.wepay.waltz.exception.SubCommandFailedException;
@@ -32,19 +34,24 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.EnumMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * ClusterCli is a tool for interacting with the Waltz Cluster.
  */
 public final class ClusterCli extends SubcommandCli {
 
-    private ClusterCli(String[] args,  boolean useByTest) {
+    private ClusterCli(String[] args, boolean useByTest) {
         super(args, useByTest, Arrays.asList(
             new Subcommand(CheckConnectivity.NAME, CheckConnectivity.DESCRIPTION, CheckConnectivity::new),
             new Subcommand(Verify.NAME, Verify.DESCRIPTION, Verify::new)
@@ -82,6 +89,7 @@ public final class ClusterCli extends SubcommandCli {
         @Override
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             ZooKeeperClient zkClient = null;
+            InternalRpcClient rpcClient = null;
             try {
                 String cliConfigPath = cmd.getOptionValue("cli-config-path");
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
@@ -92,16 +100,27 @@ public final class ClusterCli extends SubcommandCli {
                 zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
                 ZNode root = new ZNode(zkRoot);
 
-                Set<Endpoint> serverEndpoints = getListOfServerEndpoints(root, zkClient);
-                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(cliConfigPath);
-                Map<Endpoint, Map<String, Boolean>> connectivityStatusMap =
-                    checkServerConnections(waltzClientConfig,
-                        serverEndpoints);
+                ClusterManager clusterManager = new ClusterManagerImpl(zkClient, root, partitionAssignmentPolicy);
+                Set<Endpoint> serverEndpoints =
+                    clusterManager.serverDescriptors()
+                        .stream()
+                        .map(serverDescriptor -> serverDescriptor.endpoint)
+                        .collect(Collectors.toSet());
 
-                for (Map.Entry<Endpoint, Map<String, Boolean>> connectivityStatus : connectivityStatusMap.entrySet()) {
-                    System.out.println("Connectivity status of " + connectivityStatus.getKey() + " is: "
-                        + ((connectivityStatus.getValue() == null) ? "UNREACHABLE"
-                        : connectivityStatus.getValue().toString()));
+                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(cliConfigPath);
+
+                DummyTxnCallbacks callbacks = new DummyTxnCallbacks();
+                rpcClient = new InternalRpcClient(ClientSSL.createContext(waltzClientConfig.getSSLConfig()),
+                    WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, callbacks);
+
+                Map<Endpoint, Map<String, Boolean>> connectivityStatusMap =
+                    rpcClient.checkServerConnections(serverEndpoints).get();
+
+                for (Endpoint endpoint : serverEndpoints) {
+                    Map<String, Boolean> connectivityStatus = connectivityStatusMap.get(endpoint);
+                    System.out.println("Connectivity status of " + endpoint + " is: "
+                        + ((connectivityStatus == null) ? "UNREACHABLE" : connectivityStatus.toString())
+                    );
                 }
             } catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Failed to check topology of the cluster. %n%s",
@@ -110,27 +129,11 @@ public final class ClusterCli extends SubcommandCli {
                 if (zkClient != null) {
                     zkClient.close();
                 }
+
+                if (rpcClient != null) {
+                    rpcClient.close();
+                }
             }
-        }
-
-        private Set<Endpoint> getListOfServerEndpoints(ZNode root, ZooKeeperClient zkClient) throws Exception {
-            ClusterManager clusterManager = new ClusterManagerImpl(zkClient, root, partitionAssignmentPolicy);
-            Set<ServerDescriptor> serverDescriptors = clusterManager.serverDescriptors();
-            Set<Endpoint> serverEndpoints = new HashSet<>();
-
-            for (ServerDescriptor serverDescriptor: serverDescriptors) {
-                serverEndpoints.add(serverDescriptor.endpoint);
-            }
-            return serverEndpoints;
-        }
-
-        private Map<Endpoint, Map<String, Boolean>> checkServerConnections(WaltzClientConfig config,
-                                                                           Set<Endpoint> serverEndpoints) throws Exception {
-            DummyTxnCallbacks callbacks = new DummyTxnCallbacks();
-            InternalRpcClient rpcClient = new InternalRpcClient(ClientSSL.createContext(config.getSSLConfig()),
-                WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, callbacks);
-
-            return rpcClient.checkServerConnections(serverEndpoints).get();
         }
 
         @Override
@@ -143,11 +146,13 @@ public final class ClusterCli extends SubcommandCli {
      * The {@code verify} command checks:
      * 1. Zookeeper partition assignment metadata is valid
      * 2. The partition assignment of actual servers matches the one on Zookeeper
-     * ....
+     * 3. All of the servers are reachable and each of those can reach its replica storage nodes.
+     * ...
      */
     private static final class Verify extends Cli {
         private static final String NAME = "verify";
         private static final String DESCRIPTION = "Validates if partition(s) is handled by some server";
+        private static final long TIMEOUT_IN_SECONDS = 5;
 
         private final PartitionAssignmentPolicy partitionAssignmentPolicy = new DynamicPartitionAssignmentPolicy();
 
@@ -187,37 +192,78 @@ public final class ClusterCli extends SubcommandCli {
                 WaltzClientConfig waltzClientConfig = getWaltzClientConfig(cliConfigPath);
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
-                String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
+                ZNode zkRoot = new ZNode((String) cliConfig.get(CliConfig.CLUSTER_ROOT));
+                ZNode storeRoot = new ZNode(zkRoot, StoreMetadata.STORE_ZNODE_NAME);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
 
                 zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
 
-                ClusterManager clusterManager = new ClusterManagerImpl(zkClient, new ZNode(zkRoot), partitionAssignmentPolicy);
+                StoreMetadata storeMetadata = new StoreMetadata(zkClient, storeRoot);
+
+                ClusterManager clusterManager = new ClusterManagerImpl(zkClient, zkRoot, partitionAssignmentPolicy);
 
                 for (int partitionId = 0; partitionId < clusterManager.numPartitions(); partitionId++) {
                     partitionsValidationResultList.add(new PartitionValidationResults(partitionId));
                 }
 
-                // Step1: validate all partitions on zk
+                // Step1: Validate all partitions on zk
                 buildZookeeperPartitionAssignmentsValidation(clusterManager, partitionsValidationResultList);
-                verifyValidation(ValidationResults.ValidationType.PARTITION_ASSIGNMENT_ZK_VALIDITY, partitionsValidationResultList);
+                verifyValidation(
+                    ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_VALIDITY, partitionsValidationResultList
+                );
 
-                // Step2: validate zk and servers partition assignment consistency
+                // Step2: Build zk and servers partition assignment consistency validations
                 rpcClient = new InternalRpcClient(ClientSSL.createContext(waltzClientConfig.getSSLConfig()),
                         WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, new DummyTxnCallbacks());
 
-                buildServersZKPartitionAssignmentsConsistencyValidation(rpcClient, clusterManager, partitionsValidationResultList).get();
+                CompletableFuture<Void> consistencyValidationFuture =
+                    buildServersZKPartitionAssignmentsConsistencyValidation(
+                        rpcClient, clusterManager, partitionsValidationResultList
+                    );
 
-                for (PartitionValidationResults results : partitionsValidationResultList) {
-                    if (!results.validationResultsMap.containsKey(ValidationResults.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY)) {
-                        ValidationResults validationResults = new ValidationResults(ValidationResults.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
-                                ValidationResults.Status.FAILURE, "Timeout exception");
-                        results.validationResultsMap.put(ValidationResults.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY, validationResults);
-                    }
+                // Step3: Build Server-Storage connectivity validations
+                CompletableFuture<Void> connectivityValidationFuture =
+                    buildServerStorageConnectivityValidation(
+                        rpcClient,
+                        clusterManager,
+                        storeMetadata.getReplicaAssignments(),
+                        partitionsValidationResultList
+                    );
+
+                // Verify validations for Step2 and Step3
+                try {
+                    consistencyValidationFuture.get(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
+                } catch (ExecutionException | TimeoutException exception) {
+                    failMissingValidationResults(
+                        partitionsValidationResultList,
+                        ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
+                        exception.toString()
+                    );
                 }
-                verifyValidation(ValidationResults.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY, partitionsValidationResultList);
 
-            } catch (Exception e) {
+                try {
+                    connectivityValidationFuture.get(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
+                } catch (ExecutionException | TimeoutException exception) {
+                    failMissingValidationResults(
+                        partitionsValidationResultList,
+                        ValidationResult.ValidationType.SERVER_STORAGE_CONNECTIVITY,
+                        exception.toString()
+                    );
+                }
+
+                verifyValidation(
+                    ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
+                    partitionsValidationResultList
+                );
+
+                verifyValidation(
+                    ValidationResult.ValidationType.SERVER_STORAGE_CONNECTIVITY,
+                    partitionsValidationResultList
+                );
+            } catch (RuntimeException e) {
+                throw new SubCommandFailedException(String.format("Failed to verify cluster. %n%s",
+                    e.getMessage()));
+            } catch (Exception  e) {
                 throw new SubCommandFailedException(String.format("Failed to verify cluster. %n%s",
                         e.getMessage()));
             } finally {
@@ -231,8 +277,19 @@ public final class ClusterCli extends SubcommandCli {
             }
         }
 
+        private void failMissingValidationResults(List<PartitionValidationResults> partitionsValidationResultsList,
+                                                  ValidationResult.ValidationType validationType,
+                                                  String failureMessage) {
+            for (PartitionValidationResults results : partitionsValidationResultsList) {
+                if (!results.validationResultsMap.containsKey(validationType)) {
+                    ValidationResult validationResult =
+                        new ValidationResult(validationType, ValidationResult.Status.FAILURE, failureMessage);
+                    results.validationResultsMap.put(validationType, validationResult);
+                }
+            }
+        }
+
         /**
-         *
          *  Verify a validation type for all partitions from the list of validation results.
          *  If validation failed, errors are printed
          *
@@ -240,7 +297,8 @@ public final class ClusterCli extends SubcommandCli {
          * @param results List containing the validation results for each partition
          * @return True if no error in validation. False otherwise
          */
-        private boolean verifyValidation(ValidationResults.ValidationType type, List<PartitionValidationResults> results) {
+        private boolean verifyValidation(ValidationResult.ValidationType type,
+                                         List<PartitionValidationResults> results) {
             boolean success = true;
             for (int partitionId = 0; partitionId < results.size(); partitionId++) {
                 if (!verifyValidation(type, results, partitionId)) {
@@ -259,16 +317,127 @@ public final class ClusterCli extends SubcommandCli {
          * @param partitionId Partition to validate
          * @return True if no error in validation. False otherwise
          */
-        private boolean verifyValidation(ValidationResults.ValidationType type, List<PartitionValidationResults> results, int partitionId) {
+        private boolean verifyValidation(ValidationResult.ValidationType type,
+                                         List<PartitionValidationResults> results,
+                                         int partitionId) {
             PartitionValidationResults partitionResult = results.get(partitionId);
 
-            ValidationResults partitionZkResults = partitionResult.validationResultsMap.get(type);
-            if (partitionZkResults.status.equals(ValidationResults.Status.FAILURE)) {
+            ValidationResult partitionZkResults = partitionResult.validationResultsMap.get(type);
+            if (partitionZkResults.status.equals(ValidationResult.Status.FAILURE)) {
                 System.out.println("Validation " + type.name() + " failed for partition " + partitionId);
                 System.out.println("Validation error is: " + partitionZkResults.error);
                 return false;
             }
             return true;
+        }
+
+        /**
+         * Builds {@code SERVER_STORAGE_CONNECTIVITY} {@code PartitionValidationResults} for all the servers in the
+         * cluster.
+         *
+         * @param rpcClient Client used to connect to Waltz server to fetch connectivity statuses.
+         * @param clusterManager ClusterManager used to fetch cluster related information from Zookeeper.
+         * @param replicaAssignments Replica assignments for all the partitions.
+         * @param partitionValidationResultsList a {@code List<PartitionValidationResults>} that will contain all the
+         *                                       validation when the returned CompletableFuture is complete.
+         * @return a {@code CompletableFuture<Void>} which will complete after all the
+         * {@code PartitionValidationResults} are available.
+         * @throws InterruptedException if thrown by the {@code InternalRpcClient}
+         * @throws ClusterManagerException if thrown by the {@code ClusterManager}
+         */
+        private CompletableFuture<Void> buildServerStorageConnectivityValidation(
+            InternalRpcClient rpcClient,
+            ClusterManager clusterManager,
+            ReplicaAssignments replicaAssignments,
+            List<PartitionValidationResults> partitionValidationResultsList
+        ) throws InterruptedException, ClusterManagerException {
+
+            PartitionAssignment partitionAssignment = clusterManager.partitionAssignment();
+            Map<Endpoint, List<PartitionInfo>> partitionAssignments =
+                clusterManager.serverDescriptors()
+                    .stream()
+                    .collect(
+                        Collectors.toMap(
+                            descriptor -> descriptor.endpoint,
+                            descriptor -> partitionAssignment.partitionsFor(descriptor.serverId),
+                            (oldKey, newKey) -> newKey
+                        )
+                    );
+
+            CompletableFuture<Map<Endpoint, Map<String, Boolean>>> connectivityStatusFuture =
+                (CompletableFuture<Map<Endpoint, Map<String, Boolean>>>)
+                    rpcClient.checkServerConnections(partitionAssignments.keySet());
+
+            return connectivityStatusFuture.thenAccept(response -> {
+                    Map<Integer, Set<String>> partitionIdToReplicas = new HashMap<>();
+                    replicaAssignments
+                        .replicas
+                        .forEach((replica, assignedPartitions) ->
+                            Arrays
+                                .stream(assignedPartitions)
+                                .forEach(partitionId -> {
+                                    partitionIdToReplicas.putIfAbsent(partitionId, new HashSet<>());
+                                    partitionIdToReplicas.get(partitionId).add(replica);
+                                })
+                        );
+
+                    partitionAssignments.forEach((endpoint, partitions) -> {
+                        Map<String, Boolean> storageConnectivityResults = response.get(endpoint);
+                        partitions.forEach(partition ->
+                            partitionValidationResultsList
+                                .get(partition.partitionId)
+                                .validationResultsMap
+                                .put(
+                                    ValidationResult.ValidationType.SERVER_STORAGE_CONNECTIVITY,
+                                    getStorageConnectivityValidationResult(
+                                        partitionIdToReplicas.get(partition.partitionId),
+                                        endpoint,
+                                        storageConnectivityResults
+                                    )
+                                )
+                        );
+                    });
+                });
+        }
+
+        private ValidationResult getStorageConnectivityValidationResult(Set<String> replicas,
+                                                                        Endpoint serverEndpoint,
+                                                                        Map<String, Boolean> storageConnectivityResults) {
+            String errMsgPrefix = String.format("Server %s", serverEndpoint);
+
+            ValidationResult.Status validationStatus = ValidationResult.Status.SUCCESS;
+            String errorMsg = "";
+
+            if (Objects.isNull(storageConnectivityResults)) {
+                validationStatus = ValidationResult.Status.FAILURE;
+                errorMsg = String.format("%s, no connectivity statuses response from the server", errMsgPrefix);
+            } else {
+                for (String replica : replicas) {
+                    if (!storageConnectivityResults.containsKey(replica)) {
+                        validationStatus = ValidationResult.Status.FAILURE;
+                        errorMsg = errorMsg.concat(System.lineSeparator()).concat(
+                            String.format(
+                                "%s, storage replica %s missing in server response",
+                                errMsgPrefix, replica
+                            )
+                        );
+                    } else if (!storageConnectivityResults.get(replica)) {
+                        validationStatus = ValidationResult.Status.FAILURE;
+                        errorMsg = errorMsg.concat(System.lineSeparator()).concat(
+                            String.format(
+                                "%s, server-storage connectivity check for storage replica %s failed",
+                                errMsgPrefix, replica
+                            )
+                        );
+                    }
+                }
+            }
+
+            return new ValidationResult(
+                ValidationResult.ValidationType.SERVER_STORAGE_CONNECTIVITY,
+                validationStatus,
+                errorMsg
+            );
         }
 
         /**
@@ -296,27 +465,27 @@ public final class ClusterCli extends SubcommandCli {
                         Map<Integer, AssignmentMatch> assignmentMatchMap = verifyAssignments(zookeeperAssignments, serverAssignments);
 
                         assignmentMatchMap.forEach((partitionId, match) -> {
-                            ValidationResults.Status status = ValidationResults.Status.SUCCESS;
+                            ValidationResult.Status status = ValidationResult.Status.SUCCESS;
                             String error = "";
 
                             if (!match.equals(AssignmentMatch.IN_BOTH)) {
-                                status = ValidationResults.Status.FAILURE;
+                                status = ValidationResult.Status.FAILURE;
                                 error = "Partition " + partitionId + " not matching in zk and server: " + match.name();
                             }
 
                             PartitionValidationResults partitionValidationResults = partitionValidationResultsList.get(partitionId);
-                            ValidationResults validationResults = new ValidationResults(ValidationResults.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
+                            ValidationResult validationResult = new ValidationResult(ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
                                                                         status, error);
-                            partitionValidationResults.validationResultsMap.put(validationResults.type, validationResults);
+                            partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
                         });
                     }).exceptionally(e -> {
                         for (PartitionInfo partitionInfo : zookeeperAssignments) {
                             PartitionValidationResults partitionValidationResults = partitionValidationResultsList.get(partitionInfo.partitionId);
-                            ValidationResults validationResults = new ValidationResults(
-                                    ValidationResults.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
-                                    ValidationResults.Status.FAILURE,
+                            ValidationResult validationResult = new ValidationResult(
+                                    ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
+                                    ValidationResult.Status.FAILURE,
                                     e.getMessage());
-                            partitionValidationResults.validationResultsMap.put(validationResults.type, validationResults);
+                            partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
                         }
                         return null;
                     });
@@ -409,23 +578,23 @@ public final class ClusterCli extends SubcommandCli {
                         partitionToServerMap[partitionInfo.partitionId] = serverId;
                     }
 
-                    ValidationResults validationResults = new ValidationResults(
-                                ValidationResults.ValidationType.PARTITION_ASSIGNMENT_ZK_VALIDITY,
-                                ("".equals(error)) ? ValidationResults.Status.SUCCESS : ValidationResults.Status.FAILURE,
+                    ValidationResult validationResult = new ValidationResult(
+                                ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_VALIDITY,
+                                ("".equals(error)) ? ValidationResult.Status.SUCCESS : ValidationResult.Status.FAILURE,
                                 error);
                     PartitionValidationResults partitionValidationResults = partitionValidationResultsList.get(partitionInfo.partitionId);
-                    partitionValidationResults.validationResultsMap.put(validationResults.type, validationResults);
+                    partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
                 }
             }
 
             for (int partitionId = 0; partitionId < clusterManager.numPartitions(); partitionId++) {
                 if (partitionToServerMap[partitionId] == 0) {
-                    ValidationResults validationResults = new ValidationResults(
-                            ValidationResults.ValidationType.PARTITION_ASSIGNMENT_ZK_VALIDITY,
-                            ValidationResults.Status.FAILURE,
+                    ValidationResult validationResult = new ValidationResult(
+                            ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_VALIDITY,
+                            ValidationResult.Status.FAILURE,
                             "Error: Partition " + partitionId + " not handled by any server");
                     PartitionValidationResults partitionValidationResults = partitionValidationResultsList.get(partitionId);
-                    partitionValidationResults.validationResultsMap.put(validationResults.type, validationResults);
+                    partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
                 }
             }
         }
@@ -441,11 +610,11 @@ public final class ClusterCli extends SubcommandCli {
         private static class PartitionValidationResults {
             private int partitionId;
 
-            private Map<Verify.ValidationResults.ValidationType, ValidationResults> validationResultsMap;
+            private Map<ValidationResult.ValidationType, ValidationResult> validationResultsMap;
 
             PartitionValidationResults(int partitionId) {
                 this.partitionId = partitionId;
-                this.validationResultsMap = new EnumMap<>(ValidationResults.ValidationType.class);
+                this.validationResultsMap = new EnumMap<>(ValidationResult.ValidationType.class);
             }
 
             @Override
@@ -458,10 +627,11 @@ public final class ClusterCli extends SubcommandCli {
         /**
          * Class to contain actual validation data for a specific validation type
          */
-        private static class ValidationResults {
+        private static class ValidationResult {
             enum ValidationType {
                 PARTITION_ASSIGNMENT_ZK_VALIDITY,
-                PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY
+                PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
+                SERVER_STORAGE_CONNECTIVITY
             }
 
             enum Status {
@@ -473,7 +643,7 @@ public final class ClusterCli extends SubcommandCli {
             private Status status;
             private String error;
 
-            ValidationResults(ValidationType type, Status status, String error) {
+            ValidationResult(ValidationType type, Status status, String error) {
                 this.type = type;
                 this.status = status;
                 this.error = error;
@@ -486,7 +656,6 @@ public final class ClusterCli extends SubcommandCli {
         }
 
     }
-
 
     /**
      * Return an object of {@code WaltzClientConfig} built from configuration file.

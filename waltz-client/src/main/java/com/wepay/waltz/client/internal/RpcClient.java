@@ -5,7 +5,6 @@ import com.wepay.zktools.clustermgr.Endpoint;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 /**
@@ -19,7 +18,7 @@ public interface RpcClient {
 
     Future<Long> getHighWaterMark(int partitionId);
 
-    CompletableFuture<Map<Endpoint, Map<String, Boolean>>>  checkServerConnections(Set<Endpoint> serverEndpoints);
+    Future<Map<Endpoint, Map<String, Boolean>>> checkServerConnections(Set<Endpoint> serverEndpoints) throws InterruptedException;
 
     Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException;
 }

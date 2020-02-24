@@ -5,6 +5,7 @@ import com.wepay.riff.network.MessageProcessingThreadPool;
 import com.wepay.riff.network.NetworkClient;
 import com.wepay.riff.util.Logging;
 import com.wepay.waltz.client.internal.Partition;
+import com.wepay.waltz.common.message.AbstractMessage;
 import com.wepay.waltz.common.message.CheckStorageConnectivityRequest;
 import com.wepay.waltz.common.message.FeedRequest;
 import com.wepay.waltz.common.message.HighWaterMarkRequest;
@@ -27,8 +28,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A {@link NetworkClient} implementation for waltz clients to communicate with Waltz cluster.
@@ -49,9 +48,7 @@ public class WaltzNetworkClient extends NetworkClient {
     private final HashMap<Integer, Partition> partitions;
 
     private boolean channelReady = false;
-    private static final int CHANNEL_NOT_READY_TIMEOUT = 5000;
     private volatile boolean running = true;
-    private AtomicReference<CompletableFuture<Optional<Map<String, Boolean>>>> checkConnectivityRef;
     private Map<Integer, CompletableFuture<Object>> outputFuturesPerMessageType;
 
     /**
@@ -80,16 +77,14 @@ public class WaltzNetworkClient extends NetworkClient {
         this.networkClientCallbacks = networkClientCallbacks;
         this.messageProcessingThreadPool = messageProcessingThreadPool;
         this.partitions = new HashMap<>();
-        this.checkConnectivityRef = new AtomicReference<>();
         this.outputFuturesPerMessageType = new ConcurrentHashMap<>();
     }
 
     /**
      * Shuts down this instance by
-     *  - un-mounting all partitions,
-     *  - setting {@link #running} to {@code false} and
-     *  - completing the {@link #checkConnectivityRef}.future (with empty value) if its not already complete. This
-     *  might be called if the server is down or if there is any network error.
+     *  - Un-mounting all partitions,
+     *  - Setting {@link #running} to {@code false}, and
+     *  - Completing the futures in {@code outputFuturesPerMessageType} with an exception
      */
     @Override
     protected void shutdown() {
@@ -103,17 +98,14 @@ public class WaltzNetworkClient extends NetworkClient {
                     partition.unmounted(this);
                 }
 
-                CompletableFuture<Optional<Map<String, Boolean>>> future = checkConnectivityRef.get();
-                if (future != null) {
-                    if (checkConnectivityRef.compareAndSet(future, null)) {
-                        future.complete(Optional.empty());
-                    }
-                }
-
-                outputFuturesPerMessageType.values().forEach(futureOutput -> futureOutput.completeExceptionally(
-                        new Exception("waltz network client instance shutting down")
-                ));
+                outputFuturesPerMessageType.values().stream()
+                    .filter(future -> !future.isDone())
+                    .forEach(future ->
+                        future.completeExceptionally(new Exception("waltz network client instance shutting down"))
+                    );
             }
+
+            lock.notifyAll();
         }
         networkClientCallbacks.onNetworkClientDisconnected(this);
     }
@@ -212,80 +204,75 @@ public class WaltzNetworkClient extends NetworkClient {
 
     /**
      * Checks server to storage connectivity.
+     * The current thread waits for channel readiness before sending the request to the server. If this client
+     * is shutdown before that, an exceptionally completed CompletableFuture is returned.
      *
-     * Note: There is a possibility that the channel may not be up when this method gets triggered. In that case,
-     * CHECK_STORAGE_CONNECTIVITY_REQUEST is resent once the channel is active.
-     *
-     * @return Completable future with the connectivity status to the storage nodes within the cluster.
+     * @return a CompletableFuture which will complete with connectivity statuses between this server and
+     * all the storage nodes in the cluster, or with an exception, if any.
+     * @throws InterruptedException If thread interrupted while waiting for channel to be ready.
      */
-    public CompletableFuture<Optional<Map<String, Boolean>>> checkServerToStorageConnectivity() {
-        while (true) {
-            CompletableFuture<Optional<Map<String, Boolean>>> future = checkConnectivityRef.get();
-            if (future != null) {
-                return future;
-            } else {
-                future = new CompletableFuture<>();
-                if (checkConnectivityRef.compareAndSet(null, future)) {
-                    sendCheckStorageConnectivityRequest();
-                    return future;
-                }
-            }
-        }
+    @SuppressWarnings("unchecked")
+    public CompletableFuture<Map<String, Boolean>> checkServerToStorageConnectivity() throws InterruptedException {
+        ReqId dummyReqId = new ReqId(clientId, 0, 0, 0);
+        CompletableFuture<Object> responseFuture =
+            sendRequestOnChannelActive(new CheckStorageConnectivityRequest(dummyReqId));
+
+        return responseFuture.thenApply(response -> (Map<String, Boolean>) response);
     }
 
     /**
-     * Requests list of partitions assigned on that server
+     * Requests the list of partitions assigned to this server.
+     * The current thread waits for channel readiness before sending the request to the server. If this client
+     * is shutdown before that, an exceptionally completed CompletableFuture is returned.
      *
-     * @return Completable future that will container the list of partitions assigned on that server
-     * @throws InterruptedException If thread interrupted while waiting for channel to be ready
+     * @return a CompletableFuture which will complete with the list of partitions assigned to this server,
+     * or with an exception, if any.
+     * @throws InterruptedException If thread interrupted while waiting for the channel to be ready
      */
-    public Future<List<Integer>> getServerPartitionAssignments() throws InterruptedException {
+    @SuppressWarnings("unchecked")
+    public CompletableFuture<List<Integer>> getServerPartitionAssignments() throws InterruptedException {
+        ReqId dummyReqId = new ReqId(clientId, 0, 0, 0);
+        CompletableFuture<Object> responseFuture =
+            sendRequestOnChannelActive(new ServerPartitionsAssignmentRequest(dummyReqId));
+
+        return responseFuture.thenApply(response -> (List<Integer>) response);
+    }
+
+    private CompletableFuture<Object> sendRequestOnChannelActive(AbstractMessage requestMessage) throws InterruptedException {
         synchronized (lock) {
-            if (running && !channelReady) {
-                lock.wait(CHANNEL_NOT_READY_TIMEOUT);
+            while (running && !channelReady) {
+                lock.wait();
             }
 
             if (!running) {
-                CompletableFuture<List<Integer>> future = new CompletableFuture<>();
+                CompletableFuture<Object> future = new CompletableFuture<>();
                 future.completeExceptionally(new Exception("Cannot reach server, network client instance shutdown"));
                 return future;
-            } else if (!channelReady) {
-                CompletableFuture<List<Integer>> future = new CompletableFuture<>();
-                future.completeExceptionally(new Exception("Cannot reach server, channel not ready"));
-                return future;
-            }
-
-            CompletableFuture<Object> future = outputFuturesPerMessageType.get(MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST);
-
-            while (true) {
-                if (future != null && !(future.isDone())) {
-                    return future.thenApply(f -> (List) f);
-                } else {
-                    future = new CompletableFuture<>();
-                    CompletableFuture<Object> oldFuture = outputFuturesPerMessageType.put(MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST, future);
-                    if (oldFuture == null || oldFuture.isDone()) {
-                        ReqId dummyReqId = new ReqId(clientId, 0, 0, 0);
-                        boolean sent = sendMessage(new ServerPartitionsAssignmentRequest(dummyReqId));
-
-                        if (!sent) {
-                            future.completeExceptionally(new Exception("Couldn't send message"));
-                        }
-                        return future.thenApply(f -> (List) f);
-                    }
-                }
             }
         }
+
+        return outputFuturesPerMessageType
+                .compute(
+                    (int) requestMessage.type(),
+                    (keyMessageType, valueFuture) -> {
+                        if (valueFuture != null && !(valueFuture.isDone())) {
+                            return valueFuture;
+                        }
+
+                        CompletableFuture<Object> newFuture = new CompletableFuture<>();
+                        boolean sent = sendMessage(requestMessage);
+
+                        if (!sent) {
+                            newFuture.completeExceptionally(new Exception("Couldn't send message"));
+                        }
+                        return newFuture;
+                    });
     }
 
     @Override
     protected MessageHandler getMessageHandler() {
         WaltzClientHandlerCallbacks handlerCallbacks = new WaltzClientHandlerCallbacksImpl();
         return new WaltzClientHandler(handlerCallbacks, messageProcessingThreadPool);
-    }
-
-    private void sendCheckStorageConnectivityRequest() {
-        ReqId dummyReqId = new ReqId(clientId, 0, 0, 0);
-        sendMessage(new CheckStorageConnectivityRequest(dummyReqId));
     }
 
     private Partition getPartition(int partitionId) {
@@ -303,11 +290,6 @@ public class WaltzNetworkClient extends NetworkClient {
                 // Actually starting to mount partitions. Call onMountingPartition
                 for (Partition partition : partitions.values()) {
                     networkClientCallbacks.onMountingPartition(WaltzNetworkClient.this, partition);
-                }
-
-                // re-send the check storage connectivity request if waiting for the response.
-                if (checkConnectivityRef.get() != null) {
-                    sendCheckStorageConnectivityRequest();
                 }
 
                 lock.notifyAll();
@@ -453,31 +435,30 @@ public class WaltzNetworkClient extends NetworkClient {
             }
         }
 
-        /**
-         * Handles the check connectivity response message received.
-         * @param storageConnectivityMap Connectivity status map of all storage nodes within the cluster.
-         */
         @Override
         public void onCheckStorageConnectivityResponseReceived(Map<String, Boolean> storageConnectivityMap) {
-            CompletableFuture<Optional<Map<String, Boolean>>> future = checkConnectivityRef.get();
-            if (future != null) {
-                if (checkConnectivityRef.compareAndSet(future, null)) {
-                    future.complete(Optional.of(storageConnectivityMap));
+            outputFuturesPerMessageType.computeIfPresent(
+                MessageType.CHECK_STORAGE_CONNECTIVITY_REQUEST,
+                (keyMessageType, valueFuture) -> {
+                    if (!valueFuture.isDone()) {
+                        valueFuture.complete(storageConnectivityMap);
+                    }
+                    return CompletableFuture.completedFuture(Optional.empty());
                 }
-            }
+            );
         }
 
         @Override
         public void onServerPartitionsAssignmentResponseReceived(List<Integer> partitions) {
-            CompletableFuture<Object> future = outputFuturesPerMessageType.get(MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST);
-
-            if (future != null && !future.isDone()) {
-                CompletableFuture<Object> oldValue = outputFuturesPerMessageType.put(MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST, CompletableFuture.completedFuture(Optional.empty()));
-
-                if (oldValue != null) {
-                    future.complete(partitions);
+            outputFuturesPerMessageType.computeIfPresent(
+                MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST,
+                (keyMessageType, valueFuture) -> {
+                    if (!valueFuture.isDone()) {
+                        valueFuture.complete(partitions);
+                    }
+                    return CompletableFuture.completedFuture(Optional.empty());
                 }
-            }
+            );
         }
     }
 }
