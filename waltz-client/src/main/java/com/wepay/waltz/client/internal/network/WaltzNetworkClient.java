@@ -100,11 +100,10 @@ public class WaltzNetworkClient extends NetworkClient {
                     partition.unmounted(this);
                 }
 
-                outputFuturesPerMessageType.values().stream()
+                outputFuturesPerMessageType.values()
+                    .stream()
                     .filter(future -> !future.isDone())
-                    .forEach(future ->
-                        future.completeExceptionally(new Exception("waltz network client instance shutting down"))
-                    );
+                    .forEach(future -> future.completeExceptionally(new NetworkClientClosedException()));
             }
 
             lock.notifyAll();
@@ -284,7 +283,7 @@ public class WaltzNetworkClient extends NetworkClient {
 
             if (!running) {
                 CompletableFuture<Object> future = new CompletableFuture<>();
-                future.completeExceptionally(new Exception("Cannot reach server, network client instance shutdown"));
+                future.completeExceptionally(new NetworkClientClosedException());
                 return future;
             }
         }
@@ -298,9 +297,8 @@ public class WaltzNetworkClient extends NetworkClient {
                         }
 
                         CompletableFuture<Object> newFuture = new CompletableFuture<>();
-                        boolean sent = sendMessage(requestMessage);
 
-                        if (!sent) {
+                        if (!sendMessage(requestMessage)) {
                             newFuture.completeExceptionally(new Exception("Couldn't send message"));
                         }
                         return newFuture;
