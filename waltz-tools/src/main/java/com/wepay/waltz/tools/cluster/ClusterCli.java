@@ -389,10 +389,10 @@ public final class ClusterCli extends SubcommandCli {
                                 .validationResultsMap
                                 .put(
                                     ValidationResult.ValidationType.SERVER_STORAGE_CONNECTIVITY,
-                                    getStorageConnectivityValidationResult(
+                                    buildStorageConnectivityValidationResult(
                                         partitionIdToReplicas.get(partition.partitionId),
-                                        endpoint,
-                                        storageConnectivityResults
+                                        storageConnectivityResults,
+                                        String.format("Server %s", endpoint)
                                     )
                                 )
                         );
@@ -400,33 +400,33 @@ public final class ClusterCli extends SubcommandCli {
                 });
         }
 
-        private ValidationResult getStorageConnectivityValidationResult(Set<String> replicas,
-                                                                        Endpoint serverEndpoint,
-                                                                        Map<String, Boolean> storageConnectivityResults) {
-            String errMsgPrefix = String.format("Server %s", serverEndpoint);
-
+        private ValidationResult buildStorageConnectivityValidationResult(
+            Set<String> storages,
+            Map<String, Boolean> storageConnectivityResults,
+            String errMsgPrefix
+        ) {
             ValidationResult.Status validationStatus = ValidationResult.Status.SUCCESS;
             String errorMsg = "";
 
             if (Objects.isNull(storageConnectivityResults)) {
                 validationStatus = ValidationResult.Status.FAILURE;
-                errorMsg = String.format("%s, no connectivity statuses response from the server", errMsgPrefix);
+                errorMsg = String.format("%s, no connectivity statuses response", errMsgPrefix);
             } else {
-                for (String replica : replicas) {
-                    if (!storageConnectivityResults.containsKey(replica)) {
+                for (String storage : storages) {
+                    if (!storageConnectivityResults.containsKey(storage)) {
                         validationStatus = ValidationResult.Status.FAILURE;
                         errorMsg = errorMsg.concat(System.lineSeparator()).concat(
                             String.format(
-                                "%s, storage replica %s missing in server response",
-                                errMsgPrefix, replica
+                                "%s, storage replica %s missing in connectivity statuses",
+                                errMsgPrefix, storage
                             )
                         );
-                    } else if (!storageConnectivityResults.get(replica)) {
+                    } else if (!storageConnectivityResults.get(storage)) {
                         validationStatus = ValidationResult.Status.FAILURE;
                         errorMsg = errorMsg.concat(System.lineSeparator()).concat(
                             String.format(
-                                "%s, server-storage connectivity check for storage replica %s failed",
-                                errMsgPrefix, replica
+                                "%s, storage connectivity check for storage replica %s failed",
+                                errMsgPrefix, storage
                             )
                         );
                     }
