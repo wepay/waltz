@@ -32,7 +32,7 @@ public class SegmentCliTest {
         String[] args = {segmentFilePath};
         SegmentCli.Statistic cli = new SegmentCli.Statistic(args);
         SegmentCli.Statistic spyCli = spy(cli);
-        doNothing().when(spyCli).init(segmentFilePath);
+        doNothing().when(spyCli).initWithSegmentFilePath(segmentFilePath);
 
         Segment mockSegment = mock(Segment.class);
         when(mockSegment.getRecord(0L)).thenReturn(new Record(0L, someReqId, someHeader, data0, someChecksum));
@@ -59,7 +59,7 @@ public class SegmentCliTest {
         String[] args = {segmentFilePath, "-t", String.valueOf(expectedTransactionId)};
         SegmentCli.Verify cli = new SegmentCli.Verify(args);
         SegmentCli.Verify spyCli = spy(cli);
-        doNothing().when(spyCli).init(segmentFilePath);
+        doNothing().when(spyCli).initWithSegmentFilePath(segmentFilePath);
 
         Segment.Index mockIndex = mock(Segment.Index.class);
         when(mockIndex.get(expectedTransactionId)).thenReturn(offset);
@@ -88,7 +88,7 @@ public class SegmentCliTest {
         String[] args = {segmentFilePath, "-t", String.valueOf(expectedTransactionId)};
         SegmentCli.Verify cli = new SegmentCli.Verify(args);
         SegmentCli.Verify spyCli = spy(cli);
-        doNothing().when(spyCli).init(segmentFilePath);
+        doNothing().when(spyCli).initWithSegmentFilePath(segmentFilePath);
 
         Segment.Index mockIndex = mock(Segment.Index.class);
         when(mockIndex.get(expectedTransactionId)).thenReturn(offset);
@@ -115,7 +115,7 @@ public class SegmentCliTest {
         String[] args = {segmentFilePath};
         SegmentCli.Verify cli = new SegmentCli.Verify(args);
         SegmentCli.Verify spyCli = spy(cli);
-        doNothing().when(spyCli).init(segmentFilePath);
+        doNothing().when(spyCli).initWithSegmentFilePath(segmentFilePath);
 
         Segment.Index mockIndex = mock(Segment.Index.class);
         when(mockIndex.get(anyLong())).thenReturn(offset);
@@ -145,7 +145,7 @@ public class SegmentCliTest {
         String[] args = {segmentFilePath};
         SegmentCli.Verify cli = new SegmentCli.Verify(args);
         SegmentCli.Verify spyCli = spy(cli);
-        doNothing().when(spyCli).init(segmentFilePath);
+        doNothing().when(spyCli).initWithSegmentFilePath(segmentFilePath);
 
         Segment.Index mockIndex = mock(Segment.Index.class);
         when(mockIndex.get(anyLong())).thenReturn(offset);
@@ -186,9 +186,9 @@ public class SegmentCliTest {
     public void testDumpMetadata() throws Exception {
         String[] args = {segmentFilePath, "-m"};
 
-        SegmentCli.Dump cli = new SegmentCli.Dump(args);
-        SegmentCli.Dump spyCli = spy(cli);
-        doNothing().when(spyCli).init(segmentFilePath);
+        SegmentCli.DumpSegment cli = new SegmentCli.DumpSegment(args);
+        SegmentCli.DumpSegment spyCli = spy(cli);
+        doNothing().when(spyCli).initWithSegmentFilePath(segmentFilePath);
 
         Segment.Index mockIndex = mock(Segment.Index.class);
         spyCli.index = mockIndex;
@@ -205,9 +205,9 @@ public class SegmentCliTest {
     public void testDumpAllRecords() throws Exception {
         String[] args = {segmentFilePath, "-r"};
 
-        SegmentCli.Dump cli = new SegmentCli.Dump(args);
-        SegmentCli.Dump spyCli = spy(cli);
-        doNothing().when(spyCli).init(segmentFilePath);
+        SegmentCli.DumpSegment cli = new SegmentCli.DumpSegment(args);
+        SegmentCli.DumpSegment spyCli = spy(cli);
+        doNothing().when(spyCli).initWithSegmentFilePath(segmentFilePath);
 
         SegmentFileHeader header = new SegmentFileHeader(null, 0, 0L);
         Segment.Index mockIndex = mock(Segment.Index.class);
@@ -230,9 +230,9 @@ public class SegmentCliTest {
         final long transactionId = 5L;
         String[] args = {segmentFilePath, "-r", "-t", String.valueOf(transactionId)};
 
-        SegmentCli.Dump cli = new SegmentCli.Dump(args);
-        SegmentCli.Dump spyCli = spy(cli);
-        doNothing().when(spyCli).init(segmentFilePath);
+        SegmentCli.DumpSegment cli = new SegmentCli.DumpSegment(args);
+        SegmentCli.DumpSegment spyCli = spy(cli);
+        doNothing().when(spyCli).initWithSegmentFilePath(segmentFilePath);
 
         Segment mockSegment = mock(Segment.class);
         when(mockSegment.getRecord(transactionId)).thenReturn(new Record(0L, someReqId, someHeader, data0, someChecksum));
@@ -248,9 +248,9 @@ public class SegmentCliTest {
         final long transactionId = 5L;
         String[] args = {segmentFilePath, "-d", "com.wepay.waltz.tools.storage.segment.DefaultDeserializer", "-r", "-t", String.valueOf(transactionId)};
 
-        SegmentCli.Dump cli = new SegmentCli.Dump(args);
-        SegmentCli.Dump spyCli = spy(cli);
-        doNothing().when(spyCli).init(segmentFilePath);
+        SegmentCli.DumpSegment cli = new SegmentCli.DumpSegment(args);
+        SegmentCli.DumpSegment spyCli = spy(cli);
+        doNothing().when(spyCli).initWithSegmentFilePath(segmentFilePath);
 
         Segment mockSegment = mock(Segment.class);
         when(mockSegment.getRecord(transactionId)).thenReturn(new Record(0L, someReqId, someHeader, data0, someChecksum));

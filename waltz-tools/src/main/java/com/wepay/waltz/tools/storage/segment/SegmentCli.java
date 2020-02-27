@@ -7,6 +7,7 @@ import com.wepay.waltz.common.util.SubcommandCli;
 import com.wepay.waltz.exception.SubCommandFailedException;
 import com.wepay.waltz.storage.exception.StorageException;
 import com.wepay.waltz.storage.server.internal.ControlFile;
+import com.wepay.waltz.storage.server.internal.PartitionInfoSnapshot;
 import com.wepay.waltz.storage.server.internal.Segment;
 import com.wepay.waltz.storage.server.internal.SegmentFileHeader;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -16,6 +17,7 @@ import org.apache.commons.cli.Options;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -33,7 +35,8 @@ public final class SegmentCli extends SubcommandCli {
         super(args, useByTest, Arrays.asList(
                 new Subcommand(Verify.NAME, Verify.DESCRIPTION, Verify::new),
                 new Subcommand(Statistic.NAME, Statistic.DESCRIPTION, Statistic::new),
-                new Subcommand(Dump.NAME, Dump.DESCRIPTION, Dump::new)
+                new Subcommand(DumpSegment.NAME, DumpSegment.DESCRIPTION, DumpSegment::new),
+                new Subcommand(DumpControlFile.NAME, DumpControlFile.DESCRIPTION, DumpControlFile::new)
         ));
     }
 
@@ -41,7 +44,7 @@ public final class SegmentCli extends SubcommandCli {
      * The class extends {@link SegmentBaseCli}, which verifies checksums and indexes.
      */
     protected static class Verify extends SegmentBaseCli {
-        private static final String NAME = "verify";
+        private static final String NAME = "verify-segment";
         private static final String DESCRIPTION = "Verify segment checksums and indexes.";
         private static final String FULL_PATH_SEGMENT_FILE = "full_path_segment_file";
         private static final int MAX_FAILURE_THRESHOLD = 100;
@@ -69,7 +72,7 @@ public final class SegmentCli extends SubcommandCli {
                 }
                 String segmentFilePath = cmd.getArgList().get(0);
 
-                init(segmentFilePath);
+                initWithSegmentFilePath(segmentFilePath);
 
                 if (cmd.hasOption("t")) {
                     long transactionId = Long.parseLong(cmd.getOptionValue("t"));
@@ -81,10 +84,9 @@ public final class SegmentCli extends SubcommandCli {
                     verifyTransactions();
                 }
             } catch (Exception e) {
-                segment.close();
                 throw new SubCommandFailedException(String.format("Failed to read segment data file. %n%s", e.getMessage()));
             } finally {
-                segment.close();
+                close();
             }
         }
 
@@ -184,7 +186,7 @@ public final class SegmentCli extends SubcommandCli {
      * of a Waltz storage segment to stdout.
      */
     protected static class Statistic extends SegmentBaseCli {
-        private static final String NAME = "statistic";
+        private static final String NAME = "segment-statistic";
         private static final String DESCRIPTION = "Display segment statistic information.";
         private static final String FULL_PATH_SEGMENT_FILE = "full_path_segment_file";
 
@@ -215,14 +217,13 @@ public final class SegmentCli extends SubcommandCli {
                 }
                 String segmentFilePath = cmd.getArgList().get(0);
 
-                init(segmentFilePath);
+                initWithSegmentFilePath(segmentFilePath);
 
                 collectStatistic();
             } catch (Exception e) {
-                segment.close();
                 throw new SubCommandFailedException(String.format("Failed to read segment data file. %n%s", e.getMessage()));
             } finally {
-                segment.close();
+                close();
             }
         }
 
@@ -294,17 +295,130 @@ public final class SegmentCli extends SubcommandCli {
     }
 
     /**
+     * The class extends {@link SegmentBaseCli}, which displays the control file contents to stdout.
+     */
+    protected static class DumpControlFile extends SegmentBaseCli {
+        private static final String NAME = "dump-control-file";
+        private static final String DESCRIPTION = "Display control file information";
+        private static final String FULL_PATH_CONTROL_FILE = "full_path_control_file";
+
+        DumpControlFile(String[] args) {
+            super(args);
+        }
+
+        @Override
+        protected void configureOptions(Options options) {
+            Option partitionOption = Option.builder("p")
+                .longOpt("partition")
+                .desc("Specify the partition id to dump control file info for. If missing, display for all partitions.")
+                .hasArg()
+                .build();
+
+            Option assignedOption = Option.builder("a")
+                .longOpt("assigned")
+                .desc("Display control file data for only assigned partitions. This is not supported with option 'p'")
+                .hasArg()
+                .build();
+
+            partitionOption.setRequired(false);
+            assignedOption.setRequired(false);
+
+            options.addOption(partitionOption);
+            options.addOption(assignedOption);
+        }
+
+        @Override
+        protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
+            try {
+                if (cmd.getArgList().size() == 0) {
+                    throw new SubCommandFailedException("Missing control file path.");
+                }
+                String controlFilePath = cmd.getArgList().get(0);
+
+                if (cmd.hasOption("p") && cmd.hasOption("a")) {
+                    throw new SubCommandFailedException("Option 'a' is supported only if dumping for all partitions");
+                }
+
+                initWithControlFilePath(controlFilePath);
+
+                List<List<String>> content = new ArrayList<>();
+                if (cmd.hasOption("p")) {
+                    int partitionId = Integer.parseInt(cmd.getOptionValue("p"));
+                    if (partitionId > controlFile.getNumPartitions()) {
+                        throw new SubCommandFailedException("Number of partitions is only "
+                            + controlFile.getNumPartitions());
+                    }
+                    content.add(getTableRow(controlFile.getPartitionInfoSnapshot(partitionId)));
+                } else {
+                    boolean printOnlyAssigned = cmd.hasOption("a");
+
+                    controlFile.getPartitionIds().forEach(
+                        partitionId -> {
+                            PartitionInfoSnapshot partitionInfoSnapshot =
+                                controlFile.getPartitionInfoSnapshot(partitionId);
+
+                            if (partitionInfoSnapshot.isAssigned || !printOnlyAssigned) {
+                                content.add(getTableRow(partitionInfoSnapshot));
+                            }
+                        }
+                    );
+                }
+
+                dump(content);
+            } catch (Exception e) {
+                throw new SubCommandFailedException(e);
+            } finally {
+                close();
+            }
+        }
+
+        @Override
+        protected String getUsage() {
+            return buildUsage(NAME, DESCRIPTION, getOptions(), FULL_PATH_CONTROL_FILE);
+        }
+
+        private void dump(List<List<String>> content) {
+            ConsoleTable consoleTable = new ConsoleTable(getTableHeader(), content, false);
+
+            System.out.println("Control File Key: " + controlFile.key);
+            consoleTable.printTable();
+        }
+
+        private List<String> getTableHeader() {
+            ArrayList<String> header = new ArrayList<>();
+            header.add("PARTITION ID");
+            header.add("SESSION ID");
+            header.add("LOW-WATER MARK");
+            header.add("LOCAL LOW-WATER MARK");
+            header.add("IS-ASSIGNED");
+            header.add("IS-AVAILABLE");
+            return header;
+        }
+
+        private List<String> getTableRow(PartitionInfoSnapshot partitionInfoSnapshot) {
+            ArrayList<String> row = new ArrayList<>();
+            row.add(String.valueOf(partitionInfoSnapshot.partitionId));
+            row.add(String.valueOf(partitionInfoSnapshot.sessionId));
+            row.add(String.valueOf(partitionInfoSnapshot.lowWaterMark));
+            row.add(String.valueOf(partitionInfoSnapshot.localLowWaterMark));
+            row.add(String.valueOf(partitionInfoSnapshot.isAssigned));
+            row.add(String.valueOf(partitionInfoSnapshot.isAvailable));
+            return row;
+        }
+    }
+
+    /**
      * The class extends {@link SegmentCli}, which dumps the contents (both metadata and records) in a Waltz storage
      * segment to stdout.
      */
-    protected static class Dump extends SegmentBaseCli {
-        private static final String NAME = "dump";
+    protected static class DumpSegment extends SegmentBaseCli {
+        private static final String NAME = "dump-segment";
         private static final String DESCRIPTION = "Display segment metadata and record.";
         private static final String FULL_PATH_SEGMENT_FILE = "full_path_segment_file";
 
         private Serializer deserializer;
 
-        Dump(String[] args) {
+        DumpSegment(String[] args) {
             super(args);
         }
 
@@ -348,7 +462,7 @@ public final class SegmentCli extends SubcommandCli {
                 }
                 String segmentFilePath = cmd.getArgList().get(0);
 
-                init(segmentFilePath);
+                initWithSegmentFilePath(segmentFilePath);
 
                 if (cmd.hasOption("d")) {
                     try {
@@ -386,10 +500,9 @@ public final class SegmentCli extends SubcommandCli {
                     }
                 }
             } catch (Exception e) {
-                segment.close();
                 throw new SubCommandFailedException(e);
             } finally {
-                segment.close();
+                close();
             }
         }
 
@@ -472,12 +585,14 @@ public final class SegmentCli extends SubcommandCli {
     }
 
     private abstract static class SegmentBaseCli extends Cli {
+        protected ControlFile controlFile;
+        protected Path controlFilePath;
+
         protected Segment segment;
         protected Segment.Index index;
         protected long firstTransactionId;
-        protected Path segmentFile;
-        protected Path indexFile;
-        protected Path controlFile;
+        protected Path segmentFilePath;
+        protected Path indexFilePath;
         protected int partitionId;
 
         private SegmentBaseCli(String[] args) {
@@ -485,25 +600,59 @@ public final class SegmentCli extends SubcommandCli {
             firstTransactionId = 0;
         }
 
-        protected void init(String segmentFilePath) throws IOException, StorageException {
+        /**
+         * Initializes only control file related fields based on the given controlFilePath
+         * @param controlFilePath Control file path
+         * @throws IOException
+         * @throws StorageException
+         */
+        protected void initWithControlFilePath(String controlFilePath) throws IOException, StorageException {
+            this.controlFilePath = Paths.get(controlFilePath);
+            controlFile = loadControlFile();
+        }
+
+        /**
+         * Initializes all the fields, including the control file related, based on the given segmentFilePath
+         * @param segmentFilePath Segment file path
+         * @throws IOException
+         * @throws StorageException
+         */
+        protected void initWithSegmentFilePath(String segmentFilePath) throws IOException, StorageException {
             parseStorageDirectory(segmentFilePath);
-            ControlFile cf = loadControlFile();
-            segment = loadSegmentFile(cf);
+            controlFile = loadControlFile();
+            segment = loadSegmentFile();
             index = segment.index;
+        }
+
+        protected void close() {
+            if (controlFile != null) {
+                controlFile.close();
+            }
+
+            if (segment != null) {
+                segment.close();
+            }
         }
 
         private ControlFile loadControlFile() throws IOException, StorageException {
             try {
-                return new ControlFile(null, controlFile, -1, false);
+                if (!Files.exists(controlFilePath)) {
+                    throw new FileNotFoundException(
+                        String.format("File %s not found", controlFilePath)
+                    );
+                }
+
+                return new ControlFile(null, controlFilePath, -1, false);
             } catch (Exception e) {
                 System.out.println("Error: Failed to load control file.");
                 throw e;
             }
         }
 
-        private Segment loadSegmentFile(ControlFile cf) throws StorageException {
+        private Segment loadSegmentFile() throws StorageException {
             try {
-                return new Segment(cf.key, segmentFile, indexFile, cf.getPartitionInfo(partitionId), -1);
+                return new Segment(controlFile.key, segmentFilePath, indexFilePath,
+                    controlFile.getPartitionInfo(partitionId), -1);
             } catch (Exception e) {
                 System.out.println("Error: Failed to load segment data file.");
                 throw e;
@@ -515,25 +664,25 @@ public final class SegmentCli extends SubcommandCli {
          * segmentFile, indexFile, controlFile and partitionId.
          *
          * @param segmentFilePath
-         * @throws FileNotFoundException
+         * @throws SubCommandFailedException
          */
         @SuppressFBWarnings(
                 value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
                 justification = "null pointer checked")
-        private void parseStorageDirectory(String segmentFilePath) throws FileNotFoundException {
-            segmentFile = Paths.get(segmentFilePath);
-            indexFile = Paths.get(segmentFilePath.replaceAll("seg$", "idx"));
+        private void parseStorageDirectory(String segmentFilePath) {
+            this.segmentFilePath = Paths.get(segmentFilePath);
+            indexFilePath = Paths.get(segmentFilePath.replaceAll("seg$", "idx"));
 
-            Path parent = segmentFile.getParent();
+            Path parent = this.segmentFilePath.getParent();
             try {
                 if (parent == null) {
-                    throw new FileNotFoundException(String.format("Path: %s does not have a parent", segmentFile));
+                    throw new FileNotFoundException(String.format("Path: %s does not have a parent", this.segmentFilePath));
                 } else if (parent.getParent() == null) {
                     throw new FileNotFoundException(String.format("Path: %s does not have a parent", parent));
                 } else if (parent.getFileName() == null) {
                     throw new FileNotFoundException(String.format("Path: %s has zero elements", parent));
                 } else {
-                    controlFile = parent.getParent().resolve(("waltz-storage.ctl"));
+                    controlFilePath = parent.getParent().resolve(ControlFile.FILE_NAME);
                     partitionId = Integer.parseInt(parent.getFileName().toString());
                 }
             } catch (FileNotFoundException e) {
