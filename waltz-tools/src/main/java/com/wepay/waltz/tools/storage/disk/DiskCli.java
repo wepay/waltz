@@ -1,4 +1,4 @@
-package com.wepay.waltz.tools.storage.segment;
+package com.wepay.waltz.tools.storage.disk;
 
 import com.wepay.waltz.client.Serializer;
 import com.wepay.waltz.common.message.Record;
@@ -29,9 +29,9 @@ import java.util.List;
  * CLI tool to interact with segment files in storage nodes.
  * Must be run from the local machine where the segment files are located.
  */
-public final class SegmentCli extends SubcommandCli {
+public final class DiskCli extends SubcommandCli {
 
-    private SegmentCli(String[] args, boolean useByTest) {
+    private DiskCli(String[] args, boolean useByTest) {
         super(args, useByTest, Arrays.asList(
                 new Subcommand(Verify.NAME, Verify.DESCRIPTION, Verify::new),
                 new Subcommand(Statistic.NAME, Statistic.DESCRIPTION, Statistic::new),
@@ -41,9 +41,9 @@ public final class SegmentCli extends SubcommandCli {
     }
 
     /**
-     * The class extends {@link SegmentBaseCli}, which verifies checksums and indexes.
+     * The class extends {@link DiskBaseCli}, which verifies checksums and indexes.
      */
-    protected static class Verify extends SegmentBaseCli {
+    protected static class Verify extends DiskBaseCli {
         private static final String NAME = "verify-segment";
         private static final String DESCRIPTION = "Verify segment checksums and indexes.";
         private static final String FULL_PATH_SEGMENT_FILE = "full_path_segment_file";
@@ -182,10 +182,10 @@ public final class SegmentCli extends SubcommandCli {
     }
 
     /**
-     * The class extends {@link SegmentBaseCli}, which displays the statistics
+     * The class extends {@link DiskBaseCli}, which displays the statistics
      * of a Waltz storage segment to stdout.
      */
-    protected static class Statistic extends SegmentBaseCli {
+    protected static class Statistic extends DiskBaseCli {
         private static final String NAME = "segment-statistic";
         private static final String DESCRIPTION = "Display segment statistic information.";
         private static final String FULL_PATH_SEGMENT_FILE = "full_path_segment_file";
@@ -295,11 +295,12 @@ public final class SegmentCli extends SubcommandCli {
     }
 
     /**
-     * The class extends {@link SegmentBaseCli}, which displays the control file contents to stdout.
+     * The class extends {@link DiskBaseCli}, which displays the control file contents to stdout.
      */
-    protected static class DumpControlFile extends SegmentBaseCli {
+    protected static class DumpControlFile extends DiskBaseCli {
         private static final String NAME = "dump-control-file";
-        private static final String DESCRIPTION = "Display control file information";
+        private static final String DESCRIPTION = String.format("Display control file information. "
+            + "Control file name should be %s", ControlFile.FILE_NAME);
         private static final String FULL_PATH_CONTROL_FILE = "full_path_control_file";
 
         DumpControlFile(String[] args) {
@@ -336,7 +337,7 @@ public final class SegmentCli extends SubcommandCli {
                 String controlFilePath = cmd.getArgList().get(0);
 
                 if (cmd.hasOption("p") && cmd.hasOption("a")) {
-                    throw new SubCommandFailedException("Option 'a' is supported only if dumping for all partitions");
+                    throw new SubCommandFailedException("'assigned' is supported only if dumping for all partitions");
                 }
 
                 initWithControlFilePath(controlFilePath);
@@ -344,9 +345,12 @@ public final class SegmentCli extends SubcommandCli {
                 List<List<String>> content = new ArrayList<>();
                 if (cmd.hasOption("p")) {
                     int partitionId = Integer.parseInt(cmd.getOptionValue("p"));
-                    if (partitionId > controlFile.getNumPartitions()) {
-                        throw new SubCommandFailedException("Number of partitions is only "
-                            + controlFile.getNumPartitions());
+                    int numPartitions = controlFile.getNumPartitions();
+                    if (partitionId >= numPartitions) {
+                        throw new SubCommandFailedException(
+                            String.format("Number of partitions: %s, Max partition id: %s",
+                                numPartitions, numPartitions - 1)
+                        );
                     }
                     content.add(getTableRow(controlFile.getPartitionInfoSnapshot(partitionId)));
                 } else {
@@ -377,7 +381,7 @@ public final class SegmentCli extends SubcommandCli {
             return buildUsage(NAME, DESCRIPTION, getOptions(), FULL_PATH_CONTROL_FILE);
         }
 
-        private void dump(List<List<String>> content) {
+        protected void dump(List<List<String>> content) {
             ConsoleTable consoleTable = new ConsoleTable(getTableHeader(), content, false);
 
             System.out.println("Control File Key: " + controlFile.key);
@@ -408,10 +412,10 @@ public final class SegmentCli extends SubcommandCli {
     }
 
     /**
-     * The class extends {@link SegmentCli}, which dumps the contents (both metadata and records) in a Waltz storage
+     * The class extends {@link DiskCli}, which dumps the contents (both metadata and records) in a Waltz storage
      * segment to stdout.
      */
-    protected static class DumpSegment extends SegmentBaseCli {
+    protected static class DumpSegment extends DiskBaseCli {
         private static final String NAME = "dump-segment";
         private static final String DESCRIPTION = "Display segment metadata and record.";
         private static final String FULL_PATH_SEGMENT_FILE = "full_path_segment_file";
@@ -584,7 +588,7 @@ public final class SegmentCli extends SubcommandCli {
         }
     }
 
-    private abstract static class SegmentBaseCli extends Cli {
+    private abstract static class DiskBaseCli extends Cli {
         protected ControlFile controlFile;
         protected Path controlFilePath;
 
@@ -595,19 +599,28 @@ public final class SegmentCli extends SubcommandCli {
         protected Path indexFilePath;
         protected int partitionId;
 
-        private SegmentBaseCli(String[] args) {
+        private DiskBaseCli(String[] args) {
             super(args);
             firstTransactionId = 0;
         }
 
         /**
-         * Initializes only control file related fields based on the given controlFilePath
+         * Initializes only control file related fields based on the given controlFilePath.
+         * Used for control file related commands.
          * @param controlFilePath Control file path
          * @throws IOException
          * @throws StorageException
          */
         protected void initWithControlFilePath(String controlFilePath) throws IOException, StorageException {
             this.controlFilePath = Paths.get(controlFilePath);
+
+            if (!this.controlFilePath.endsWith(ControlFile.FILE_NAME)) {
+                throw new FileNotFoundException(
+                    String.format("Control file should be named as %s, but it is %s",
+                        ControlFile.FILE_NAME, this.controlFilePath.getFileName())
+                );
+            }
+
             controlFile = loadControlFile();
         }
 
@@ -638,7 +651,7 @@ public final class SegmentCli extends SubcommandCli {
             try {
                 if (!Files.exists(controlFilePath)) {
                     throw new FileNotFoundException(
-                        String.format("File %s not found", controlFilePath)
+                        String.format("Control file not found at %s", controlFilePath)
                     );
                 }
 
@@ -692,6 +705,6 @@ public final class SegmentCli extends SubcommandCli {
     }
 
     public static void main(String[] args) {
-        new SegmentCli(args, false).processCmd();
+        new DiskCli(args, false).processCmd();
     }
 }

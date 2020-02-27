@@ -12,5 +12,5 @@ done
 
 JVMOPTS=-Dlog4j.configuration=file:config/log4j.properties
 
-MAINCLASS=com.wepay.waltz.tools.storage.segment.SegmentCli
+MAINCLASS=com.wepay.waltz.tools.storage.disk.DiskCli
 java $JVMOPTS -cp ${CLASSPATH#:} $MAINCLASS $@
