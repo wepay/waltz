@@ -200,7 +200,7 @@ public final class ServerCli extends SubcommandCli {
             }
         }
 
-        private void addPreferredPartition(String host, int serverPort, int partitionId, String cliConfigPath) throws Exception {
+        private void addPreferredPartition(String host, int serverPort, int partitionId, String cliConfigPath) {
             Endpoint serverEndpoint = new Endpoint(host, serverPort);
             InternalRpcClient rpcClient = null;
             try {
@@ -209,7 +209,7 @@ public final class ServerCli extends SubcommandCli {
                 rpcClient = new InternalRpcClient(ClientSSL.createContext(waltzClientConfig.getSSLConfig()),
                     WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, callbacks);
 
-                if (!(Boolean) rpcClient.addPreferredPartition(serverEndpoint, partitionId).get()) {
+                if (!rpcClient.addPreferredPartition(serverEndpoint, partitionId).get()) {
                     System.out.println("Failed to add preferred partition " + partitionId + " to server Endpoint "
                             + serverEndpoint + ".");
                 }
@@ -289,7 +289,7 @@ public final class ServerCli extends SubcommandCli {
             }
         }
 
-        private void removePreferredPartition(String host, int serverPort, int partitionId, String cliConfigPath) throws Exception {
+        private void removePreferredPartition(String host, int serverPort, int partitionId, String cliConfigPath) {
             Endpoint serverEndpoint = new Endpoint(host, serverPort);
             InternalRpcClient rpcClient = null;
             try {
@@ -298,7 +298,7 @@ public final class ServerCli extends SubcommandCli {
                 rpcClient = new InternalRpcClient(ClientSSL.createContext(waltzClientConfig.getSSLConfig()),
                     WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, callbacks);
 
-                if (!(Boolean) rpcClient.removePreferredPartition(serverEndpoint, partitionId).get()) {
+                if (!rpcClient.removePreferredPartition(serverEndpoint, partitionId).get()) {
                     System.out.println("Failed to remove preferred partition " + partitionId + " from server Endpoint "
                         + serverEndpoint + ".");
                 }

@@ -81,12 +81,27 @@ public interface WaltzClientHandlerCallbacks extends MessageHandlerCallbacks {
      */
     void onHighWaterMarkReceived(int partitionId, long highWaterMark);
 
+    /**
+     * Handles the received check connectivity response message.
+     * @param storageConnectivityMap Connectivity status map of all storage nodes within the cluster.
+     */
     void onCheckStorageConnectivityResponseReceived(Map<String, Boolean> storageConnectivityMap);
 
+    /**
+     * Handles the received partition assignment response message.
+     * @param partitions List of all the partitions this server is assigned to.
+     */
     void onServerPartitionsAssignmentResponseReceived(List<Integer> partitions);
 
+    /**
+     * Handles the add preferred partition response message received.
+     * @param result true if preferred partition addition was successful, otherwise false.
+     */
     void onAddPreferredPartitionResponseReceived(Boolean result);
 
+    /**
+     * Handles the remove preferred partition response message received.
+     * @param result true if preferred partition removal was successful, otherwise false.
+     */
     void onRemovePreferredPartitionResponseReceived(Boolean result);
-
 }

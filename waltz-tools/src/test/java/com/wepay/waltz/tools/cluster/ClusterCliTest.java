@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class ClusterCliTest {
@@ -36,7 +37,7 @@ public class ClusterCliTest {
         System.setOut(originalOut);
     }
 
-    Properties createProperties(String connectString, String znodePath, int sessionTimeout, SslSetup sslSetup) {
+    private Properties createProperties(String connectString, String znodePath, int sessionTimeout, SslSetup sslSetup) {
         Properties properties =  new Properties();
         properties.setProperty(CliConfig.ZOOKEEPER_CONNECT_STRING, connectString);
         properties.setProperty(CliConfig.ZOOKEEPER_SESSION_TIMEOUT, String.valueOf(sessionTimeout));
@@ -113,7 +114,7 @@ public class ClusterCliTest {
         }
     }
 
-
+    @Test
     public void testVerifyCommand() throws Exception {
         int numPartitions = 3;
         int numStorageNodes = 3;
@@ -143,8 +144,10 @@ public class ClusterCliTest {
                     "--cli-config-path", configFilePath
             };
             ClusterCli.testMain(args1);
-            assertTrue(!outContent.toString("UTF-8").contains("Validation PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY failed"));
-
+            assertFalse(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY failed"));
+            assertFalse(outContent.toString("UTF-8")
+                .contains("Validation SERVER_STORAGE_CONNECTIVITY failed"));
 
             // Close the server network connection
             WaltzServerRunner waltzServerRunner = helper.getWaltzServerRunner(helper.getServerPort(),
@@ -155,7 +158,10 @@ public class ClusterCliTest {
                     "--cli-config-path", configFilePath
             };
             ClusterCli.testMain(args2);
-            assertTrue(outContent.toString("UTF-8").contains("Validation PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY failed"));
+            assertTrue(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY failed"));
+            assertTrue(outContent.toString("UTF-8")
+                .contains("Validation SERVER_STORAGE_CONNECTIVITY failed"));
         } finally {
             helper.closeAll();
         }

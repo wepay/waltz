@@ -8,7 +8,6 @@ import io.netty.handler.ssl.SslContext;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
@@ -75,25 +74,28 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
      *
      * @param serverEndpoints Set of server endpoints.
      * @return a combined completable future with the connection status per server endpoint.
+     * @throws InterruptedException if thrown by the {@code WaltzNetworkClient}
      */
     @Override
-    public CompletableFuture<Map<Endpoint, Map<String, Boolean>>> checkServerConnections(Set<Endpoint> serverEndpoints) {
-        Map<Endpoint, CompletableFuture<Optional<Map<String, Boolean>>>> futures = new HashMap<>();
-
+    public Future<Map<Endpoint, Map<String, Boolean>>> checkServerConnections(Set<Endpoint> serverEndpoints) throws InterruptedException {
+        Map<Endpoint, CompletableFuture<Map<String, Boolean>>> futures = new HashMap<>();
         for (Endpoint endpoint : serverEndpoints) {
             WaltzNetworkClient networkClient = getNetworkClient(endpoint);
-            CompletableFuture<Optional<Map<String, Boolean>>> future = networkClient.checkServerToStorageConnectivity();
+            CompletableFuture<Map<String, Boolean>> future = networkClient.checkServerToStorageConnectivity();
             futures.put(endpoint, future);
         }
 
-        return CompletableFuture.allOf(futures.values().toArray(new CompletableFuture[futures.size()]))
-            .thenApply(v -> {
-                Map<Endpoint, Map<String, Boolean>> connectivityStatusMap = new HashMap<>();
-                futures.forEach(((endpoint, future) ->
-                    connectivityStatusMap.put(endpoint,
-                        future.join().isPresent() ? future.join().get() : null)));
-                return connectivityStatusMap;
-            });
+        return CompletableFuture
+                .allOf(futures.values().toArray(new CompletableFuture[futures.size()]))
+                .handle((v, t) -> {
+                    Map<Endpoint, Map<String, Boolean>> connectivityStatusMap = new HashMap<>();
+                    futures
+                        .entrySet()
+                        .stream()
+                        .filter(entry -> !entry.getValue().isCompletedExceptionally())
+                        .forEach((entry) -> connectivityStatusMap.put(entry.getKey(), entry.getValue().join()));
+                    return connectivityStatusMap;
+                });
     }
 
     /**
@@ -101,7 +103,7 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
      *
      * @param serverEndpoint Server from which to fetch the assigned partitions
      * @return Future which will contain the list of partitions when complete
-     * @throws InterruptedException If thread interrupted while waiting for channel with Waltz server to be ready
+     * @throws InterruptedException if thrown by the {@code WaltzNetworkClient}
      */
     @Override
     public Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException {
@@ -113,12 +115,12 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
      * Adds the given partition Id as a preferred partition to the given Server Endpoint.
      * @param serverEndpoint Server Endpoint to add the partition to.
      * @param partitionId The partition Id.
-     * @return a Completable future that has a Boolean status. True if the preferred partition is added, otherwise
-     * false.
+     * @return a Future which will complete with a {@code true} if the preferred partition is added
+     * successfully, a {@code false} otherwise, or an exception if any.
      * @throws InterruptedException If thread is interrupted while waiting for Network client channel to be ready.
      */
     @Override
-    public CompletableFuture<Boolean> addPreferredPartition(Endpoint serverEndpoint, int partitionId) throws InterruptedException {
+    public Future<Boolean> addPreferredPartition(Endpoint serverEndpoint, int partitionId) throws InterruptedException {
         WaltzNetworkClient networkClient = getNetworkClient(serverEndpoint);
         return networkClient.addPreferredPartition(partitionId);
     }
@@ -127,14 +129,14 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
      * Removes the given partition Id as a preferred partition from the given Server Endpoint.
      * @param serverEndpoint Server Endpoint from which the partition is to be removed.
      * @param partitionId The partition Id.
-     * @return a Completable future that has a Boolean status. True if the preferred partition is removed, otherwise
-     * false.
+     * @return a Future which will complete with a {@code true} if the preferred partition is added
+     * successfully, a {@code false} otherwise, or an exception if any.
      * @throws InterruptedException If thread is interrupted while waiting for Network client channel to be ready.
      */
     @Override
-    public CompletableFuture<Boolean> removePreferredPartition(Endpoint serverEndpoint, int partitionId) throws InterruptedException {
+    public Future<Boolean> removePreferredPartition(Endpoint serverEndpoint,
+                                                    int partitionId) throws InterruptedException {
         WaltzNetworkClient networkClient = getNetworkClient(serverEndpoint);
         return networkClient.removePreferredPartition(partitionId);
     }
-
 }
