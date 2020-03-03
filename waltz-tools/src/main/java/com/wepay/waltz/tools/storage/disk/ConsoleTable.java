@@ -1,4 +1,4 @@
-package com.wepay.waltz.tools.storage.segment;
+package com.wepay.waltz.tools.storage.disk;
 
 import java.util.ArrayList;
 import java.util.List;

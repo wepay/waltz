@@ -1,4 +1,4 @@
-package com.wepay.waltz.tools.storage.segment;
+package com.wepay.waltz.tools.storage.disk;
 
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
