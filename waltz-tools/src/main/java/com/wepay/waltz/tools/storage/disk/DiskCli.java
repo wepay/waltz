@@ -346,9 +346,11 @@ public final class DiskCli extends SubcommandCli {
                 if (cmd.hasOption("p")) {
                     int partitionId = Integer.parseInt(cmd.getOptionValue("p"));
                     int numPartitions = controlFile.getNumPartitions();
-                    if (partitionId >= numPartitions) {
+                    if (partitionId < 0 || partitionId >= numPartitions) {
                         throw new SubCommandFailedException(
-                            String.format("Number of partitions: %s, Max partition id: %s",
+                            String.format(
+                                "Invalid partition id, Number of partitions: %s,"
+                                    + " Min partition id: 0, Max partition id: %s",
                                 numPartitions, numPartitions - 1)
                         );
                     }
