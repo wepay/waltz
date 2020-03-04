@@ -283,7 +283,7 @@ public final class ZooKeeperCliTest {
             // add mis-formatted storage node should fail
             String storageNodeToAdd = "fakehostmisformatted";
             String expectedCmdOutput =
-                    "Error: java.lang.IllegalArgumentException: Storage must be in format of host:admin_port";
+                    "Error: java.lang.IllegalArgumentException: Storage must be in format of host:port";
             int storageAdminPort = 8100;
             addStorageNode(storageNodeToAdd, storageAdminPort, STORAGE_GROUP_1, configFilePath);
 

@@ -537,7 +537,7 @@ public final class ZooKeeperCli extends SubcommandCli {
 
                 String[] storageHostAndPort = storage.split(":");
                 if (storageHostAndPort.length != 2) {
-                    throw new IllegalArgumentException("Storage must be in format of host:admin_port");
+                    throw new IllegalArgumentException("Storage must be in format of host:port");
                 }
 
                 StoreMetadata storeMetadata = new StoreMetadata(zkClient, new ZNode(root, StoreMetadata.STORE_ZNODE_NAME));
