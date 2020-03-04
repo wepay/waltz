@@ -260,6 +260,50 @@ public final class ZooKeeperCliTest {
     }
 
     @Test
+    public void testAddMisformattedStorageNodeShouldFail() throws Exception {
+        // set up streams
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(errContent, false, "UTF-8"));
+
+        ZooKeeperServerRunner zooKeeperServerRunner = new ZooKeeperServerRunner(0);
+        String connectString = zooKeeperServerRunner.start();
+        String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, createProperties(connectString, CLUSTER_ROOT));
+
+        try {
+            ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
+            ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
+            ZNode groupNode = new ZNode(storeRoot, StoreMetadata.GROUP_ZNODE_NAME);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
+            ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
+
+            int prevGroupSize = zkClient.getData(groupNode, GroupDescriptorSerializer.INSTANCE).value.groups.size();
+
+            // add mis-formatted storage node should fail
+            String storageNodeToAdd = "fakehostmisformatted";
+            String expectedCmdOutput =
+                    "Error: java.lang.IllegalArgumentException: Storage must be in format of host:admin_port";
+            int storageAdminPort = 8100;
+            addStorageNode(storageNodeToAdd, storageAdminPort, STORAGE_GROUP_1, configFilePath);
+
+            NodeData<GroupDescriptor> groupDescriptorData = zkClient.getData(groupNode, GroupDescriptorSerializer.INSTANCE);
+            Map<String, Integer> groups = groupDescriptorData.value.groups;
+
+            assertTrue(errContent.toString("UTF-8").contains(expectedCmdOutput));
+            assertEquals(prevGroupSize, groups.size());
+
+        } finally {
+            // restore streams
+            System.setErr(originalErr);
+            errContent.close();
+
+            zooKeeperServerRunner.stop();
+            zooKeeperServerRunner.clear();
+        }
+    }
+
+    @Test
     public void testRemoveStorageNode() throws Exception {
         ZooKeeperServerRunner zooKeeperServerRunner = new ZooKeeperServerRunner(0);
         String connectString = zooKeeperServerRunner.start();
