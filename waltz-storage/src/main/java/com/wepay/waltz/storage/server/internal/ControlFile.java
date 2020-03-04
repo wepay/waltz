@@ -136,6 +136,17 @@ public class ControlFile {
     }
 
     /**
+     * Return the corresponding {@link PartitionInfoSnapshot} object for the cached {@link PartitionInfo}
+     * from the control file's in-memory {@link PartitionInfo} map cache.
+     *
+     * @param partitionId
+     * @return A PartitionInfoSnapshot object
+     */
+    public PartitionInfoSnapshot getPartitionInfoSnapshot(int partitionId) {
+        return getPartitionInfo(partitionId).getSnapshot();
+    }
+
+    /**
      * Flush the file channel for the control file.
      *
      * @throws IOException
