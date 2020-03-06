@@ -195,6 +195,15 @@ public class WaltzClient {
     }
 
     /**
+     * Gets the total number of all partitions of this client, including active ones and inactive ones.
+     *
+     * @return the total number of partitions.
+     */
+    public int getNumPartitions() {
+        return clusterManager.numPartitions();
+    }
+
+    /**
      * Sets ids of partitions for this client to work with.
      * Partitions not in {@code partitionIds} will become inaccessible from this client.
      * To use this method the client must set the {@code client.autoMount} configuration parameter to {@code false}.
