@@ -195,7 +195,7 @@ public class WaltzClient {
     }
 
     /**
-     * Gets the total number of all partitions of this client, including active ones and inactive ones.
+     * Gets the total number of partitions in this cluster, including active and inactive ones.
      *
      * @return the total number of partitions.
      */
