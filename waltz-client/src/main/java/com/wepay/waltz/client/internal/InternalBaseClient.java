@@ -293,7 +293,8 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
     }
 
     /**
-     * Asynchronously removes the server by invoking {@link WaltzNetworkClient#close()} on the corresponding network client.
+     * Asynchronously removes the server by invoking {@link WaltzNetworkClient#unmountAllPartitions()} and
+     * {@link WaltzNetworkClient#close()} in that order on the corresponding network client.
      *
      * @param endpoint the {@code Endpoint} of the server to be removed.
      */
@@ -306,6 +307,7 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
                 logger.info("removing server: endpoint=" + endpoint);
                 WaltzNetworkClient networkClient = networkClients.remove(endpoint);
                 if (networkClient != null) {
+                    networkClient.unmountAllPartitions();
                     networkClient.close();
                 }
             }
@@ -424,6 +426,7 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
     private void doSetEndpoints() {
         try {
             synchronized (activePartitions) {
+                logger.debug("setting endpoints, " + endpoints.keySet());
                 for (Map.Entry<Endpoint, List<PartitionInfo>> entry : endpoints.entrySet()) {
                     Endpoint endpoint = entry.getKey();
 
