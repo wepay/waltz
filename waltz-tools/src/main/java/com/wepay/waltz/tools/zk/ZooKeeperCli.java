@@ -535,6 +535,11 @@ public final class ZooKeeperCli extends SubcommandCli {
                 int adminPort = Integer.parseInt(cmd.getOptionValue("storage-admin-port"));
                 int groupId = Integer.parseInt(cmd.getOptionValue("group"));
 
+                String[] storageHostAndPort = storage.split(":");
+                if (storageHostAndPort.length != 2) {
+                    throw new IllegalArgumentException("Storage must be in format of host:port");
+                }
+
                 StoreMetadata storeMetadata = new StoreMetadata(zkClient, new ZNode(root, StoreMetadata.STORE_ZNODE_NAME));
                 storeMetadata.addStorageNode(storage, groupId, adminPort);
             } catch (Exception e) {
