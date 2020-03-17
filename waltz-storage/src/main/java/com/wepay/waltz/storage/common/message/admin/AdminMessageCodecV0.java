@@ -9,6 +9,8 @@ import com.wepay.waltz.storage.common.SessionInfo;
 import com.wepay.waltz.storage.exception.StorageRpcException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class AdminMessageCodecV0 implements MessageCodec {
@@ -75,6 +77,17 @@ public class AdminMessageCodecV0 implements MessageCodec {
                 String metricsJson = reader.readString();
                 return new MetricsResponse(seqNum, metricsJson);
 
+            case AdminMessageType.ASSIGNED_PARTITION_STATUS_REQUEST:
+                return new AssignedPartitionStatusRequest(seqNum);
+
+            case AdminMessageType.ASSIGNED_PARTITION_STATUS_RESPONSE:
+                int size = reader.readInt();
+                Map<Integer, Boolean> partitionStatusMap = new HashMap<>();
+                for (int i = 0; i < size; i++) {
+                    partitionStatusMap.put(reader.readInt(), reader.readBoolean());
+                }
+                return new AssignedPartitionStatusResponse(seqNum, partitionStatusMap);
+
             default:
                 throw new IllegalStateException("unknown message type: " + messageType);
         }
@@ -115,6 +128,7 @@ public class AdminMessageCodecV0 implements MessageCodec {
                 writer.writeBoolean(partitionAssignmentRequest.deleteStorageFiles);
                 break;
 
+            case AdminMessageType.ASSIGNED_PARTITION_STATUS_REQUEST:
             case AdminMessageType.METRICS_REQUEST:
                 break;
 
@@ -151,6 +165,16 @@ public class AdminMessageCodecV0 implements MessageCodec {
                 LastSessionInfoResponse lastSessionInfoResponse = (LastSessionInfoResponse) msg;
                 writer.writeInt(lastSessionInfoResponse.partitionId);
                 lastSessionInfoResponse.lastSessionInfo.writeTo(writer);
+                break;
+
+            case AdminMessageType.ASSIGNED_PARTITION_STATUS_RESPONSE:
+                AssignedPartitionStatusResponse assignedPartitionStatusResponse = (AssignedPartitionStatusResponse) msg;
+                Map<Integer, Boolean> partitionStatusMap = assignedPartitionStatusResponse.partitionStatusMap;
+                writer.writeInt(partitionStatusMap.size());
+                for (Map.Entry<Integer, Boolean> partitionStatus : partitionStatusMap.entrySet()) {
+                    writer.writeInt(partitionStatus.getKey());
+                    writer.writeBoolean(partitionStatus.getValue());
+                }
                 break;
 
             default:

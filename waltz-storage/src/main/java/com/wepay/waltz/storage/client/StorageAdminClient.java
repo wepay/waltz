@@ -10,6 +10,8 @@ import com.wepay.waltz.storage.common.message.admin.AdminMessage;
 import com.wepay.waltz.storage.common.message.admin.AdminMessageCodecV0;
 import com.wepay.waltz.storage.common.message.admin.AdminMessageType;
 import com.wepay.waltz.storage.common.message.admin.AdminOpenRequest;
+import com.wepay.waltz.storage.common.message.admin.AssignedPartitionStatusRequest;
+import com.wepay.waltz.storage.common.message.admin.AssignedPartitionStatusResponse;
 import com.wepay.waltz.storage.common.message.admin.LastSessionInfoRequest;
 import com.wepay.waltz.storage.common.message.admin.LastSessionInfoResponse;
 import com.wepay.waltz.storage.common.message.admin.MetricsRequest;
@@ -84,6 +86,14 @@ public class StorageAdminClient extends StorageBaseClient {
     }
 
     /**
+     * Get the set of the partitions assigned to the storage Node and their write status.
+     * @return Future of Set of partitions with their corresponding write status.
+     */
+    public CompletableFuture<Object> getAssignedPartitionStatus() {
+        return call(new AssignedPartitionStatusRequest(seqNum.getAndIncrement()));
+    }
+
+    /**
      * Gets the session info of the last session
      * @param partitionId the partition id
      * @return Future of SessionInfo
@@ -134,6 +144,10 @@ public class StorageAdminClient extends StorageBaseClient {
 
                 case AdminMessageType.LAST_SESSION_INFO_RESPONSE:
                     future.complete(((LastSessionInfoResponse) msg).lastSessionInfo);
+                    break;
+
+                case AdminMessageType.ASSIGNED_PARTITION_STATUS_RESPONSE:
+                    future.complete(((AssignedPartitionStatusResponse) msg).partitionStatusMap);
                     break;
 
                 default:

@@ -15,6 +15,7 @@ import com.wepay.waltz.storage.common.message.admin.AdminMessageCodecV0;
 import com.wepay.waltz.storage.common.message.admin.AdminMessageType;
 import com.wepay.waltz.storage.common.message.admin.AdminOpenRequest;
 import com.wepay.waltz.storage.common.message.admin.AdminSuccessResponse;
+import com.wepay.waltz.storage.common.message.admin.AssignedPartitionStatusResponse;
 import com.wepay.waltz.storage.common.message.admin.LastSessionInfoRequest;
 import com.wepay.waltz.storage.common.message.admin.LastSessionInfoResponse;
 import com.wepay.waltz.storage.common.message.admin.MetricsResponse;
@@ -30,6 +31,8 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 public class AdminServerHandler extends MessageHandler {
 
@@ -126,6 +129,24 @@ public class AdminServerHandler extends MessageHandler {
                 ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
                 String metricsJson = ow.writeValueAsString(MetricRegistry.getInstance());
                 sendMessage(new MetricsResponse(message.seqNum, metricsJson), true);
+                break;
+
+            case AdminMessageType.ASSIGNED_PARTITION_STATUS_REQUEST:
+                Map<Integer, Boolean> partitionStatusMap = new HashMap<>();
+
+                // Check partition's assignment and availability
+                Set<Integer> partitionSet = storageManager.getAssignedPartitionIds();
+                for (Integer id : partitionSet) {
+                    Partition partition = storageManager.getPartition(id);
+                    PartitionInfoSnapshot partitionInfoSnapshot = partition.getPartitionInfoSnapshot();
+                    if (partitionInfoSnapshot.isAssigned && partitionInfoSnapshot.isAvailable) {
+                        partitionStatusMap.put(partitionInfoSnapshot.partitionId, true);
+                    } else {
+                        partitionStatusMap.put(partitionInfoSnapshot.partitionId, false);
+                    }
+                }
+
+                sendMessage(new AssignedPartitionStatusResponse(message.seqNum, partitionStatusMap), true);
                 break;
 
             default:
