@@ -17,4 +17,7 @@ public final class AdminMessageType {
     public static final int LAST_SESSION_INFO_RESPONSE = 10;
     public static final int METRICS_REQUEST = 11;
     public static final int METRICS_RESPONSE = 12;
+    public static final int ASSIGNED_PARTITION_STATUS_REQUEST = 13;
+    public static final int ASSIGNED_PARTITION_STATUS_RESPONSE = 14;
+
 }

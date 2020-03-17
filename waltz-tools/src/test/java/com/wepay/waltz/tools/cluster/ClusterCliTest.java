@@ -5,6 +5,7 @@ import com.wepay.waltz.test.util.SslSetup;
 import com.wepay.waltz.test.util.WaltzServerRunner;
 import com.wepay.waltz.test.util.WaltzStorageRunner;
 import com.wepay.waltz.tools.CliConfig;
+import com.wepay.waltz.tools.storage.StorageCli;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,6 +13,7 @@ import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -129,14 +131,26 @@ public class ClusterCliTest {
                 helper.getZkSessionTimeout(), helper.getSslSetup());
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME,
                 configProperties);
-
+        String host = InetAddress.getLocalHost().getCanonicalHostName();
+        int partitionId = 1;
         try {
             helper.startZooKeeperServer();
+
             for (int i = 0; i < numStorageNodes; i++) {
                 WaltzStorageRunner storageRunner = helper.getWaltzStorageRunner(i);
                 storageRunner.startAsync();
                 storageRunner.awaitStart();
+
+                // Add partition P1 to all storage nodes.
+                String[] args0 = {
+                    "add-partition",
+                    "--storage", host + ":" + helper.getStorageAdminPort(i),
+                    "--partition", String.valueOf(partitionId),
+                    "--cli-config-path", configFilePath
+                };
+                StorageCli.testMain(args0);
             }
+
             helper.startWaltzServer(true);
 
             String[] args1 = {
@@ -144,24 +158,67 @@ public class ClusterCliTest {
                     "--cli-config-path", configFilePath
             };
             ClusterCli.testMain(args1);
+
+            // Check that the server partition assignment on ZooKeeper matches with that on the server node.
             assertFalse(outContent.toString("UTF-8")
                 .contains("Validation PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY failed"));
+
+            // Check that server to storage connectivity didn't fail.
             assertFalse(outContent.toString("UTF-8")
                 .contains("Validation SERVER_STORAGE_CONNECTIVITY failed"));
+
+            // Check that the storage partition assignment on ZooKeeper match with that on the storage nodes only for
+            // Partition 1.
+            assertTrue(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_ASSIGNMENT_ZK_STORAGE_CONSISTENCY failed for partition 0"));
+            assertFalse(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_ASSIGNMENT_ZK_STORAGE_CONSISTENCY failed for partition 1"));
+            assertTrue(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_ASSIGNMENT_ZK_STORAGE_CONSISTENCY failed for partition 2"));
+
+            // Check that quorum is only achieved on Partition 1.
+            assertTrue(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_QUORUM_STATUS failed for partition 0"));
+            assertFalse(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_QUORUM_STATUS failed for partition 1"));
+            assertTrue(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_QUORUM_STATUS failed for partition 2"));
 
             // Close the server network connection
             WaltzServerRunner waltzServerRunner = helper.getWaltzServerRunner(helper.getServerPort(),
                     helper.getServerJettyPort());
             waltzServerRunner.closeNetworkServer();
+
+            // Stop the storage node [0]
+            WaltzStorageRunner waltzStorageRunner = helper.getWaltzStorageRunner();
+            waltzStorageRunner.stop();
+
+            // Stop the storage node [1]. (Note: Quorum should fail for Partition 1.)
+            waltzStorageRunner = helper.getWaltzStorageRunner(1);
+            waltzStorageRunner.stop();
+
             String[] args2 = {
                     "verify",
                     "--cli-config-path", configFilePath
             };
             ClusterCli.testMain(args2);
+
+            // Check that the server partition assignment on ZooKeeper doesn't match with that on the server.
             assertTrue(outContent.toString("UTF-8")
                 .contains("Validation PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY failed"));
+
+            // Check that server to storage connectivity failed.
             assertTrue(outContent.toString("UTF-8")
                 .contains("Validation SERVER_STORAGE_CONNECTIVITY failed"));
+
+            // Check that for partition 1, the storage partition assignment on ZooKeeper doesn't match with that on
+            // the storage nodes.
+            assertTrue(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_ASSIGNMENT_ZK_STORAGE_CONSISTENCY failed for partition 1"));
+
+            // Check that quorum is not achieved on Partition 1.
+            assertTrue(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_QUORUM_STATUS failed for partition 1"));
         } finally {
             helper.closeAll();
         }
