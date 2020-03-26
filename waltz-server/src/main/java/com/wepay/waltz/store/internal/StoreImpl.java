@@ -1,22 +1,32 @@
 package com.wepay.waltz.store.internal;
 
 import com.wepay.riff.util.Logging;
+import com.wepay.waltz.common.util.DaemonThreadFactory;
 import com.wepay.waltz.server.WaltzServerConfig;
 import com.wepay.waltz.store.Store;
 import com.wepay.waltz.store.StorePartition;
+import com.wepay.waltz.store.exception.GenerationMismatchException;
+import com.wepay.waltz.store.exception.RecoveryFailedException;
 import com.wepay.waltz.store.exception.StoreException;
 import com.wepay.waltz.common.metadata.ReplicaAssignments;
 import com.wepay.waltz.common.metadata.ReplicaId;
 import com.wepay.waltz.common.metadata.StoreMetadata;
 import com.wepay.waltz.common.metadata.StoreParams;
+import com.wepay.waltz.store.exception.StoreSessionManagerException;
+import com.wepay.zktools.zookeeper.NodeData;
 import com.wepay.zktools.zookeeper.WatcherHandle;
 import com.wepay.zktools.zookeeper.ZNode;
 import com.wepay.zktools.zookeeper.ZooKeeperClient;
 import org.slf4j.Logger;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 /**
  * Implements {@link Store}.
@@ -32,6 +42,19 @@ public class StoreImpl implements Store {
 
     private final AtomicBoolean running = new AtomicBoolean(true);
     private final WatcherHandle assignmentWatcherHandle;
+
+    private final Map<Integer, StoreSessionManager> storeSessionManagers = new ConcurrentHashMap<>();
+    private final ExecutorService asyncTaskExecutor = Executors.newSingleThreadExecutor(DaemonThreadFactory.INSTANCE);
+
+    private final Function<StoreSessionManager, StoreSession> getStoreSessionFunc = (storeSessionManager) -> {
+        StoreSession storeSession = null;
+        try {
+            storeSession = storeSessionManager.getStoreSession();
+        } catch (GenerationMismatchException | StoreSessionManagerException | RecoveryFailedException ex) {
+            logger.warn("Failed to get StoreSession", ex);
+        }
+        return storeSession;
+    };
 
     /**
      * Class constructor.
@@ -54,8 +77,7 @@ public class StoreImpl implements Store {
 
             ReplicaAssignments replicaAssignments = storeMetadata.getReplicaAssignments();
             this.replicaSessionManager = new ReplicaSessionManager(replicaAssignments, new ConnectionConfig(key, numPartitions, config));
-            this.assignmentWatcherHandle = storeMetadata.watchReplicaAssignments(replicaSessionManager::updateReplicaSessionManager);
-
+            this.assignmentWatcherHandle = storeMetadata.watchReplicaAssignments(this::onReplicaAssignmentsUpdate);
         } catch (Exception ex) {
             logger.error("failed to create store instance", ex);
             throw new StoreException("failed to create store instance", ex);
@@ -67,6 +89,8 @@ public class StoreImpl implements Store {
         if (running.compareAndSet(true, false)) {
             assignmentWatcherHandle.close();
             replicaSessionManager.close();
+            storeSessionManagers.clear();
+            asyncTaskExecutor.shutdownNow();
         }
     }
 
@@ -86,8 +110,8 @@ public class StoreImpl implements Store {
                     znode
                 );
 
+            storeSessionManagers.put(partitionId, storeSessionManager);
             return new StorePartitionImpl(storeSessionManager, config);
-
         } catch (IllegalArgumentException ex) {
             logger.error("failed to get a partition", ex);
             throw ex;
@@ -111,4 +135,33 @@ public class StoreImpl implements Store {
         return replicaSessionManager.getConnectionConfig();
     }
 
+    public void onPartitionRemoved(int partitionId) {
+        storeSessionManagers.computeIfPresent(partitionId, (key, storeSessionManager) ->
+            storeSessionManager.isClosed() ? null : storeSessionManager
+        );
+    }
+
+    private void onReplicaAssignmentsUpdate(NodeData<ReplicaAssignments> nodeData) {
+        replicaSessionManager.updateReplicaSessionManager(nodeData);
+
+        asyncTaskExecutor.execute(() ->
+            storeSessionManagers.keySet().forEach(key ->
+                storeSessionManagers.computeIfPresent(
+                    key,
+                    (partitionId, sessionManager) -> {
+                        if (sessionManager.isClosed()) {
+                            return null;
+                        }
+                        StoreSession currentSession = getStoreSessionFunc.apply(sessionManager);
+                        if (currentSession != null) {
+                            currentSession.close();
+                            // Creates a new session triggering recovery
+                            getStoreSessionFunc.apply(sessionManager);
+                        }
+                        return sessionManager;
+                    }
+                )
+            )
+        );
+    }
 }

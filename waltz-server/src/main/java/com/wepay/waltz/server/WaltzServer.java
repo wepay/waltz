@@ -179,6 +179,7 @@ public class WaltzServer {
                         Partition partition = partitions.remove(partitionId);
                         if (partition != null) {
                             partition.closeAsync();
+                            store.onPartitionRemoved(partitionId);
                         }
                     }
                     logger.info("partition assigned: " + getPartitionIds() + " endpoint=" + endpoint);

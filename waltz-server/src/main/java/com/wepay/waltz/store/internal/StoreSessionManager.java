@@ -115,6 +115,10 @@ public class StoreSessionManager {
         return healthy;
     }
 
+    public boolean isClosed() {
+        return !running.get();
+    }
+
     /**
      * Returns a store session.
      * @return a store session

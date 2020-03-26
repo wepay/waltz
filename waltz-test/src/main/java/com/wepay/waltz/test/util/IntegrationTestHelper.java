@@ -46,6 +46,8 @@ import java.util.concurrent.Future;
 public class IntegrationTestHelper {
 
     private static final int STORAGE_GROUP_ID = 0;
+    private static final int CACHE_SIZE = 5120;
+    private static final int TRANSACTION_DATA_CACHE_SIZE = 20480;
 
     private final String sslConfigPath;
     private final SslSetup sslSetup;
@@ -292,6 +294,8 @@ public class IntegrationTestHelper {
                 Map<Object, Object> config = new HashMap<>(props);
                 config.put(WaltzServerConfig.ZOOKEEPER_CONNECT_STRING, zkConnectString);
                 config.put(WaltzServerConfig.ZOOKEEPER_SESSION_TIMEOUT, zkSessionTimeout);
+                config.put(WaltzServerConfig.FEED_CACHE_SIZE, CACHE_SIZE);
+                config.put(WaltzServerConfig.TRANSACTION_DATA_CACHE_SIZE, TRANSACTION_DATA_CACHE_SIZE);
                 if (jettyPort > 0) {
                     config.put(WaltzServerConfig.SERVER_JETTY_PORT, jettyPort);
                 }
