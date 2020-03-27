@@ -69,7 +69,7 @@ public class ZooKeeperServerRunner extends Runner<ZooKeeperServer> {
     }
 
     protected void closeServer() {
-        server.shutdown(true);
+        server.shutdown();
         server = null;
     }
 

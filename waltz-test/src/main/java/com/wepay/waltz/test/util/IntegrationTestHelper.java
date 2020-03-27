@@ -46,8 +46,9 @@ import java.util.concurrent.Future;
 public class IntegrationTestHelper {
 
     private static final int STORAGE_GROUP_ID = 0;
-    private static final int CACHE_SIZE = 5120;
-    private static final int TRANSACTION_DATA_CACHE_SIZE = 20480;
+    // Use smaller caches in testing.
+    private static final int CACHE_SIZE = 5120; // 5MB
+    private static final int TRANSACTION_DATA_CACHE_SIZE = 20480; // 20MB
 
     private final String sslConfigPath;
     private final SslSetup sslSetup;

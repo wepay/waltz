@@ -26,7 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 
 /**
  * Implements {@link Store}.
@@ -45,16 +44,6 @@ public class StoreImpl implements Store {
 
     private final Map<Integer, StoreSessionManager> storeSessionManagers = new ConcurrentHashMap<>();
     private final ExecutorService asyncTaskExecutor = Executors.newSingleThreadExecutor(DaemonThreadFactory.INSTANCE);
-
-    private final Function<StoreSessionManager, StoreSession> getStoreSessionFunc = (storeSessionManager) -> {
-        StoreSession storeSession = null;
-        try {
-            storeSession = storeSessionManager.getStoreSession();
-        } catch (GenerationMismatchException | StoreSessionManagerException | RecoveryFailedException ex) {
-            logger.warn("Failed to get StoreSession", ex);
-        }
-        return storeSession;
-    };
 
     /**
      * Class constructor.
@@ -142,26 +131,40 @@ public class StoreImpl implements Store {
     }
 
     private void onReplicaAssignmentsUpdate(NodeData<ReplicaAssignments> nodeData) {
-        replicaSessionManager.updateReplicaSessionManager(nodeData);
+        synchronized (this) {
+            Set<ReplicaId> replicaIds = getReplicaIds();
+            Set<ReplicaId> newReplicaIds = ReplicaSessionManager.createReplicaIds(nodeData.value);
 
-        asyncTaskExecutor.execute(() ->
-            storeSessionManagers.keySet().forEach(key ->
-                storeSessionManagers.computeIfPresent(
-                    key,
-                    (partitionId, sessionManager) -> {
-                        if (sessionManager.isClosed()) {
-                            return null;
-                        }
-                        StoreSession currentSession = getStoreSessionFunc.apply(sessionManager);
+            if (newReplicaIds.equals(replicaIds)) {
+                logger.debug("ReplicaId sets are the same, current:{}, new:{}", replicaIds, newReplicaIds);
+                return;
+            }
+
+            replicaSessionManager.updateReplicaSessionManager(nodeData);
+
+            asyncTaskExecutor.execute(() -> {
+                for (StoreSessionManager sessionManager : storeSessionManagers.values()) {
+                    if (!sessionManager.isClosed()) {
+                        StoreSession currentSession = getStoreSession(sessionManager);
+
                         if (currentSession != null) {
                             currentSession.close();
-                            // Creates a new session triggering recovery
-                            getStoreSessionFunc.apply(sessionManager);
+                            getStoreSession(sessionManager);
                         }
-                        return sessionManager;
                     }
-                )
-            )
-        );
+                }
+            });
+        }
+    }
+
+    private StoreSession getStoreSession(StoreSessionManager storeSessionManager) {
+        StoreSession storeSession = null;
+
+        try {
+            storeSession = storeSessionManager.getStoreSession();
+        } catch (GenerationMismatchException | StoreSessionManagerException | RecoveryFailedException ex) {
+            logger.warn("Failed to get StoreSession", ex);
+        }
+        return storeSession;
     }
 }

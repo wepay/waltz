@@ -120,7 +120,7 @@ public class StoreSessionManager {
     }
 
     /**
-     * Returns a store session.
+     * Returns a store session. If the {@code currentSession} is unusable, creates a new store session.
      * @return a store session
      * @throws RecoveryFailedException
      * @throws StoreSessionManagerException
