@@ -539,6 +539,7 @@ public final class StorageCliTest {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testSyncPartitionAssignments() throws Exception {
         int numStorage = 3;
@@ -561,6 +562,7 @@ public final class StorageCliTest {
         ZooKeeperClient zkClient = null;
         List<WaltzStorageRunner> storageRunners = new ArrayList<>();
         Map<String, StorageClient> storageClientMap = new HashMap<>();
+        Map<String, StorageAdminClient> storageAdminClientMap = new HashMap<>();
 
         try {
             // set up zookeeper server
@@ -591,11 +593,15 @@ public final class StorageCliTest {
                 // open storage node
                 StorageClient storageClient = new StorageClient(localhost, storage.port, sslContext, key, numPartition);
                 storageClient.open();
+                StorageAdminClient storageAdminClient = new StorageAdminClient(localhost, storage.adminPort, sslContext,
+                    key, numPartition);
+                storageAdminClient.open();
 
                 // add storage node to group in ZK
                 storeMetadata.addStorageNode(connectString, storageGroupId, storage.adminPort);
 
                 storageClientMap.put(localhost + ":" + storage.port, storageClient);
+                storageAdminClientMap.put(localhost + ":" + storage.port, storageAdminClient);
                 storageRunners.add(storageRunner);
             }
 
@@ -606,6 +612,7 @@ public final class StorageCliTest {
             for (Map.Entry<String, int[]> entry : storeMetadata.getReplicaAssignments().replicas.entrySet()) {
                 String connectString = entry.getKey();
                 int[] partitionIds = entry.getValue();
+                assertEquals(((Map<String, Boolean>) storageAdminClientMap.get(connectString).getAssignedPartitionStatus().get()).size(), 0);
                 for (int partitionId : partitionIds) {
                     try {
                         storageClientMap.get(connectString).lastSessionInfo(0L, partitionId).get();
@@ -629,11 +636,22 @@ public final class StorageCliTest {
 
             // verify storage nodes are assigned
             for (Map.Entry<String, int[]> entry : storeMetadata.getReplicaAssignments().replicas.entrySet()) {
+                assertEquals(((Map<String, Boolean>) storageAdminClientMap.get(entry.getKey()).getAssignedPartitionStatus().get()).size(), entry.getValue().length);
                 for (int partitionId : entry.getValue()) {
                     storageClientMap.get(entry.getKey()).lastSessionInfo(0L, partitionId).get();
                 }
             }
         } finally {
+            // close storage client
+            for (StorageClient storageClient : storageClientMap.values()) {
+                storageClient.close();
+            }
+
+            // close storage admin client
+            for (StorageAdminClient storageAdminClient : storageAdminClientMap.values()) {
+                storageAdminClient.close();
+            }
+
             // close storage
             for (WaltzStorageRunner runner : storageRunners) {
                 runner.stop();
