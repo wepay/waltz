@@ -46,7 +46,7 @@ import java.util.concurrent.Future;
 public class IntegrationTestHelper {
 
     private static final int STORAGE_GROUP_ID = 0;
-    // Use smaller caches in testing.
+    // Use smaller caches in testing because defaults allocate quite a lot of memory.
     private static final int CACHE_SIZE = 5120; // 5MB
     private static final int TRANSACTION_DATA_CACHE_SIZE = 20480; // 20MB
 
