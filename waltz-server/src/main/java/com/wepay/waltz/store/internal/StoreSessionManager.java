@@ -115,8 +115,12 @@ public class StoreSessionManager {
         return healthy;
     }
 
+    public boolean isClosed() {
+        return !running.get();
+    }
+
     /**
-     * Returns a store session.
+     * Returns a store session. If the {@code currentSession} is unusable, creates a new store session.
      * @return a store session
      * @throws RecoveryFailedException
      * @throws StoreSessionManagerException

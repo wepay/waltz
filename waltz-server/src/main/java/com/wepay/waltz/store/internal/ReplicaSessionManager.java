@@ -112,11 +112,16 @@ public class ReplicaSessionManager {
     }
 
     /**
-     * Update replicaIds based on ReplicaAssignments.
+     * A utility method to return a set of ReplicaIds for a given ReplicaAssignments.
      * @param assignments
+     * @return a set of ReplicaIds.
      */
-    private Set<ReplicaId> createReplicaIds(ReplicaAssignments assignments) {
+    protected static Set<ReplicaId> createReplicaIds(ReplicaAssignments assignments) {
         Set<ReplicaId> replicaIds = new HashSet<>();
+        if (assignments == null) {
+            return replicaIds;
+        }
+
         for (Map.Entry<String, int[]> entry : assignments.replicas.entrySet()) {
             String connectString = entry.getKey();
             for (int partitionId : entry.getValue()) {

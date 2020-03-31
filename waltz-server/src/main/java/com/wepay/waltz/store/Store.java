@@ -32,4 +32,6 @@ public interface Store {
     Set<ReplicaId> getReplicaIds();
 
     ConnectionConfig getConnectionConfig();
+
+    void onPartitionRemoved(int partitionId);
 }

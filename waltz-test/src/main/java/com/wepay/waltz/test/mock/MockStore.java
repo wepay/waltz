@@ -37,4 +37,9 @@ public class MockStore implements Store {
     public ConnectionConfig getConnectionConfig() {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void onPartitionRemoved(int partitionId) {
+        // Do nothing
+    }
 }
