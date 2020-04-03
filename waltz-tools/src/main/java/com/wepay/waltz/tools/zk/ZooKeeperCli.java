@@ -106,8 +106,9 @@ public final class ZooKeeperCli extends SubcommandCli {
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+                int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
-                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
                 ZNode storeRoot = new ZNode(root, StoreMetadata.STORE_ZNODE_NAME);
                 StoreMetadata storeMetadata = new StoreMetadata(zkClient, storeRoot);
@@ -237,8 +238,9 @@ public final class ZooKeeperCli extends SubcommandCli {
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+                int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
-                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
                 ZNode storeRoot = new ZNode(root, StoreMetadata.STORE_ZNODE_NAME);
                 StoreMetadata storeMetadata = new StoreMetadata(zkClient, storeRoot);
@@ -306,8 +308,9 @@ public final class ZooKeeperCli extends SubcommandCli {
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+                int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
-                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
                 String clusterName = cmd.getOptionValue("name");
                 int numPartitions = Integer.parseInt(cmd.getOptionValue("partitions"));
@@ -430,8 +433,9 @@ public final class ZooKeeperCli extends SubcommandCli {
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+                int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
-                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
                 String clusterName = cmd.getOptionValue("name");
                 boolean force = cmd.hasOption("force");
@@ -528,8 +532,9 @@ public final class ZooKeeperCli extends SubcommandCli {
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+                int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
-                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
                 String storage = cmd.getOptionValue("storage");
                 int adminPort = Integer.parseInt(cmd.getOptionValue("storage-admin-port"));
@@ -600,8 +605,9 @@ public final class ZooKeeperCli extends SubcommandCli {
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+                int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
-                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
                 String storage = cmd.getOptionValue("storage");
 
@@ -672,8 +678,9 @@ public final class ZooKeeperCli extends SubcommandCli {
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+                int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
-                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
                 int partitionId = Integer.parseInt(cmd.getOptionValue("partition"));
                 String storage = cmd.getOptionValue("storage");
@@ -745,8 +752,9 @@ public final class ZooKeeperCli extends SubcommandCli {
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+                int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
-                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
                 int partition = Integer.parseInt(cmd.getOptionValue("partition"));
                 String storage = cmd.getOptionValue("storage");
@@ -811,8 +819,9 @@ public final class ZooKeeperCli extends SubcommandCli {
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+                int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
-                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
                 int groupId = Integer.parseInt(cmd.getOptionValue("group"));
 

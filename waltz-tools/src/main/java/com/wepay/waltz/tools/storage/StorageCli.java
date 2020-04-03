@@ -140,8 +140,9 @@ public final class StorageCli extends SubcommandCli {
             try {
                 String zkConnectString = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+                int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
-                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout, zkConnectTimeout);
 
                 StoreMetadata storeMetadata = new StoreMetadata(zkClient, new ZNode(zkRoot + '/' + StoreMetadata.STORE_ZNODE_NAME));
                 ConnectionMetadata md = storeMetadata.getConnectionMetadata();
@@ -166,10 +167,11 @@ public final class StorageCli extends SubcommandCli {
             String zkConnectString = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
             String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
             int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+            int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
             try {
                 SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
-                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout, zkConnectTimeout);
                 storageAdminClient = openStorageAdminClient(storageHost, storagePort, sslContext, zkClient, zkRoot);
                 return (String) storageAdminClient.getMetrics().get();
             } finally {
@@ -301,11 +303,12 @@ public final class StorageCli extends SubcommandCli {
             String zkConnectString = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
             String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
             int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+            int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
             try {
                 SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
 
-                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout, zkConnectTimeout);
 
                 storageAdminClient = openStorageAdminClient(storageHost, storagePort, sslContext, zkClient, zkRoot);
 
@@ -407,10 +410,11 @@ public final class StorageCli extends SubcommandCli {
             String zkConnectString = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
             String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
             int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+            int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
             try {
                 SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
-                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout, zkConnectTimeout);
                 storageAdminClient = openStorageAdminClient(storageHost, storagePort, sslContext, zkClient, zkRoot);
                 storageAdminClient.setPartitionAvailable(partitionId, isAvailable).get();
             } finally {
@@ -522,11 +526,12 @@ public final class StorageCli extends SubcommandCli {
             String zkConnectString = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
             String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
             int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+            int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
             try {
                 SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
 
-                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout, zkConnectTimeout);
 
                 storageAdminClient = openStorageAdminClient(storageHost, storagePort, sslContext, zkClient, zkRoot);
 
@@ -689,12 +694,13 @@ public final class StorageCli extends SubcommandCli {
             String zkConnectString = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
             String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
             int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+            int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
             try {
                 SslContext sourceSslContext = Utils.getSslContext(sourceSslConfigPath, WaltzServerConfig.SERVER_SSL_CONFIG_PREFIX);
                 SslContext destinationSslContext = Utils.getSslContext(destinationSslConfigPath, WaltzServerConfig.SERVER_SSL_CONFIG_PREFIX);
 
-                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout, zkConnectTimeout);
                 sourceStorageAdminClient = openStorageAdminClient(sourceStorageHost, sourceStorageAdminPort, sourceSslContext, zkClient, zkRoot);
                 destinationStorageClient = openStorageClient(destinationStorageHost, destinationStoragePort, destinationSslContext, zkClient, zkRoot, true);
                 destinationStorageAdminClient = openStorageAdminClient(destinationStorageHost, destinationStorageAdminPort, destinationSslContext, zkClient, zkRoot);
@@ -766,10 +772,11 @@ public final class StorageCli extends SubcommandCli {
             String zkConnectString = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
             String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
             int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+            int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
             try {
                 SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
-                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
 
                 StoreMetadata storeMetadata = new StoreMetadata(zkClient, new ZNode(root, StoreMetadata.STORE_ZNODE_NAME));
@@ -841,10 +848,11 @@ public final class StorageCli extends SubcommandCli {
             String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
             String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
             int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+            int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
             try {
                 SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
-                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
                 ZNode storeRoot = new ZNode(root, StoreMetadata.STORE_ZNODE_NAME);
 
@@ -1004,9 +1012,10 @@ public final class StorageCli extends SubcommandCli {
             String zkConnectString = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
             String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
             int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+            int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
             try {
                 SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
-                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout, zkConnectTimeout);
 
                 storageClient = openStorageClient(storageHost, storagePort, sslContext, zkClient, zkRoot, isOffline);
                 storageAdminClient = openStorageAdminClient(storageHost, storageAdminPort, sslContext, zkClient, zkRoot);

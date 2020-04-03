@@ -543,7 +543,8 @@ public final class StorageCliTest {
     public void testSyncPartitionAssignments() throws Exception {
         int numStorage = 3;
         int numPartition = 12;
-        int zkTimeout = 30000;
+        int zkSessionTimeout = 30000;
+        int zkConnectTimeout = 10000;
         int storageGroupId = 0;
         long segmentSizeThreshold = 400L;
         String localhost = InetAddress.getLocalHost().getCanonicalHostName();
@@ -566,7 +567,7 @@ public final class StorageCliTest {
             // set up zookeeper server
             zkServerRunner = new ZooKeeperServerRunner(portFinder.getPort());
             String zkConnectionString = zkServerRunner.start();
-            zkClient = new ZooKeeperClientImpl(zkConnectionString, zkTimeout);
+            zkClient = new ZooKeeperClientImpl(zkConnectionString, zkSessionTimeout, zkConnectTimeout);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRoot, "test cluster", numPartition);
             ZooKeeperCli.Create.createStores(zkClient, clusterRoot, numPartition);
             StoreMetadata storeMetadata = new StoreMetadata(zkClient, storeRoot);
@@ -579,7 +580,7 @@ public final class StorageCliTest {
                 storageProperties.setProperty(WaltzStorageConfig.STORAGE_DIRECTORY, Files.createTempDirectory(DIR_NAME).toString());
                 storageProperties.setProperty(WaltzStorageConfig.SEGMENT_SIZE_THRESHOLD, String.valueOf(segmentSizeThreshold));
                 storageProperties.setProperty(WaltzStorageConfig.ZOOKEEPER_CONNECT_STRING, zkConnectionString);
-                storageProperties.setProperty(WaltzStorageConfig.ZOOKEEPER_SESSION_TIMEOUT, String.valueOf(zkTimeout));
+                storageProperties.setProperty(WaltzStorageConfig.ZOOKEEPER_SESSION_TIMEOUT, String.valueOf(zkSessionTimeout));
                 storageProperties.setProperty(WaltzStorageConfig.CLUSTER_ROOT, clusterRoot.path);
                 sslSetup.setConfigParams(storageProperties, WaltzStorageConfig.STORAGE_SSL_CONFIG_PREFIX);
                 WaltzStorageConfig storageConfig = new WaltzStorageConfig(storageProperties);

@@ -46,6 +46,7 @@ public final class ZooKeeperCliTest {
     private static final int STORAGE_GROUP_0 = 0;
     private static final int STORAGE_GROUP_1 = 1;
     private static final int ZK_SESSION_TIMEOUT = 30000;
+    private static final int ZK_CONNECT_TIMEOUT = 10000;
 
     private static final String CLUSTER_ROOT = "/test/root";
     private static final String CLUSTER_NAME = "tool test";
@@ -86,7 +87,7 @@ public final class ZooKeeperCliTest {
             };
             ZooKeeperCli.testMain(createCommandArgs);
 
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
 
             ZNode root = new ZNode(CLUSTER_ROOT);
 
@@ -137,7 +138,7 @@ public final class ZooKeeperCliTest {
         try {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
 
@@ -201,7 +202,7 @@ public final class ZooKeeperCliTest {
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode groupNode = new ZNode(storeRoot, StoreMetadata.GROUP_ZNODE_NAME);
             ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
 
@@ -236,7 +237,7 @@ public final class ZooKeeperCliTest {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode groupNode = new ZNode(storeRoot, StoreMetadata.GROUP_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
 
@@ -274,7 +275,7 @@ public final class ZooKeeperCliTest {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode groupNode = new ZNode(storeRoot, StoreMetadata.GROUP_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
 
@@ -314,7 +315,7 @@ public final class ZooKeeperCliTest {
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode groupNode = new ZNode(storeRoot, StoreMetadata.GROUP_ZNODE_NAME);
             ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, 0, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
 
@@ -349,7 +350,7 @@ public final class ZooKeeperCliTest {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode groupNode = new ZNode(storeRoot, StoreMetadata.GROUP_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
 
@@ -381,7 +382,7 @@ public final class ZooKeeperCliTest {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
 
@@ -420,7 +421,7 @@ public final class ZooKeeperCliTest {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
 
@@ -455,7 +456,7 @@ public final class ZooKeeperCliTest {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
 
@@ -484,7 +485,7 @@ public final class ZooKeeperCliTest {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
 
@@ -522,7 +523,7 @@ public final class ZooKeeperCliTest {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
 
@@ -560,7 +561,7 @@ public final class ZooKeeperCliTest {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
 
@@ -602,7 +603,7 @@ public final class ZooKeeperCliTest {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, storageGroupMap, storageConnectionMap);
 
@@ -638,7 +639,7 @@ public final class ZooKeeperCliTest {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, numPartitions);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, numPartitions);
 
@@ -677,7 +678,7 @@ public final class ZooKeeperCliTest {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, numPartitions);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, numPartitions);
 
@@ -728,7 +729,7 @@ public final class ZooKeeperCliTest {
             ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
             ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
             ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
-            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
             ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, numPartitions);
             ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, numPartitions);
 
