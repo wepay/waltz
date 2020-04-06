@@ -802,7 +802,7 @@ public final class StorageCli extends SubcommandCli {
 
                         // Remove the remaining old partitions that are no longer to be handled.
                         for (int partitionId : assignedPartitionStatus.keySet()) {
-                            storageAdminClient.setPartitionAssignment(partitionId, false, false).get();
+                            futures.add(storageAdminClient.setPartitionAssignment(partitionId, false, false));
                         }
 
                         CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).get();
