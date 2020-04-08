@@ -1,3 +1,4 @@
 zookeeper.connectString: localhost:42181
 zookeeper.sessionTimeout: 1000
+zookeeper.connectTimeout: 5000
 cluster.root: /waltz_cluster

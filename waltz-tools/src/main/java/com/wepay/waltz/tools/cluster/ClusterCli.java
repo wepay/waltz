@@ -101,8 +101,9 @@ public final class ClusterCli extends SubcommandCli {
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+                int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
 
-                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
 
                 ClusterManager clusterManager = new ClusterManagerImpl(zkClient, root, partitionAssignmentPolicy);
@@ -201,9 +202,10 @@ public final class ClusterCli extends SubcommandCli {
                 ZNode zkRoot = new ZNode((String) cliConfig.get(CliConfig.CLUSTER_ROOT));
                 ZNode storeRoot = new ZNode(zkRoot, StoreMetadata.STORE_ZNODE_NAME);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+                int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
                 SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
 
-                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
+                zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
 
                 StoreMetadata storeMetadata = new StoreMetadata(zkClient, storeRoot);
                 ClusterManager clusterManager = new ClusterManagerImpl(zkClient, zkRoot, partitionAssignmentPolicy);

@@ -19,6 +19,8 @@ public class CliConfig extends AbstractConfig {
     public static final String ZOOKEEPER_CONNECT_STRING = "zookeeper.connectString";
     public static final String ZOOKEEPER_SESSION_TIMEOUT = "zookeeper.sessionTimeout";
     public static final int DEFAULT_ZOOKEEPER_SESSION_TIMEOUT = 30000;
+    public static final String ZOOKEEPER_CONNECT_TIMEOUT = "zookeeper.connectTimeout";
+    public static final int DEFAULT_ZOOKEEPER_CONNECT_TIMEOUT = 10000;
 
     // Cluster
     public static final String CLUSTER_ROOT = "cluster.root";
@@ -28,6 +30,7 @@ public class CliConfig extends AbstractConfig {
         // ZooKeeper
         parsers.put(ZOOKEEPER_CONNECT_STRING, stringParser);
         parsers.put(ZOOKEEPER_SESSION_TIMEOUT, intParser.withDefault(DEFAULT_ZOOKEEPER_SESSION_TIMEOUT));
+        parsers.put(ZOOKEEPER_CONNECT_TIMEOUT, intParser.withDefault(DEFAULT_ZOOKEEPER_CONNECT_TIMEOUT));
 
         // Cluster
         parsers.put(CLUSTER_ROOT, stringParser);
