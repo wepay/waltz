@@ -147,10 +147,14 @@ public final class ZooKeeperCliTest {
             HashMap<ReplicaId, ReplicaState> replicaStates = new HashMap<>();
             ZNode partitionRoot = new ZNode(storeRoot, StoreMetadata.PARTITION_ZNODE_NAME);
             ZNode znode = new ZNode(partitionRoot, Integer.toString(partitionId));
-            for (int i = 0; i < numReplicas; i++) {
+            for (int i = 0; i < numReplicas - 1; i++) {
                 ReplicaId replicaId = new ReplicaId(partitionId, String.format(connectStringTemplate, i, i));
                 replicaStates.put(replicaId, new ReplicaState(replicaId, -1L, ReplicaState.UNRESOLVED));
             }
+
+            // The recovery for the last replica is set to finished
+            ReplicaId replicaId = new ReplicaId(partitionId, String.format(connectStringTemplate, numReplicas - 1, numReplicas - 1));
+            replicaStates.put(replicaId, new ReplicaState(replicaId, sessionId, ReplicaState.UNRESOLVED));
 
             zkClient.create(
                     znode,
@@ -172,8 +176,8 @@ public final class ZooKeeperCliTest {
                     + "  fakehost1:6001 has admin port: 6101\n"
                     + "  fakehost0:6000 has admin port: 6100\n"
                     + "store [/test/root/store/partition/0] replica states:\n"
-                    + "  ReplicaId(0,fakehost0:6000), SessionId: -1, closingHighWaterMark: UNRESOLVED\n"
-                    + "  ReplicaId(0,fakehost1:6001), SessionId: -1, closingHighWaterMark: UNRESOLVED\n"
+                    + "  ReplicaId(0,fakehost0:6000), SessionId: -1, closingHighWaterMark: UNRESOLVED, recoveryFinished: false\n"
+                    + "  ReplicaId(0,fakehost1:6001), SessionId: 10, closingHighWaterMark: UNRESOLVED, recoveryFinished: true\n"
                     + "store [/test/root/store/partition/1] replica states:\n"
                     + "No node found\n"
                     + "store [/test/root/store/partition/2] replica states:\n"

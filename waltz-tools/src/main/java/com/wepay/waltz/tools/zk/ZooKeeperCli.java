@@ -123,13 +123,15 @@ public final class ZooKeeperCli extends SubcommandCli {
                     for (int id = 0; id < storeParams.numPartitions; id++) {
                         ZNode znode = new ZNode(partitionRoot, Integer.toString(id));
                         Map<ReplicaId, ReplicaState> replicaState;
+                        Long sessionId = null;
                         try {
                             PartitionMetadata partitionMetadata = zkClient.getData(znode, PartitionMetadataSerializer.INSTANCE).value;
                             replicaState = partitionMetadata.replicaStates;
+                            sessionId = partitionMetadata.sessionId;
                         } catch (KeeperException.NoNodeException e) {
                             replicaState = Collections.emptyMap();
                         }
-                        listReplicaState(znode, replicaState);
+                        listReplicaState(znode, replicaState, sessionId);
                     }
                 }
             } catch (Exception e) {
@@ -186,13 +188,19 @@ public final class ZooKeeperCli extends SubcommandCli {
             ListCluster.list(root, zkClient);
         }
 
-        private void listReplicaState(ZNode znode, Map<ReplicaId, ReplicaState> replicaState) {
+        private void listReplicaState(ZNode znode, Map<ReplicaId, ReplicaState> replicaState, Long storeSessionId) {
             System.out.println("store [" + znode + "] replica states:");
 
             if (replicaState.size() > 0) {
                 Map<ReplicaId, ReplicaState> sortedReplicaState = new TreeMap<>(replicaState);
                 for (Map.Entry<ReplicaId, ReplicaState> entry : sortedReplicaState.entrySet()) {
-                    System.out.println("  " + entry.getKey() + ", SessionId: " + entry.getValue().sessionId + ", closingHighWaterMark: " + ((entry.getValue().closingHighWaterMark) == ReplicaState.UNRESOLVED ? "UNRESOLVED" : entry.getValue().closingHighWaterMark));
+                    long replicaSessionId = entry.getValue().sessionId;
+                    long closingHighWaterMark = entry.getValue().closingHighWaterMark;
+                    boolean recoveryFinished = storeSessionId != null && replicaSessionId == storeSessionId && closingHighWaterMark == ReplicaState.UNRESOLVED;
+                    System.out.println(
+                        "  " + entry.getKey() + ", SessionId: " + replicaSessionId + ", closingHighWaterMark: "
+                            + (closingHighWaterMark == ReplicaState.UNRESOLVED ? "UNRESOLVED" : closingHighWaterMark) + ", recoveryFinished: " + recoveryFinished
+                    );
                 }
             } else {
                 System.out.println("No node found");
