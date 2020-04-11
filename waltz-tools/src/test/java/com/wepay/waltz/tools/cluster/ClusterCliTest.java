@@ -223,4 +223,89 @@ public class ClusterCliTest {
             helper.closeAll();
         }
     }
+
+    @Test
+    public void testVerifyCommandWithPartitionOption() throws Exception {
+        int numPartitions = 3;
+        int numStorageNodes = 3;
+        Properties properties =  new Properties();
+        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/cluster/cli/test");
+        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, String.valueOf(numPartitions));
+        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
+        properties.setProperty(IntegrationTestHelper.Config.NUM_STORAGES, String.valueOf(numStorageNodes));
+        IntegrationTestHelper helper = new IntegrationTestHelper(properties);
+
+        Properties configProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
+            helper.getZkSessionTimeout(), helper.getSslSetup());
+        String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME,
+            configProperties);
+        String host = InetAddress.getLocalHost().getCanonicalHostName();
+        int partitionId = 1;
+        try {
+            helper.startZooKeeperServer();
+
+            for (int i = 0; i < numStorageNodes; i++) {
+                WaltzStorageRunner storageRunner = helper.getWaltzStorageRunner(i);
+                storageRunner.startAsync();
+                storageRunner.awaitStart();
+
+                // Add partition P1 to all storage nodes.
+                String[] args0 = {
+                    "add-partition",
+                    "--storage", host + ":" + helper.getStorageAdminPort(i),
+                    "--partition", String.valueOf(partitionId),
+                    "--cli-config-path", configFilePath
+                };
+                StorageCli.testMain(args0);
+            }
+
+            helper.startWaltzServer(true);
+
+            String[] args1 = {
+                "verify",
+                "--cli-config-path", configFilePath,
+                "--partition", String.valueOf(partitionId)
+            };
+            ClusterCli.testMain(args1);
+
+            // Check that the server partition assignment on ZooKeeper matches with that on the server node.
+            assertFalse(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY failed for partition " + partitionId));
+
+            // Check that server to storage connectivity didn't fail.
+            assertFalse(outContent.toString("UTF-8")
+                .contains("Validation SERVER_STORAGE_CONNECTIVITY failed for partition " + partitionId));
+
+            // Close the server network connection
+            WaltzServerRunner waltzServerRunner = helper.getWaltzServerRunner(helper.getServerPort(),
+                helper.getServerJettyPort());
+            waltzServerRunner.closeNetworkServer();
+
+            // Stop the storage node [0]
+            WaltzStorageRunner waltzStorageRunner = helper.getWaltzStorageRunner();
+            waltzStorageRunner.stop();
+
+            // Stop the storage node [1]. (Note: Quorum should fail for Partition 1.)
+            waltzStorageRunner = helper.getWaltzStorageRunner(1);
+            waltzStorageRunner.stop();
+
+            String[] args2 = {
+                "verify",
+                "--cli-config-path", configFilePath,
+                "--partition", String.valueOf(partitionId)
+            };
+            ClusterCli.testMain(args2);
+
+            // Check that the server partition assignment on ZooKeeper doesn't match with that on the server.
+            assertTrue(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY failed for partition " + partitionId));
+
+            // Check that server to storage connectivity failed.
+            assertTrue(outContent.toString("UTF-8")
+                .contains("Validation SERVER_STORAGE_CONNECTIVITY failed for partition " + partitionId));
+
+        } finally {
+            helper.closeAll();
+        }
+    }
 }

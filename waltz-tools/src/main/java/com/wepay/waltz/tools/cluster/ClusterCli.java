@@ -37,6 +37,7 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -204,67 +205,57 @@ public final class ClusterCli extends SubcommandCli {
                 SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
 
                 zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout);
-
                 StoreMetadata storeMetadata = new StoreMetadata(zkClient, storeRoot);
                 ClusterManager clusterManager = new ClusterManagerImpl(zkClient, zkRoot, partitionAssignmentPolicy);
                 int numPartitions = clusterManager.numPartitions();
-
-                for (int partitionId = 0; partitionId < clusterManager.numPartitions(); partitionId++) {
-                    partitionsValidationResultList.add(new PartitionValidationResults(partitionId));
-                }
-
-                // Step1: Validate all partitions on zk
-                buildZookeeperPartitionAssignmentsValidation(clusterManager, partitionsValidationResultList);
-
-                // Step2: Build zk and servers partition assignment consistency validations
                 rpcClient = new InternalRpcClient(ClientSSL.createContext(waltzClientConfig.getSSLConfig()),
-                        WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, new DummyTxnCallbacks());
+                    WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, new DummyTxnCallbacks());
 
-                CompletableFuture<Void> consistencyValidationFuture =
-                    buildServersZKPartitionAssignmentsConsistencyValidation(
-                        rpcClient, clusterManager, partitionsValidationResultList
-                    );
+                if (cmd.hasOption("partition")) {
+                    int partitionId = Integer.parseInt(cmd.getOptionValue("partition"));
+                    if ((partitionId < 0) || (partitionId >= numPartitions)) {
+                        throw new IllegalArgumentException("Partition " + partitionId + " is not valid.");
+                    }
 
-                // Step3: Build Server-Storage connectivity validations
-                CompletableFuture<Void> connectivityValidationFuture =
-                    buildServerStorageConnectivityValidation(
-                        rpcClient,
-                        clusterManager,
-                        storeMetadata.getReplicaAssignments(),
-                        partitionsValidationResultList
-                    );
+                    PartitionValidationResults partitionValidationResults = new PartitionValidationResults(partitionId);
+                    partitionsValidationResultList.add(partitionValidationResults);
 
-                // Step4: Validate zk and storage partition assignment consistency and Quorum
-                Map<Integer, List<String>> zkPartitionToStorageNodeMap =
-                    getZkPartitionToStorageNodeMapping(storeMetadata);
+                    verifyPerPartition(partitionId, clusterManager, storeMetadata.getReplicaAssignments(), rpcClient,
+                        partitionsValidationResultList);
 
-                Map<String, Integer> storageConnections = getStorageConnections(storeMetadata);
+                } else {
+                    for (int partitionId = 0; partitionId < clusterManager.numPartitions(); partitionId++) {
+                        partitionsValidationResultList.add(new PartitionValidationResults(partitionId));
+                    }
 
-                Map<Integer, Map<String, Boolean>> partitionToStorageStatusMap =
-                    getPartitionStatusFromStorage(storeMetadata, storageConnections, sslContext);
+                    // Step1: Validate all partitions on zk
+                    buildZookeeperPartitionAssignmentsValidation(clusterManager, partitionsValidationResultList);
 
-                buildStoragePartitionValidationResult(numPartitions, storageConnections, zkPartitionToStorageNodeMap,
-                    partitionToStorageStatusMap, partitionsValidationResultList);
+                    // Step2: Build zk and servers partition assignment consistency validations
+                    CompletableFuture<Void> consistencyValidationFuture =
+                        buildServersZKPartitionAssignmentsConsistencyValidation(
+                        rpcClient, clusterManager, partitionsValidationResultList);
 
-                // Update validation result for remaining partitions if not already updated.
-                try {
-                    consistencyValidationFuture.get(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
-                } catch (ExecutionException | TimeoutException exception) {
-                    failMissingValidationResults(
-                        partitionsValidationResultList,
-                        ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
-                        exception.toString()
-                    );
-                }
+                    // Step3: Build Server-Storage connectivity validations
+                    CompletableFuture<Void> connectivityValidationFuture =
+                        buildServerStorageConnectivityValidation(rpcClient, clusterManager,
+                        storeMetadata.getReplicaAssignments(), partitionsValidationResultList);
 
-                try {
-                    connectivityValidationFuture.get(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
-                } catch (ExecutionException | TimeoutException exception) {
-                    failMissingValidationResults(
-                        partitionsValidationResultList,
-                        ValidationResult.ValidationType.SERVER_STORAGE_CONNECTIVITY,
-                        exception.toString()
-                    );
+                    // Step4: Validate zk and storage partition assignment consistency and Quorum
+                    Map<Integer, List<String>> zkPartitionToStorageNodeMap =
+                        getZkPartitionToStorageNodeMapping(storeMetadata);
+
+                    Map<String, Integer> storageConnections = getStorageConnections(storeMetadata);
+
+                    Map<Integer, Map<String, Boolean>> partitionToStorageStatusMap =
+                        getPartitionStatusFromStorage(storeMetadata, storageConnections, sslContext);
+
+                    buildStoragePartitionValidationResult(numPartitions, storageConnections, zkPartitionToStorageNodeMap,
+                        partitionToStorageStatusMap, partitionsValidationResultList);
+
+                    updateRemainingValidationResults(consistencyValidationFuture, connectivityValidationFuture,
+                        partitionsValidationResultList);
+
                 }
 
                 // Verify all results
@@ -285,6 +276,154 @@ public final class ClusterCli extends SubcommandCli {
                     rpcClient.close();
                 }
             }
+        }
+
+        private void verifyPerPartition(int partitionId,
+                                        ClusterManager clusterManager,
+                                        ReplicaAssignments replicaAssignments,
+                                        InternalRpcClient rpcClient,
+                                        List<PartitionValidationResults> partitionsValidationResultList) throws Exception {
+
+            PartitionValidationResults partitionValidationResults = partitionsValidationResultList.get(0);
+            Endpoint serverEndpoint = null;
+            int serverId = -1;
+
+            PartitionAssignment partitionAssignment = clusterManager.partitionAssignment();
+            for (int sId : partitionAssignment.serverIds()) {
+                for (PartitionInfo partitionInfo : partitionAssignment.partitionsFor(sId)) {
+                    if (partitionInfo.partitionId == partitionId) {
+                        serverId = sId;
+                        break;
+                    }
+                }
+                if (serverId != -1) {
+                    break;
+                }
+            }
+
+            Set<ServerDescriptor> serverDescriptors = clusterManager.serverDescriptors();
+            for (ServerDescriptor serverDescriptor : serverDescriptors) {
+                if (serverDescriptor.serverId == serverId) {
+                    serverEndpoint = serverDescriptor.endpoint;
+                }
+            }
+
+            // Step 1: Partition validation on zk
+            String error = (serverId == -1) ? "Error: Partition " + partitionId + " is not assigned to any server" : "";
+
+            ValidationResult validationResult = new ValidationResult(
+                ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_VALIDITY,
+                ("".equals(error)) ? ValidationResult.Status.SUCCESS : ValidationResult.Status.FAILURE,
+                error);
+            partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
+
+            // Step 2: Zk and server partition assignment consistency validation
+            CompletableFuture<Void> consistencyValidationFuture =
+                buildServersZKPartitionAssignmentsConsistencyValidationPerPartition(rpcClient, serverEndpoint,
+                    partitionId, partitionValidationResults);
+
+            // Step 3: Build Server-Storage connectivity validations
+            CompletableFuture<Void> connectivityValidationFuture =
+                buildServerStorageConnectivityValidationPerPartition(rpcClient,
+                serverEndpoint, replicaAssignments, partitionId, partitionValidationResults);
+
+            updateRemainingValidationResults(consistencyValidationFuture, connectivityValidationFuture,
+                partitionsValidationResultList);
+
+            ValidationResult storageConsistencyValidationResult = new ValidationResult(
+                ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_STORAGE_CONSISTENCY,
+                ValidationResult.Status.SUCCESS, "");
+            ValidationResult quorumValidationResult = new ValidationResult(
+                ValidationResult.ValidationType.PARTITION_QUORUM_STATUS,
+                ValidationResult.Status.SUCCESS, "");
+            partitionValidationResults.validationResultsMap.put(storageConsistencyValidationResult.type, storageConsistencyValidationResult);
+            partitionValidationResults.validationResultsMap.put(quorumValidationResult.type, quorumValidationResult);
+
+        }
+
+        private CompletableFuture<Void> buildServersZKPartitionAssignmentsConsistencyValidationPerPartition(
+            InternalRpcClient rpcClient, Endpoint serverEndpoint, int partitionId,
+            PartitionValidationResults partitionValidationResults) throws InterruptedException {
+            try {
+                CompletableFuture<List<Integer>> future =
+                    (CompletableFuture<List<Integer>>) rpcClient.getServerPartitionAssignments(serverEndpoint);
+
+                return future.thenAccept(serverAssignments -> {
+                    ValidationResult.Status status = ValidationResult.Status.SUCCESS;
+                    String error = "";
+
+                    if (!serverAssignments.contains(partitionId)) {
+                        status = ValidationResult.Status.FAILURE;
+                        error = "Partition " + partitionId + " not matching in zk and server: " + AssignmentMatch.ONLY_IN_ZOOKEEPER;
+                    }
+                    ValidationResult validationResult = new ValidationResult(
+                        ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
+                        status, error);
+                    partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
+                }).exceptionally(e -> {
+                    ValidationResult validationResult = new ValidationResult(
+                        ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
+                        ValidationResult.Status.FAILURE,
+                        e.getMessage());
+                    partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
+                    return null;
+                });
+            } catch (Exception ex) {
+                return new CompletableFuture<>();
+            }
+        }
+
+        private CompletableFuture<Void> buildServerStorageConnectivityValidationPerPartition(
+            InternalRpcClient rpcClient, Endpoint serverEndpoint, ReplicaAssignments replicaAssignments,
+            int partitionId, PartitionValidationResults partitionValidationResults) throws InterruptedException {
+
+            try {
+                CompletableFuture<Map<Endpoint, Map<String, Boolean>>> connectivityStatusFuture =
+                    (CompletableFuture<Map<Endpoint, Map<String, Boolean>>>)
+                        rpcClient.checkServerConnections(Collections.singleton(serverEndpoint));
+
+                return connectivityStatusFuture.thenAccept(response -> {
+                    Map<Integer, Set<String>> partitionIdToReplicas = getPartitionToReplicasInfo(replicaAssignments);
+                    ValidationResult validationResult =
+                        buildStorageConnectivityValidationResult(partitionIdToReplicas.get(partitionId),
+                            response.get(serverEndpoint), String.format("Server %s", serverEndpoint));
+                    partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
+                });
+            } catch (Exception ex) {
+                return new CompletableFuture<>();
+            }
+        }
+
+        private void updateRemainingValidationResults(CompletableFuture<Void> consistencyValidationFuture,
+                                                      CompletableFuture<Void> connectivityValidationFuture,
+                                                      List<PartitionValidationResults> partitionsValidationResultList) throws Exception {
+
+            // Update validation result for remaining partitions if not already updated.
+            String error = "";
+
+            try {
+                consistencyValidationFuture.get(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
+            } catch (ExecutionException | TimeoutException exception) {
+                error = (exception.getMessage() == null) ? "No Server Endpoint found." : exception.getMessage();
+            }
+
+            failMissingValidationResults(
+                partitionsValidationResultList,
+                ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
+                error
+            );
+
+            try {
+                connectivityValidationFuture.get(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
+            } catch (ExecutionException | TimeoutException exception) {
+                error = (exception.getMessage() == null) ? "No Server Endpoint found." : exception.getMessage();
+            }
+
+            failMissingValidationResults(
+                partitionsValidationResultList,
+                ValidationResult.ValidationType.SERVER_STORAGE_CONNECTIVITY,
+                error
+            );
         }
 
         private void failMissingValidationResults(List<PartitionValidationResults> partitionsValidationResultsList,
@@ -447,9 +586,9 @@ public final class ClusterCli extends SubcommandCli {
         private boolean verifyValidation(List<PartitionValidationResults> results) {
             boolean success = true;
 
-            for (int partitionId = 0; partitionId < results.size(); partitionId++) {
+            for (PartitionValidationResults partitionValidationResults : results) {
                 for (ValidationResult.ValidationType type : ValidationResult.ValidationType.values()) {
-                    if (!verifyValidation(type, results, partitionId)) {
+                    if (!verifyValidation(type, partitionValidationResults, partitionValidationResults.partitionId)) {
                         success = false;
                     }
                 }
@@ -458,18 +597,17 @@ public final class ClusterCli extends SubcommandCli {
         }
 
         /**
-         * Verify a validation type for a specific partition from the list of validation results.
+         * Verify a validation type for a specific partition from its validation result.
          * If validation failed, error is printed
          *
          * @param type Type of validation
-         * @param results List containing the validation results for each partition
+         * @param partitionResult The validation result for the given partition
          * @param partitionId Partition to validate
          * @return True if no error in validation. False otherwise
          */
         private boolean verifyValidation(ValidationResult.ValidationType type,
-                                         List<PartitionValidationResults> results,
+                                         PartitionValidationResults partitionResult,
                                          int partitionId) {
-            PartitionValidationResults partitionResult = results.get(partitionId);
 
             ValidationResult validationResult = partitionResult.validationResultsMap.get(type);
             if (validationResult.status.equals(ValidationResult.Status.FAILURE)) {
@@ -518,17 +656,7 @@ public final class ClusterCli extends SubcommandCli {
                     rpcClient.checkServerConnections(partitionAssignments.keySet());
 
             return connectivityStatusFuture.thenAccept(response -> {
-                    Map<Integer, Set<String>> partitionIdToReplicas = new HashMap<>();
-                    replicaAssignments
-                        .replicas
-                        .forEach((replica, assignedPartitions) ->
-                            Arrays
-                                .stream(assignedPartitions)
-                                .forEach(partitionId -> {
-                                    partitionIdToReplicas.putIfAbsent(partitionId, new HashSet<>());
-                                    partitionIdToReplicas.get(partitionId).add(replica);
-                                })
-                        );
+                    Map<Integer, Set<String>> partitionIdToReplicas = getPartitionToReplicasInfo(replicaAssignments);
 
                     partitionAssignments.forEach((endpoint, partitions) -> {
                         Map<String, Boolean> storageConnectivityResults = response.get(endpoint);
@@ -547,6 +675,21 @@ public final class ClusterCli extends SubcommandCli {
                         );
                     });
                 });
+        }
+
+        private Map<Integer, Set<String>> getPartitionToReplicasInfo(ReplicaAssignments replicaAssignments) {
+            Map<Integer, Set<String>> partitionIdToReplicas = new HashMap<>();
+            replicaAssignments
+                .replicas
+                .forEach((replica, assignedPartitions) ->
+                    Arrays
+                        .stream(assignedPartitions)
+                        .forEach(partitionId -> {
+                            partitionIdToReplicas.putIfAbsent(partitionId, new HashSet<>());
+                            partitionIdToReplicas.get(partitionId).add(replica);
+                        })
+                );
+            return partitionIdToReplicas;
         }
 
         private ValidationResult buildStorageConnectivityValidationResult(
