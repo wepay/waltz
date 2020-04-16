@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.Collections;
 import java.util.List;
@@ -765,6 +766,7 @@ public final class StorageCli extends SubcommandCli {
             }
         }
 
+        @SuppressWarnings("unchecked")
         private void syncPartitionAssignments(String cliConfigPath) throws Exception {
             ZooKeeperClient zkClient = null;
 
@@ -787,10 +789,33 @@ public final class StorageCli extends SubcommandCli {
                     String storageHost = storageConnectString.split(":")[0];
                     int[] partitionIds = assignment.getValue();
                     int storageAdminPort = connectionMetadata.connections.get(storageConnectString);
+                    StorageAdminClient storageAdminClient = null;
 
-                    for (int partitionId : partitionIds) {
-                        try (StorageAdminClient client = openStorageAdminClient(storageHost, storageAdminPort, sslContext, zkClient, zkRoot)) {
-                            client.setPartitionAssignment(partitionId, true, false).get();
+                    try {
+                        List<CompletableFuture> futures = new ArrayList<>();
+                        storageAdminClient = openStorageAdminClient(storageHost, storageAdminPort, sslContext,
+                            zkClient, zkRoot);
+
+                        // Get current assigned partitions.
+                        HashMap<Integer, Boolean> assignedPartitionStatus =
+                            (HashMap<Integer, Boolean>) storageAdminClient.getAssignedPartitionStatus().get();
+
+                        for (int partitionId : partitionIds) {
+                            if ((assignedPartitionStatus.get(partitionId) == null) || !assignedPartitionStatus.get(partitionId)) {
+                                futures.add(storageAdminClient.setPartitionAssignment(partitionId, true, false));
+                            }
+                            assignedPartitionStatus.remove(partitionId);
+                        }
+
+                        // Remove the remaining old partitions that are no longer to be handled.
+                        for (int partitionId : assignedPartitionStatus.keySet()) {
+                            futures.add(storageAdminClient.setPartitionAssignment(partitionId, false, false));
+                        }
+
+                        CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).get();
+                    } finally {
+                        if (storageAdminClient != null) {
+                            storageAdminClient.close();
                         }
                     }
                 }
