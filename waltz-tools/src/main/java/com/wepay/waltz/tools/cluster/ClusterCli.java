@@ -195,7 +195,7 @@ public final class ClusterCli extends SubcommandCli {
             ZooKeeperClient zkClient = null;
             InternalRpcClient rpcClient = null;
             List<PartitionValidationResults> partitionsValidationResultList = new ArrayList<>();
-            int pId = -1;
+            int partitionId = -1;
 
             try {
                 String cliConfigPath = cmd.getOptionValue("cli-config-path");
@@ -215,14 +215,14 @@ public final class ClusterCli extends SubcommandCli {
                 int numPartitions = clusterManager.numPartitions();
 
                 if (cmd.hasOption("partition")) {
-                    pId = Integer.parseInt(cmd.getOptionValue("partition"));
-                    if ((pId < 0) || (pId >= numPartitions)) {
-                        throw new IllegalArgumentException("Partition " + pId + " is not valid.");
+                    partitionId = Integer.parseInt(cmd.getOptionValue("partition"));
+                    if ((partitionId < 0) || (partitionId >= numPartitions)) {
+                        throw new IllegalArgumentException("Partition " + partitionId + " is not valid.");
                     }
                 }
 
-                for (int partitionId = 0; partitionId < clusterManager.numPartitions(); partitionId++) {
-                    partitionsValidationResultList.add(new PartitionValidationResults(partitionId));
+                for (int pId = 0; pId < clusterManager.numPartitions(); pId++) {
+                    partitionsValidationResultList.add(new PartitionValidationResults(pId));
                 }
 
                 // Step1: Validate all partitions on zk
@@ -267,7 +267,7 @@ public final class ClusterCli extends SubcommandCli {
                     partitionsValidationResultList);
 
                 // Verify all results or just one partition if "partition" option is present
-                verifyValidation(partitionsValidationResultList, pId);
+                verifyValidation(partitionsValidationResultList, partitionId);
 
             } catch (RuntimeException e) {
                 throw new SubCommandFailedException(String.format("Failed to verify cluster. %n%s",
