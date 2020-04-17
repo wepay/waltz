@@ -37,6 +37,7 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -194,6 +195,8 @@ public final class ClusterCli extends SubcommandCli {
             ZooKeeperClient zkClient = null;
             InternalRpcClient rpcClient = null;
             List<PartitionValidationResults> partitionsValidationResultList = new ArrayList<>();
+            int partitionId = -1;
+
             try {
                 String cliConfigPath = cmd.getOptionValue("cli-config-path");
                 WaltzClientConfig waltzClientConfig = getWaltzClientConfig(cliConfigPath);
@@ -211,8 +214,15 @@ public final class ClusterCli extends SubcommandCli {
                 ClusterManager clusterManager = new ClusterManagerImpl(zkClient, zkRoot, partitionAssignmentPolicy);
                 int numPartitions = clusterManager.numPartitions();
 
-                for (int partitionId = 0; partitionId < clusterManager.numPartitions(); partitionId++) {
-                    partitionsValidationResultList.add(new PartitionValidationResults(partitionId));
+                if (cmd.hasOption("partition")) {
+                    partitionId = Integer.parseInt(cmd.getOptionValue("partition"));
+                    if ((partitionId < 0) || (partitionId >= numPartitions)) {
+                        throw new IllegalArgumentException("Partition " + partitionId + " is not valid.");
+                    }
+                }
+
+                for (int pId = 0; pId < clusterManager.numPartitions(); pId++) {
+                    partitionsValidationResultList.add(new PartitionValidationResults(pId));
                 }
 
                 // Step1: Validate all partitions on zk
@@ -249,28 +259,15 @@ public final class ClusterCli extends SubcommandCli {
                     partitionToStorageStatusMap, partitionsValidationResultList);
 
                 // Update validation result for remaining partitions if not already updated.
-                try {
-                    consistencyValidationFuture.get(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
-                } catch (ExecutionException | TimeoutException exception) {
-                    failMissingValidationResults(
-                        partitionsValidationResultList,
-                        ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
-                        exception.toString()
-                    );
-                }
+                updateRemainingValidationResults(consistencyValidationFuture,
+                    ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
+                    partitionsValidationResultList);
+                updateRemainingValidationResults(connectivityValidationFuture,
+                    ValidationResult.ValidationType.SERVER_STORAGE_CONNECTIVITY,
+                    partitionsValidationResultList);
 
-                try {
-                    connectivityValidationFuture.get(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
-                } catch (ExecutionException | TimeoutException exception) {
-                    failMissingValidationResults(
-                        partitionsValidationResultList,
-                        ValidationResult.ValidationType.SERVER_STORAGE_CONNECTIVITY,
-                        exception.toString()
-                    );
-                }
-
-                // Verify all results
-                verifyValidation(partitionsValidationResultList);
+                // Verify all results or just one partition if "partition" option is present
+                verifyValidation(partitionsValidationResultList, partitionId);
 
             } catch (RuntimeException e) {
                 throw new SubCommandFailedException(String.format("Failed to verify cluster. %n%s",
@@ -287,6 +284,24 @@ public final class ClusterCli extends SubcommandCli {
                     rpcClient.close();
                 }
             }
+        }
+
+        private void updateRemainingValidationResults(CompletableFuture<Void> future,
+                                                      ValidationResult.ValidationType validationType,
+                                                      List<PartitionValidationResults> partitionsValidationResultList) throws Exception {
+            String error = "No Server Endpoint found.";
+
+            try {
+                future.get(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
+            } catch (ExecutionException | TimeoutException exception) {
+                error = exception.getMessage();
+            }
+
+            failMissingValidationResults(
+                partitionsValidationResultList,
+                validationType,
+                error
+            );
         }
 
         private void failMissingValidationResults(List<PartitionValidationResults> partitionsValidationResultsList,
@@ -354,7 +369,7 @@ public final class ClusterCli extends SubcommandCli {
             StoreParams storeParams = storeMetadata.getStoreParams();
             StorageAdminClient storageAdminClient = null;
             try {
-                 storageAdminClient = new StorageAdminClient(storageHost, storageAdminPort, sslContext,
+                storageAdminClient = new StorageAdminClient(storageHost, storageAdminPort, sslContext,
                     storeParams.key, storeParams.numPartitions);
                 storageAdminClient.open();
 
@@ -444,14 +459,22 @@ public final class ClusterCli extends SubcommandCli {
          *  If validation failed, errors are printed
          *
          * @param results List containing the validation results for each partition
+         * @param partitionId partitionId provided via the "partition" option, or else its -1
          * @return True if no error in validation. False otherwise
          */
-        private boolean verifyValidation(List<PartitionValidationResults> results) {
+        private boolean verifyValidation(List<PartitionValidationResults> results, int partitionId) {
             boolean success = true;
-
-            for (int partitionId = 0; partitionId < results.size(); partitionId++) {
+            if (partitionId == -1) {
+                for (PartitionValidationResults partitionValidationResults : results) {
+                    for (ValidationResult.ValidationType type : ValidationResult.ValidationType.values()) {
+                        if (!verifyValidation(type, partitionValidationResults, partitionValidationResults.partitionId)) {
+                            success = false;
+                        }
+                    }
+                }
+            } else {
                 for (ValidationResult.ValidationType type : ValidationResult.ValidationType.values()) {
-                    if (!verifyValidation(type, results, partitionId)) {
+                    if (!verifyValidation(type, results.get(partitionId), partitionId)) {
                         success = false;
                     }
                 }
@@ -464,14 +487,13 @@ public final class ClusterCli extends SubcommandCli {
          * If validation failed, error is printed
          *
          * @param type Type of validation
-         * @param results List containing the validation results for each partition
+         * @param partitionResult The validation results for the given partition
          * @param partitionId Partition to validate
          * @return True if no error in validation. False otherwise
          */
         private boolean verifyValidation(ValidationResult.ValidationType type,
-                                         List<PartitionValidationResults> results,
+                                         PartitionValidationResults partitionResult,
                                          int partitionId) {
-            PartitionValidationResults partitionResult = results.get(partitionId);
 
             ValidationResult validationResult = partitionResult.validationResultsMap.get(type);
             if (validationResult.status.equals(ValidationResult.Status.FAILURE)) {
@@ -620,16 +642,22 @@ public final class ClusterCli extends SubcommandCli {
                         assignmentMatchMap.forEach((partitionId, match) -> {
                             ValidationResult.Status status = ValidationResult.Status.SUCCESS;
                             String error = "";
+                            PartitionValidationResults partitionValidationResults = partitionValidationResultsList.get(partitionId);
+                            ValidationResult zkValidationResult =
+                                partitionValidationResults.validationResultsMap.get(ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_VALIDITY);
 
-                            if (!match.equals(AssignmentMatch.IN_BOTH)) {
+                            if (zkValidationResult.status == ValidationResult.Status.FAILURE) {
+                                status = ValidationResult.Status.FAILURE;
+                                error = zkValidationResult.error;
+                            } else if (!match.equals(AssignmentMatch.IN_BOTH)) {
                                 status = ValidationResult.Status.FAILURE;
                                 error = "Partition " + partitionId + " not matching in zk and server: " + match.name();
                             }
 
-                            PartitionValidationResults partitionValidationResults = partitionValidationResultsList.get(partitionId);
                             ValidationResult validationResult = new ValidationResult(ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
                                                                         status, error);
-                            partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
+                            partitionValidationResults.validationResultsMap.put(validationResult.type,
+                                validationResult);
                         });
                     }).exceptionally(e -> {
                         for (PartitionInfo partitionInfo : zookeeperAssignments) {
@@ -638,7 +666,8 @@ public final class ClusterCli extends SubcommandCli {
                                     ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
                                     ValidationResult.Status.FAILURE,
                                     e.getMessage());
-                            partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
+                            partitionValidationResults.validationResultsMap.put(validationResult.type,
+                                validationResult);
                         }
                         return null;
                     });
@@ -767,7 +796,8 @@ public final class ClusterCli extends SubcommandCli {
 
             PartitionValidationResults(int partitionId) {
                 this.partitionId = partitionId;
-                this.validationResultsMap = new EnumMap<>(ValidationResult.ValidationType.class);
+                this.validationResultsMap =
+                    Collections.synchronizedMap(new EnumMap<>(ValidationResult.ValidationType.class));
             }
 
             @Override
