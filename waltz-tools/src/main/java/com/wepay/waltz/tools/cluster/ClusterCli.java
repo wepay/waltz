@@ -10,6 +10,10 @@ import com.wepay.waltz.common.metadata.ConnectionMetadata;
 import com.wepay.waltz.common.metadata.StoreMetadata;
 import com.wepay.waltz.common.metadata.StoreParams;
 import com.wepay.waltz.common.metadata.ReplicaAssignments;
+import com.wepay.waltz.common.metadata.ReplicaId;
+import com.wepay.waltz.common.metadata.ReplicaState;
+import com.wepay.waltz.common.metadata.PartitionMetadata;
+import com.wepay.waltz.common.metadata.PartitionMetadataSerializer;
 import com.wepay.waltz.common.util.Cli;
 import com.wepay.waltz.common.util.SubcommandCli;
 import com.wepay.waltz.common.util.Utils;
@@ -27,11 +31,13 @@ import com.wepay.zktools.clustermgr.internal.ServerDescriptor;
 import com.wepay.zktools.clustermgr.internal.PartitionAssignment;
 import com.wepay.zktools.zookeeper.ZNode;
 import com.wepay.zktools.zookeeper.ZooKeeperClient;
+import com.wepay.zktools.zookeeper.ZooKeeperClientException;
 import com.wepay.zktools.zookeeper.internal.ZooKeeperClientImpl;
 import io.netty.handler.ssl.SslContext;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.apache.zookeeper.KeeperException;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.FileInputStream;
@@ -258,6 +264,11 @@ public final class ClusterCli extends SubcommandCli {
                 buildStoragePartitionValidationResult(numPartitions, storageConnections, zkPartitionToStorageNodeMap,
                     partitionToStorageStatusMap, partitionsValidationResultList);
 
+                // Step5: Validate recovery is completed and replica states updated in ZK
+                ZNode partitionRoot = new ZNode(storeRoot, StoreMetadata.PARTITION_ZNODE_NAME);
+
+                buildStorageRecoveryCompleteValidationResult(numPartitions, partitionRoot, zkClient, partitionsValidationResultList);
+
                 // Update validation result for remaining partitions if not already updated.
                 updateRemainingValidationResults(consistencyValidationFuture,
                     ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
@@ -362,6 +373,52 @@ public final class ClusterCli extends SubcommandCli {
                 partitionValidationResults.validationResultsMap.put(quorumValidationResult.type,
                     quorumValidationResult);
             }
+        }
+
+        private void buildStorageRecoveryCompleteValidationResult(int numPartitions,
+                                                                  ZNode partitionRoot,
+                                                                  ZooKeeperClient zkClient,
+                                                                  List<PartitionValidationResults> partitionsValidationResultsList) {
+            for (int partitionId = 0; partitionId < numPartitions; partitionId++) {
+                String error = "";
+                ZNode zNode = new ZNode(partitionRoot, Integer.toString(partitionId));
+                Map<ReplicaId, ReplicaState> replicaState;
+                Long sessionId;
+
+                try {
+                    PartitionMetadata partitionMetadata = zkClient.getData(zNode, PartitionMetadataSerializer.INSTANCE).value;
+                    replicaState = partitionMetadata.replicaStates;
+                    sessionId = partitionMetadata.sessionId;
+                } catch (KeeperException | ZooKeeperClientException e) {
+                    replicaState = Collections.emptyMap();
+                    sessionId = null;
+                    error = "Cannot obtain replica states";
+                }
+
+                for (Map.Entry<ReplicaId, ReplicaState> entry : replicaState.entrySet()) {
+                    boolean recoveryComplete =
+                        (sessionId != null)
+                        && (entry.getValue().sessionId == sessionId)
+                        && (entry.getValue().closingHighWaterMark == ReplicaState.UNRESOLVED);
+                    if (!recoveryComplete) {
+                        error = error.concat(System.lineSeparator())
+                            .concat(String.format("Storage replica %s recovery not completed", entry.getKey()));
+                    }
+                }
+
+                ValidationResult validationResult = new ValidationResult(
+                    ValidationResult.ValidationType.STORAGE_RECOVERY_COMPLETE,
+                    ("".equals(error)) ? ValidationResult.Status.SUCCESS : ValidationResult.Status.FAILURE,
+                    error);
+                PartitionValidationResults partitionValidationResults = partitionsValidationResultsList.get(partitionId);
+                partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
+            }
+
+            failMissingValidationResults(
+                partitionsValidationResultsList,
+                ValidationResult.ValidationType.STORAGE_RECOVERY_COMPLETE,
+                "Cannot obtain replica states"
+            );
         }
 
         private StorageAdminClient openStorageAdminClient(String storageHost, Integer storageAdminPort,
@@ -816,7 +873,8 @@ public final class ClusterCli extends SubcommandCli {
                 PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
                 SERVER_STORAGE_CONNECTIVITY,
                 PARTITION_ASSIGNMENT_ZK_STORAGE_CONSISTENCY,
-                PARTITION_QUORUM_STATUS
+                PARTITION_QUORUM_STATUS,
+                STORAGE_RECOVERY_COMPLETE
             }
 
             enum Status {
