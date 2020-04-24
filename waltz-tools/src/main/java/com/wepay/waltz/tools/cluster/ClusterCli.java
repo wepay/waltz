@@ -407,7 +407,7 @@ public final class ClusterCli extends SubcommandCli {
                 }
 
                 ValidationResult validationResult = new ValidationResult(
-                    ValidationResult.ValidationType.STORAGE_RECOVERY_COMPLETE,
+                    ValidationResult.ValidationType.REPLICA_RECOVERY_STATUS,
                     ("".equals(error)) ? ValidationResult.Status.SUCCESS : ValidationResult.Status.FAILURE,
                     error);
                 PartitionValidationResults partitionValidationResults = partitionsValidationResultsList.get(partitionId);
@@ -416,7 +416,7 @@ public final class ClusterCli extends SubcommandCli {
 
             failMissingValidationResults(
                 partitionsValidationResultsList,
-                ValidationResult.ValidationType.STORAGE_RECOVERY_COMPLETE,
+                ValidationResult.ValidationType.REPLICA_RECOVERY_STATUS,
                 "Cannot obtain replica states"
             );
         }
@@ -874,7 +874,7 @@ public final class ClusterCli extends SubcommandCli {
                 SERVER_STORAGE_CONNECTIVITY,
                 PARTITION_ASSIGNMENT_ZK_STORAGE_CONSISTENCY,
                 PARTITION_QUORUM_STATUS,
-                STORAGE_RECOVERY_COMPLETE
+                REPLICA_RECOVERY_STATUS
             }
 
             enum Status {

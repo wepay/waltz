@@ -184,7 +184,7 @@ public class ClusterCliTest {
             assertTrue(outContent.toString("UTF-8")
                 .contains("Validation PARTITION_QUORUM_STATUS failed for partition 2"));
 
-            // Check that STORAGE_RECOVERY_COMPLETE didn't fail
+            // Check that REPLICA_RECOVERY_STATUS verification didn't fail
             assertFalse(outContent.toString("UTF-8").contains("Recovery not completed"));
             assertFalse(outContent.toString("UTF-8").contains("Cannot obtain replica states"));
 
@@ -280,7 +280,7 @@ public class ClusterCliTest {
             assertFalse(outContent.toString("UTF-8")
                 .contains("Validation SERVER_STORAGE_CONNECTIVITY failed for partition " + partitionId));
 
-            // Check that STORAGE_RECOVERY_COMPLETE didn't fail
+            // Check that REPLICA_RECOVERY_STATUS verification didn't fail
             assertFalse(outContent.toString("UTF-8").contains("Recovery not completed"));
             assertFalse(outContent.toString("UTF-8").contains("Cannot obtain replica states"));
 
