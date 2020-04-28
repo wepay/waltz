@@ -48,9 +48,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.EnumMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -267,7 +269,8 @@ public final class ClusterCli extends SubcommandCli {
                 // Step5: Validate recovery is completed and replica states updated in ZK
                 ZNode partitionRoot = new ZNode(storeRoot, StoreMetadata.PARTITION_ZNODE_NAME);
 
-                buildStorageRecoveryCompleteValidationResult(numPartitions, partitionRoot, zkClient, partitionsValidationResultList);
+                buildStorageRecoveryCompleteValidationResult(numPartitions, partitionRoot,
+                    storeMetadata.getReplicaAssignments(), zkClient, partitionsValidationResultList);
 
                 // Update validation result for remaining partitions if not already updated.
                 updateRemainingValidationResults(consistencyValidationFuture,
@@ -375,10 +378,34 @@ public final class ClusterCli extends SubcommandCli {
             }
         }
 
+        /**
+         * Builds REPLICA_RECOVERY_STATUS {@code PartitionValidationResults} for all the replicas in the
+         * cluster.
+         * The validation result is set to success if and only if:
+         * 1. The set of replicas in replica assignments is the same as the set of replicas in replica states.
+         * 2. For each replica, the session id in the replica states equals the session id in partitionMetadata,
+         * and closingHighWaterMark is UNRESOLVED.
+         *
+         * @param numPartitions Total number of partitions in the cluster.
+         * @param partitionRoot ZNode used to fetch replica states for each partition.
+         * @param replicaAssignments Replica assignments for all the partitions.
+         * @param zkClient ZooKeeper Client used to fetch partition metadata.
+         * @param partitionsValidationResultsList a {@code List<PartitionValidationResults>} that contains all the
+         *                                       validation results.
+         */
         private void buildStorageRecoveryCompleteValidationResult(int numPartitions,
                                                                   ZNode partitionRoot,
+                                                                  ReplicaAssignments replicaAssignments,
                                                                   ZooKeeperClient zkClient,
                                                                   List<PartitionValidationResults> partitionsValidationResultsList) {
+            // A set that contains all replica ids in replica assignments
+            Set<ReplicaId> assignmentReplicaIdSet = new TreeSet<>();
+            for (Map.Entry<String, int[]> entry : replicaAssignments.replicas.entrySet()) {
+                for (int partitionId : entry.getValue()) {
+                    assignmentReplicaIdSet.add(new ReplicaId(partitionId, entry.getKey()));
+                }
+            }
+
             for (int partitionId = 0; partitionId < numPartitions; partitionId++) {
                 String error = "";
                 ZNode zNode = new ZNode(partitionRoot, Integer.toString(partitionId));
@@ -395,14 +422,23 @@ public final class ClusterCli extends SubcommandCli {
                     error = "Cannot obtain replica states";
                 }
 
-                for (Map.Entry<ReplicaId, ReplicaState> entry : replicaState.entrySet()) {
+                Map<ReplicaId, ReplicaState> sortedReplicaState = new TreeMap<>(replicaState);
+                for (Map.Entry<ReplicaId, ReplicaState> entry : sortedReplicaState.entrySet()) {
+                    ReplicaId replicaId = entry.getKey();
+                    if (!assignmentReplicaIdSet.contains(replicaId)) {
+                        error = error.concat(System.lineSeparator())
+                            .concat(String.format("%s replica info missing in replica assignments", replicaId));
+                        continue;
+                    }
+                    assignmentReplicaIdSet.remove(replicaId);
+
                     boolean recoveryComplete =
                         (sessionId != null)
                         && (entry.getValue().sessionId == sessionId)
                         && (entry.getValue().closingHighWaterMark == ReplicaState.UNRESOLVED);
                     if (!recoveryComplete) {
                         error = error.concat(System.lineSeparator())
-                            .concat(String.format("Storage replica %s recovery not completed", entry.getKey()));
+                            .concat(String.format("%s recovery not completed", replicaId));
                     }
                 }
 
@@ -411,6 +447,24 @@ public final class ClusterCli extends SubcommandCli {
                     ("".equals(error)) ? ValidationResult.Status.SUCCESS : ValidationResult.Status.FAILURE,
                     error);
                 PartitionValidationResults partitionValidationResults = partitionsValidationResultsList.get(partitionId);
+                partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
+            }
+
+            // For the remaining replicaIds in the set, they only occurs in replica assignments and not in replica states
+            for (ReplicaId replicaId : assignmentReplicaIdSet) {
+                PartitionValidationResults partitionValidationResults = partitionsValidationResultsList.get(replicaId.partitionId);
+                ValidationResult validationResult = partitionValidationResults.validationResultsMap
+                    .get(ValidationResult.ValidationType.REPLICA_RECOVERY_STATUS);
+
+                String error = validationResult == null ? "" : validationResult.error;
+                error = error.concat(System.lineSeparator())
+                    .concat(String.format("%s replica info missing in replica states", replicaId));
+
+                validationResult = new ValidationResult(
+                    ValidationResult.ValidationType.REPLICA_RECOVERY_STATUS,
+                    ValidationResult.Status.FAILURE,
+                    error
+                );
                 partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
             }
 

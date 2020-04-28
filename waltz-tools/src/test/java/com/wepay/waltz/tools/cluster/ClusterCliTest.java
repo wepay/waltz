@@ -184,9 +184,13 @@ public class ClusterCliTest {
             assertTrue(outContent.toString("UTF-8")
                 .contains("Validation PARTITION_QUORUM_STATUS failed for partition 2"));
 
-            // Check that REPLICA_RECOVERY_STATUS verification didn't fail
-            assertFalse(outContent.toString("UTF-8").contains("Recovery not completed"));
-            assertFalse(outContent.toString("UTF-8").contains("Cannot obtain replica states"));
+            // Check that REPLICA_RECOVERY_STATUS validation is success only for Partition 1
+            assertTrue(outContent.toString("UTF-8")
+                .contains("Validation REPLICA_RECOVERY_STATUS failed for partition 0"));
+            assertFalse(outContent.toString("UTF-8")
+                .contains("Validation REPLICA_RECOVERY_STATUS failed for partition 1"));
+            assertTrue(outContent.toString("UTF-8")
+                .contains("Validation REPLICA_RECOVERY_STATUS failed for partition 2"));
 
             // Close the server network connection
             WaltzServerRunner waltzServerRunner = helper.getWaltzServerRunner(helper.getServerPort(),
@@ -281,8 +285,8 @@ public class ClusterCliTest {
                 .contains("Validation SERVER_STORAGE_CONNECTIVITY failed for partition " + partitionId));
 
             // Check that REPLICA_RECOVERY_STATUS verification didn't fail
-            assertFalse(outContent.toString("UTF-8").contains("Recovery not completed"));
-            assertFalse(outContent.toString("UTF-8").contains("Cannot obtain replica states"));
+            assertFalse(outContent.toString("UTF-8")
+                .contains("Validation REPLICA_RECOVERY_STATUS failed for partition " + partitionId));
 
             // Close the server network connection
             WaltzServerRunner waltzServerRunner = helper.getWaltzServerRunner(helper.getServerPort(),
