@@ -48,11 +48,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
-import java.util.TreeMap;
 import java.util.EnumMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -399,7 +397,7 @@ public final class ClusterCli extends SubcommandCli {
                                                                   ZooKeeperClient zkClient,
                                                                   List<PartitionValidationResults> partitionsValidationResultsList) {
             // A set that contains all replica ids in replica assignments
-            Set<ReplicaId> assignmentReplicaIdSet = new TreeSet<>();
+            Set<ReplicaId> assignmentReplicaIdSet = new HashSet<>();
             for (Map.Entry<String, int[]> entry : replicaAssignments.replicas.entrySet()) {
                 for (int partitionId : entry.getValue()) {
                     assignmentReplicaIdSet.add(new ReplicaId(partitionId, entry.getKey()));
@@ -422,8 +420,7 @@ public final class ClusterCli extends SubcommandCli {
                     error = "Cannot obtain replica states";
                 }
 
-                Map<ReplicaId, ReplicaState> sortedReplicaState = new TreeMap<>(replicaState);
-                for (Map.Entry<ReplicaId, ReplicaState> entry : sortedReplicaState.entrySet()) {
+                for (Map.Entry<ReplicaId, ReplicaState> entry : replicaState.entrySet()) {
                     ReplicaId replicaId = entry.getKey();
                     if (!assignmentReplicaIdSet.contains(replicaId)) {
                         error = error.concat(System.lineSeparator())
