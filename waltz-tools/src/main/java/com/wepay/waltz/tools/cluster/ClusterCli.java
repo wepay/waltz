@@ -267,8 +267,11 @@ public final class ClusterCli extends SubcommandCli {
                 // Step5: Validate recovery is completed and replica states updated in ZK
                 ZNode partitionRoot = new ZNode(storeRoot, StoreMetadata.PARTITION_ZNODE_NAME);
 
+                Map<Integer, Set<String>> zkPartitionToStorageNodeSetMap =
+                    getZkPartitionToStorageNodeSetMapping(storeMetadata);
+
                 buildStorageRecoveryCompleteValidationResult(numPartitions, partitionRoot,
-                    storeMetadata.getReplicaAssignments(), zkClient, partitionsValidationResultList);
+                    zkPartitionToStorageNodeSetMap, zkClient, partitionsValidationResultList);
 
                 // Update validation result for remaining partitions if not already updated.
                 updateRemainingValidationResults(consistencyValidationFuture,
@@ -386,25 +389,18 @@ public final class ClusterCli extends SubcommandCli {
          *
          * @param numPartitions Total number of partitions in the cluster.
          * @param partitionRoot ZNode used to fetch replica states for each partition.
-         * @param replicaAssignments Replica assignments for all the partitions.
+         * @param zkPartitionToStorageNodeSetMap Map of partitionId to set of storageConnectString.
          * @param zkClient ZooKeeper Client used to fetch partition metadata.
          * @param partitionsValidationResultsList a {@code List<PartitionValidationResults>} that contains all the
          *                                       validation results.
          */
         private void buildStorageRecoveryCompleteValidationResult(int numPartitions,
                                                                   ZNode partitionRoot,
-                                                                  ReplicaAssignments replicaAssignments,
+                                                                  Map<Integer, Set<String>> zkPartitionToStorageNodeSetMap,
                                                                   ZooKeeperClient zkClient,
                                                                   List<PartitionValidationResults> partitionsValidationResultsList) {
-            // A set that contains all replica ids in replica assignments
-            Set<ReplicaId> assignmentReplicaIdSet = new HashSet<>();
-            for (Map.Entry<String, int[]> entry : replicaAssignments.replicas.entrySet()) {
-                for (int partitionId : entry.getValue()) {
-                    assignmentReplicaIdSet.add(new ReplicaId(partitionId, entry.getKey()));
-                }
-            }
-
             for (int partitionId = 0; partitionId < numPartitions; partitionId++) {
+                Set<String> storageNodeSet = zkPartitionToStorageNodeSetMap.get(partitionId);
                 String error = "";
                 ZNode zNode = new ZNode(partitionRoot, Integer.toString(partitionId));
                 Map<ReplicaId, ReplicaState> replicaState;
@@ -421,13 +417,13 @@ public final class ClusterCli extends SubcommandCli {
                 }
 
                 for (Map.Entry<ReplicaId, ReplicaState> entry : replicaState.entrySet()) {
-                    ReplicaId replicaId = entry.getKey();
-                    if (!assignmentReplicaIdSet.contains(replicaId)) {
+                    String storageNodeConnectString = entry.getKey().storageNodeConnectString;
+                    if (!storageNodeSet.contains(storageNodeConnectString)) {
                         error = error.concat(System.lineSeparator())
-                            .concat(String.format("%s replica info missing in replica assignments", replicaId));
+                            .concat(String.format("Storage %s replica info missing in replica assignments", storageNodeConnectString));
                         continue;
                     }
-                    assignmentReplicaIdSet.remove(replicaId);
+                    storageNodeSet.remove(storageNodeConnectString);
 
                     boolean recoveryComplete =
                         (sessionId != null)
@@ -435,8 +431,12 @@ public final class ClusterCli extends SubcommandCli {
                         && (entry.getValue().closingHighWaterMark == ReplicaState.UNRESOLVED);
                     if (!recoveryComplete) {
                         error = error.concat(System.lineSeparator())
-                            .concat(String.format("%s recovery not completed", replicaId));
+                            .concat(String.format("Storage %s recovery not completed", storageNodeConnectString));
                     }
+                }
+
+                if (storageNodeSet.isEmpty()) {
+                    zkPartitionToStorageNodeSetMap.remove(partitionId);
                 }
 
                 ValidationResult validationResult = new ValidationResult(
@@ -447,15 +447,17 @@ public final class ClusterCli extends SubcommandCli {
                 partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
             }
 
-            // For the remaining replicaIds in the set, they only occurs in replica assignments and not in replica states
-            for (ReplicaId replicaId : assignmentReplicaIdSet) {
-                PartitionValidationResults partitionValidationResults = partitionsValidationResultsList.get(replicaId.partitionId);
+            // For each remaining storageNode, there is only corresponding info in replica assignments and not in replica states
+            zkPartitionToStorageNodeSetMap.forEach((partitionId, storageNodeSet) -> {
+                PartitionValidationResults partitionValidationResults = partitionsValidationResultsList.get(partitionId);
                 ValidationResult validationResult = partitionValidationResults.validationResultsMap
                     .get(ValidationResult.ValidationType.REPLICA_RECOVERY_STATUS);
 
                 String error = validationResult == null ? "" : validationResult.error;
-                error = error.concat(System.lineSeparator())
-                    .concat(String.format("%s replica info missing in replica states", replicaId));
+                for (String storageNode : storageNodeSet) {
+                    error = error.concat(System.lineSeparator())
+                        .concat(String.format("Storage %s replica info missing in replica states", storageNode));
+                }
 
                 validationResult = new ValidationResult(
                     ValidationResult.ValidationType.REPLICA_RECOVERY_STATUS,
@@ -463,7 +465,7 @@ public final class ClusterCli extends SubcommandCli {
                     error
                 );
                 partitionValidationResults.validationResultsMap.put(validationResult.type, validationResult);
-            }
+            });
 
             failMissingValidationResults(
                 partitionsValidationResultsList,
@@ -560,6 +562,19 @@ public final class ClusterCli extends SubcommandCli {
             });
 
             return zkPartitionToReplicaMap;
+        }
+
+        private Map<Integer, Set<String>> getZkPartitionToStorageNodeSetMapping(StoreMetadata storeMetadata) throws Exception {
+            Map<Integer, Set<String>> zkPartitionToReplicaSetMap = new HashMap<>();
+
+            storeMetadata.getReplicaAssignments().replicas.forEach((replicaConnection, partitionList) -> {
+                for (Integer partitionId : partitionList) {
+                    zkPartitionToReplicaSetMap.putIfAbsent(partitionId, new HashSet<>());
+                    zkPartitionToReplicaSetMap.get(partitionId).add(replicaConnection);
+                }
+            });
+
+            return zkPartitionToReplicaSetMap;
         }
 
         /**
