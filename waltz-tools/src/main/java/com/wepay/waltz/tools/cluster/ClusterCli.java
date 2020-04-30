@@ -253,7 +253,7 @@ public final class ClusterCli extends SubcommandCli {
                     );
 
                 // Step4: Validate zk and storage partition assignment consistency and Quorum
-                Map<Integer, List<String>> zkPartitionToStorageNodeMap =
+                Map<Integer, Set<String>> zkPartitionToStorageNodeMap =
                     getZkPartitionToStorageNodeMapping(storeMetadata);
 
                 Map<String, Integer> storageConnections = getStorageConnections(storeMetadata);
@@ -267,11 +267,8 @@ public final class ClusterCli extends SubcommandCli {
                 // Step5: Validate recovery is completed and replica states updated in ZK
                 ZNode partitionRoot = new ZNode(storeRoot, StoreMetadata.PARTITION_ZNODE_NAME);
 
-                Map<Integer, Set<String>> zkPartitionToStorageNodeSetMap =
-                    getZkPartitionToStorageNodeSetMapping(storeMetadata);
-
                 buildStorageRecoveryCompleteValidationResult(numPartitions, partitionRoot,
-                    zkPartitionToStorageNodeSetMap, zkClient, partitionsValidationResultList);
+                    zkPartitionToStorageNodeMap, zkClient, partitionsValidationResultList);
 
                 // Update validation result for remaining partitions if not already updated.
                 updateRemainingValidationResults(consistencyValidationFuture,
@@ -333,7 +330,7 @@ public final class ClusterCli extends SubcommandCli {
 
         private void buildStoragePartitionValidationResult(int numPartitions,
                                                            Map<String, Integer> storageConnections,
-                                                           Map<Integer, List<String>> zkPartitionToStorageNodeMap,
+                                                           Map<Integer, Set<String>> zkPartitionToStorageNodeMap,
                                                            Map<Integer, Map<String, Boolean>> partitionToStorageStatusMap,
                                                            List<PartitionValidationResults> partitionValidationResultsList) {
             for (int id = 0; id < numPartitions; id++) {
@@ -342,8 +339,11 @@ public final class ClusterCli extends SubcommandCli {
                 PartitionValidationResults partitionValidationResults = partitionValidationResultsList.get(id);
 
                 // Verity zk and storage node partition assignment consistency for a partition Id.
-                if (zkPartitionToStorageNodeMap.getOrDefault(id, new ArrayList<>()).size() != partitionToStorageStatusMap.getOrDefault(id,
-                    new HashMap<>()).size()) {
+                Set<String> zkStorageNodeMapPerId = zkPartitionToStorageNodeMap.getOrDefault(id,
+                    new HashSet<>());
+                Map<String, Boolean> storageStatusMapPerId = partitionToStorageStatusMap.getOrDefault(id,
+                    new HashMap<>());
+                if ((zkStorageNodeMapPerId.size() != storageStatusMapPerId.size()) || (!zkStorageNodeMapPerId.equals(storageStatusMapPerId.keySet()))) {
                     partitionAssignmentValidationResult = new ValidationResult(
                         ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_STORAGE_CONSISTENCY,
                         ValidationResult.Status.FAILURE, "Error: ZooKeeper and StorageNode Partition Assignment "
@@ -389,18 +389,18 @@ public final class ClusterCli extends SubcommandCli {
          *
          * @param numPartitions Total number of partitions in the cluster.
          * @param partitionRoot ZNode used to fetch replica states for each partition.
-         * @param zkPartitionToStorageNodeSetMap Map of partitionId to set of storageConnectString.
+         * @param zkPartitionToStorageNodeMap Map of partitionId to set of storageConnectString.
          * @param zkClient ZooKeeper Client used to fetch partition metadata.
          * @param partitionsValidationResultsList a {@code List<PartitionValidationResults>} that contains all the
          *                                       validation results.
          */
         private void buildStorageRecoveryCompleteValidationResult(int numPartitions,
                                                                   ZNode partitionRoot,
-                                                                  Map<Integer, Set<String>> zkPartitionToStorageNodeSetMap,
+                                                                  Map<Integer, Set<String>> zkPartitionToStorageNodeMap,
                                                                   ZooKeeperClient zkClient,
                                                                   List<PartitionValidationResults> partitionsValidationResultsList) {
             for (int partitionId = 0; partitionId < numPartitions; partitionId++) {
-                Set<String> storageNodeSet = zkPartitionToStorageNodeSetMap.get(partitionId);
+                Set<String> storageNodeSet = zkPartitionToStorageNodeMap.get(partitionId);
                 String error = "";
                 ZNode zNode = new ZNode(partitionRoot, Integer.toString(partitionId));
                 Map<ReplicaId, ReplicaState> replicaState;
@@ -436,7 +436,7 @@ public final class ClusterCli extends SubcommandCli {
                 }
 
                 if (storageNodeSet.isEmpty()) {
-                    zkPartitionToStorageNodeSetMap.remove(partitionId);
+                    zkPartitionToStorageNodeMap.remove(partitionId);
                 }
 
                 ValidationResult validationResult = new ValidationResult(
@@ -448,7 +448,7 @@ public final class ClusterCli extends SubcommandCli {
             }
 
             // For each remaining storageNode, there is only corresponding info in replica assignments and not in replica states
-            zkPartitionToStorageNodeSetMap.forEach((partitionId, storageNodeSet) -> {
+            zkPartitionToStorageNodeMap.forEach((partitionId, storageNodeSet) -> {
                 PartitionValidationResults partitionValidationResults = partitionsValidationResultsList.get(partitionId);
                 ValidationResult validationResult = partitionValidationResults.validationResultsMap
                     .get(ValidationResult.ValidationType.REPLICA_RECOVERY_STATUS);
@@ -550,31 +550,18 @@ public final class ClusterCli extends SubcommandCli {
             return storageConnections;
         }
 
-        private Map<Integer, List<String>> getZkPartitionToStorageNodeMapping(StoreMetadata storeMetadata) throws Exception {
+        private Map<Integer, Set<String>> getZkPartitionToStorageNodeMapping(StoreMetadata storeMetadata) throws Exception {
 
-            Map<Integer, List<String>> zkPartitionToReplicaMap = new HashMap<>();
+            Map<Integer, Set<String>> zkPartitionToReplicaMap = new HashMap<>();
 
             storeMetadata.getReplicaAssignments().replicas.forEach((replicaConnection, partitionList) -> {
                 for (Integer partitionId : partitionList) {
-                    zkPartitionToReplicaMap.putIfAbsent(partitionId, new ArrayList<>());
+                    zkPartitionToReplicaMap.putIfAbsent(partitionId, new HashSet<>());
                     zkPartitionToReplicaMap.get(partitionId).add(replicaConnection);
                 }
             });
 
             return zkPartitionToReplicaMap;
-        }
-
-        private Map<Integer, Set<String>> getZkPartitionToStorageNodeSetMapping(StoreMetadata storeMetadata) throws Exception {
-            Map<Integer, Set<String>> zkPartitionToReplicaSetMap = new HashMap<>();
-
-            storeMetadata.getReplicaAssignments().replicas.forEach((replicaConnection, partitionList) -> {
-                for (Integer partitionId : partitionList) {
-                    zkPartitionToReplicaSetMap.putIfAbsent(partitionId, new HashSet<>());
-                    zkPartitionToReplicaSetMap.get(partitionId).add(replicaConnection);
-                }
-            });
-
-            return zkPartitionToReplicaSetMap;
         }
 
         /**
