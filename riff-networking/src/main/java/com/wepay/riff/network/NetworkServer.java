@@ -40,6 +40,7 @@ public abstract class NetworkServer implements Closeable {
 
         ServerBootstrap b = new ServerBootstrap();
         b.group(parentGroup, childGroup)
+            .option(ChannelOption.SO_KEEPALIVE, true)
             .option(ChannelOption.TCP_NODELAY, true)
             .channel(NioServerSocketChannel.class)
             .handler(new LoggingHandler(LogLevel.INFO))
