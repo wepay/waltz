@@ -66,6 +66,7 @@ public abstract class NetworkClient implements Closeable {
         synchronized (this) {
             Bootstrap b = new Bootstrap();
             b.group(group)
+                .option(ChannelOption.SO_KEEPALIVE, true)
                 .option(ChannelOption.TCP_NODELAY, true)
                 .channel(NioSocketChannel.class)
                 .handler(new ClientInitializer());
