@@ -228,6 +228,10 @@ public class StoreSessionManager {
         synchronized (sessionAssignLock) {
             if (running.get()) {
                 currentSession = session;
+            } else {
+                if (session != null) {
+                    session.close();
+                }
             }
         }
     }
