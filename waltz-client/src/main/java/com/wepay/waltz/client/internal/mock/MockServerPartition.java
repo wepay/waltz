@@ -123,6 +123,7 @@ public class MockServerPartition {
                         sendMessage(new FeedData(copy(request.reqId), highWaterMark, request.header));
 
                         commit(request.writeLockRequest, highWaterMark);
+                        commit(request.appendLockRequest, highWaterMark);
                     }
                 }
 
