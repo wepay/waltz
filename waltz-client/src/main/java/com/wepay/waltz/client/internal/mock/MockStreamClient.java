@@ -75,7 +75,7 @@ class MockStreamClient implements StreamClient {
 
         partition.ensureActive();
 
-        return new TransactionBuilderImpl(partition.nextReqId(), callbacks.getClientHighWaterMark(partitionId));
+        return new TransactionBuilderImpl(partition.nextReqId(), partition.getClientHighWaterMark());
     }
 
     @Override

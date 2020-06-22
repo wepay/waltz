@@ -308,12 +308,10 @@ public class AbstractClientCallbacksForJDBCTest {
             }
         };
 
-        WaltzClient client1 = new WaltzClient(callbacks1, config1);
-
         dataSource.makeDbDown();
 
         try {
-            client1.submit(mkTransactionContext(0));
+            new WaltzClient(callbacks1, config1);
             fail();
 
         } catch (RuntimeException ex) {
