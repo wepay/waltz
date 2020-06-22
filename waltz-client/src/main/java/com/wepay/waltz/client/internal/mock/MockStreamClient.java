@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class MockStreamClient implements StreamClient {
 
     private final Map<Integer, MockClientPartition> clientPartitions;
-    private final WaltzClientCallbacks callbacks;
 
     private final int clientId;
     private final String clusterName;
@@ -43,7 +42,6 @@ class MockStreamClient implements StreamClient {
         this.clientId = clientId;
         this.clusterName = clusterName;
         this.clientPartitions = MockClientPartition.createForStreamClient(clientId, maxConcurrentTransactions, partitions, callbacks, rpcClient);
-        this.callbacks = callbacks;
         this.autoMount = autoMount;
         if (autoMount) {
             for (Map.Entry<Integer, MockClientPartition> entry : clientPartitions.entrySet()) {
