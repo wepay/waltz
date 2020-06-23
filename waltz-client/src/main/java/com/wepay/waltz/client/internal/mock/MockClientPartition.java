@@ -80,6 +80,10 @@ final class MockClientPartition {
         }
     }
 
+    long getClientHighWaterMark() {
+        return clientHighWaterMark.get();
+    }
+
     void activate() {
         synchronized (this) {
             if (transactionMonitor != null && transactionMonitor.start()) {
