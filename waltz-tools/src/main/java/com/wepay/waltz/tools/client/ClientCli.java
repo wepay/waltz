@@ -548,9 +548,16 @@ public final class ClientCli extends SubcommandCli {
     }
 
     private static long getHighWaterMark(int partitionId, WaltzClientConfig config) throws Exception {
-        DummyTxnCallbacks callbacks = new DummyTxnCallbacks();
-        WaltzClient client = new WaltzClient(callbacks, config);
-        return client.getHighWaterMark(partitionId);
+        WaltzClient client = null;
+        try {
+            DummyTxnCallbacks callbacks = new DummyTxnCallbacks();
+            client = new WaltzClient(callbacks, config);
+            return client.getHighWaterMark(partitionId);
+        } finally {
+            if (client != null) {
+                client.close();
+            }
+        }
     }
 
     /**
