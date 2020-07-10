@@ -4,6 +4,7 @@ from ducktape.mark import parametrize
 from ducktape.cluster.cluster_spec import ClusterSpec
 from waltz_ducktape.tests.produce_consume_validate import ProduceConsumeValidateTest
 from waltz_ducktape.tests.validation.node_bounce_scheduler import NodeBounceScheduler
+from waltz_ducktape.tests.validation.connection_interruption import ConnectionInterruption
 
 
 class SmokeTest(ProduceConsumeValidateTest):
@@ -44,6 +45,15 @@ class SmokeTest(ProduceConsumeValidateTest):
         self.run_produce_consume_validate(lambda: self.simple_validation_func(validation_cmd, timeout),
                                           lambda: self._kill_a_server_node(num_active_partitions))
 
+    @cluster(cluster_spec=MIN_CLUSTER_SPEC)
+    @parametrize(num_active_partitions=1, txn_per_client=80, num_clients=2, interval=600, timeout=300, interruption_length=5000, no_interruptions=4)
+    @parametrize(num_active_partitions=4, txn_per_client=100, num_clients=2, interval=1000, timeout=300, interruption_length=20000, no_interruptions=1)
+    def test_produce_consume_client_disconnects(self, num_active_partitions, txn_per_client, num_clients, interval, timeout,
+                                                interruption_length, no_interruptions):
+        validation_cmd = self.client_cli.validate_txn_cmd(num_active_partitions, txn_per_client, num_clients, interval)
+        self.run_produce_consume_validate(lambda: self.simple_validation_func(validation_cmd, timeout),
+                                          lambda: self._disconnect_and_reconnect_client(num_active_partitions, interruption_length, no_interruptions))
+
     def _bounce_storage_nodes(self, interval):
         storage_node_bounce_scheduler = NodeBounceScheduler(service=self.waltz_storage, interval=interval,
                                                             stop_condition=lambda: self.verifiable_client.task_complete())
@@ -57,3 +67,10 @@ class SmokeTest(ProduceConsumeValidateTest):
                                                            stop_condition=lambda: self.verifiable_client.task_complete(),
                                                            iterable_cmd_list=iter(cmd_list))
         server_node_bounce_scheduler.start()
+
+    def _disconnect_and_reconnect_client(self, num_active_partitions, interruption_length, no_of_interruptions):
+        node_idx = self.get_server_node_idx(randrange(min(num_active_partitions, len(self.waltz_server.nodes))))
+        connection_interruption = ConnectionInterruption(service = self.waltz_server,
+                                                        interruption_length = interruption_length,
+                                                        no_of_interruptions = no_of_interruptions, service_node_index = node_idx)
+        connection_interruption.start()
