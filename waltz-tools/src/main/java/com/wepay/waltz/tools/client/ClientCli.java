@@ -558,6 +558,7 @@ public final class ClientCli extends SubcommandCli {
      * it is not suppose to receive any callbacks.
      */
     private static final class DummyTxnCallbacks implements WaltzClientCallbacks {
+    public static final class DummyTxnCallbacks implements WaltzClientCallbacks {
 
         @Override
         public long getClientHighWaterMark(int partitionId) {
