@@ -557,7 +557,6 @@ public final class ClientCli extends SubcommandCli {
      * A transaction callback to help construct {@link WaltzClient}. It is dummy because
      * it is not suppose to receive any callbacks.
      */
-    private static final class DummyTxnCallbacks implements WaltzClientCallbacks {
     public static final class DummyTxnCallbacks implements WaltzClientCallbacks {
 
         @Override
