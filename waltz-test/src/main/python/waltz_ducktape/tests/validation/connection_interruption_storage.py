@@ -23,12 +23,12 @@ class ConnectionInterruptionServer(ProduceConsumeValidateTest):
         super(ConnectionInterruptionServer, self).__init__(test_context=test_context)
 
     @cluster(cluster_spec=MIN_CLUSTER_SPEC)
-    @parametrize(num_active_partitions=1, txn_per_client=200, num_clients=1, interval=100, timeout=240, interruption_length=5000, no_of_nodes_to_bounce=1)
-    @parametrize(num_active_partitions=4, txn_per_client=200, num_clients=2, interval=100, timeout=300, interruption_length=5000, no_of_nodes_to_bounce=1)
-    @parametrize(num_active_partitions=1, txn_per_client=200, num_clients=1, interval=100, timeout=300, interruption_length=5000, no_of_nodes_to_bounce=2)
-    @parametrize(num_active_partitions=4, txn_per_client=200, num_clients=2, interval=100, timeout=300, interruption_length=5000, no_of_nodes_to_bounce=2)
-    def test_disconnect_storage_shortly(self, num_active_partitions, txn_per_client, num_clients, interval, timeout, interruption_length, no_of_nodes_to_bounce):
-        self.run_produce_consume_validate(lambda: self.disconnect_reconnect_storage_node(num_active_partitions, txn_per_client, num_clients, interval, timeout, interruption_length, no_of_nodes_to_bounce))
+    @parametrize(num_active_partitions=1, txn_per_client=200, num_clients=1, interval=100, timeout=240, interruption_length=5, num_of_nodes_to_bounce=1)
+    @parametrize(num_active_partitions=4, txn_per_client=200, num_clients=2, interval=100, timeout=300, interruption_length=5, num_of_nodes_to_bounce=1)
+    @parametrize(num_active_partitions=1, txn_per_client=200, num_clients=1, interval=100, timeout=300, interruption_length=5, num_of_nodes_to_bounce=2)
+    @parametrize(num_active_partitions=4, txn_per_client=200, num_clients=2, interval=100, timeout=300, interruption_length=5, num_of_nodes_to_bounce=2)
+    def test_disconnect_storage_shortly(self, num_active_partitions, txn_per_client, num_clients, interval, timeout, interruption_length, num_of_nodes_to_bounce):
+        self.run_produce_consume_validate(lambda: self.disconnect_reconnect_storage_node(num_active_partitions, txn_per_client, num_clients, interval, timeout, interruption_length, num_of_nodes_to_bounce))
 
     class StorageNodeInfo:
         def __init__(self, node):
@@ -36,7 +36,7 @@ class ConnectionInterruptionServer(ProduceConsumeValidateTest):
             self.node_hostname = node.account.ssh_hostname
             self.sum_number_of_transactions_before = 0
 
-    def disconnect_reconnect_storage_node(self, num_active_partitions, txn_per_client, num_clients, interval, timeout, interruption_length, no_of_nodes_to_bounce):
+    def disconnect_reconnect_storage_node(self, num_active_partitions, txn_per_client, num_clients, interval, timeout, interruption_length, num_of_nodes_to_bounce):
         """
         A validate function to test bouncing network connection between server and storage. Verification of correctness
         is done by comparing expected number of stored transactions with the reality.
@@ -47,11 +47,11 @@ class ConnectionInterruptionServer(ProduceConsumeValidateTest):
         :param interval: Average interval(millisecond) between transactions
         :param timeout: Test timeout
         :param interruption_length: Length(milliseconds) of communication interruption between server and storage
-        :param no_of_nodes_to_bounce: Number of storage nodes to bounce. This may affect the quorum
+        :param num_of_nodes_to_bounce: Number of storage nodes to bounce. This may affect the quorum
         """
 
         nodes_summary = []
-        for node_number in random.sample(range(len(self.waltz_storage.nodes)), no_of_nodes_to_bounce):
+        for node_number in random.sample(range(len(self.waltz_storage.nodes)), num_of_nodes_to_bounce):
             nodes_summary.append(self.StorageNodeInfo(self.waltz_storage.nodes[node_number]))
 
         admin_port = self.waltz_storage.admin_port
@@ -70,7 +70,7 @@ class ConnectionInterruptionServer(ProduceConsumeValidateTest):
         # Step 3: Disconnect storage
         for node_summary in nodes_summary:
             node_summary.node.account.ssh_capture("sudo iptables -I INPUT -p tcp --destination-port {} -j DROP".format(port))
-            sleep(interruption_length / 1000)
+            sleep(interruption_length)
 
         # Step 4: Reconnect storage
         for node_summary in nodes_summary:
@@ -96,4 +96,3 @@ class ConnectionInterruptionServer(ProduceConsumeValidateTest):
         for partition in range(num_active_partitions):
             sum += self.get_storage_max_transaction_id(self.get_host(node_summary.node_hostname, admin_port), port, partition)
         return sum
-
