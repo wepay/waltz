@@ -4,7 +4,6 @@ from ducktape.mark import parametrize
 from ducktape.cluster.cluster_spec import ClusterSpec
 from waltz_ducktape.tests.produce_consume_validate import ProduceConsumeValidateTest
 from waltz_ducktape.tests.validation.node_bounce_scheduler import NodeBounceScheduler
-from waltz_ducktape.tests.validation.connection_interruption import ConnectionInterruption
 
 
 class SmokeTest(ProduceConsumeValidateTest):
