@@ -31,6 +31,12 @@ class ConnectionInterruption(ProduceConsumeValidateTest):
         node_idx = self.get_server_node_idx(randrange(min(num_active_partitions, len(self.waltz_server.nodes))))
         self.run_produce_consume_validate(lambda: self.produce_consume_with_network_interruption(validation_cmd, timeout, network_interruption_length, num_interruptions, duration_between_interruptions, node_idx, num_active_partitions))
 
+    def block_connection_to_port(self, node, port):
+        node.account.ssh_capture("sudo iptables -I INPUT -p tcp --destination-port {} -j DROP".format(port))
+
+    def enable_connection_to_port(self, node, port):
+        node.account.ssh_capture("sudo iptables -D INPUT -p tcp --destination-port {} -j DROP".format(port))
+
     def produce_consume_with_network_interruption(self, validation_cmd, timeout, network_interruption_length, num_interruptions, duration_between_interruptions, node_idx, num_active_partitions):
         """
         Set up waltz and interrupt network between a waltz client node and a server node.
@@ -57,14 +63,12 @@ class ConnectionInterruption(ProduceConsumeValidateTest):
 
             # disable connection on port
             self.waltz_server.logger.info("Closing a port")
-            node.account.ssh_capture(
-                "sudo iptables -I INPUT -p tcp --destination-port {} -j DROP".format(self.waltz_server.port))
+            self.block_connection_to_port(node, self.waltz_server.port)
             sleep(network_interruption_length)
 
             # enable connection on port
             self.waltz_server.logger.info("Opening a port")
-            node.account.ssh_capture(
-                "sudo iptables -D INPUT -p tcp --destination-port {} -j DROP".format(self.waltz_server.port))
+            self.enable_connection_to_port(node, self.waltz_server.port)
 
         wait_until(lambda: self.verifiable_client.task_complete() == True, timeout_sec=timeout,
                    err_msg="verifiable_client failed to complete task in %d seconds." % timeout)
