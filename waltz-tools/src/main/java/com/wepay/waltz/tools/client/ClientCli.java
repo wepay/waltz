@@ -30,6 +30,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+import java.util.stream.Collectors;
+
 
 import static java.lang.Math.toIntExact;
 
@@ -43,8 +47,403 @@ public final class ClientCli extends SubcommandCli {
     private ClientCli(String[] args,  boolean useByTest) {
         super(args, useByTest, Arrays.asList(
                 new Subcommand(Validate.NAME, Validate.DESCRIPTION, Validate::new),
-                new Subcommand(HighWaterMark.NAME, HighWaterMark.DESCRIPTION, HighWaterMark::new)
+                new Subcommand(HighWaterMark.NAME, HighWaterMark.DESCRIPTION, HighWaterMark::new),
+                new Subcommand(Producer.NAME, Producer.DESCRIPTION, Producer::new),
+                new Subcommand(Consumer.NAME, Consumer.DESCRIPTION, Consumer::new),
+                new Subcommand(ClientProcessesSetup.NAME, ClientProcessesSetup.DESCRIPTION, ClientProcessesSetup::new)
         ));
+    }
+
+    /**
+     * Use {@code ClientProcessesSetup} command to submit transactions to Waltz
+     * server for testing, and consume the transactions for validation,
+     * including transaction data and optimistic locking. Unlike when running
+     * {@code Validate} every single client (producer & consumer) is an independent
+     * process created by firing {@code Producer} and {@code Consumer} command.
+     *
+     * When running {@code ClientProcessesSetup} command, there should not be any external
+     * client that is producing TXNs of the same partition (different partition
+     * is okay). Otherwise, the validation result will be unpredictable. Validation of every single
+     * client is done the same way as in {@code Validate}. Main thread waits for all processes to finish
+     * and checks their input stream for validation.
+     */
+    private static final class ClientProcessesSetup extends Cli {
+        private static final String NAME = "client-processes-setup";
+        private static final String DESCRIPTION = "Creates multiple processes of producers and consumers";
+        private static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
+        private static final String DEFAULT_Dlog4j_CONFIG_PATH = "/etc/waltz-client/waltz-log4j.cfg";
+
+        private ClientProcessesSetup(String[] args) {
+            super(args);
+        }
+
+        @Override
+        protected void configureOptions(Options options) {
+            Option txnPerProducerOption = Option.builder("tpp")
+                    .longOpt("txn-per-producer")
+                    .desc("Specify number of transactions per producer")
+                    .hasArg()
+                    .build();
+            Option numProducersOption = Option.builder("np")
+                    .longOpt("num-producers")
+                    .desc("Specify number of total producers")
+                    .hasArg()
+                    .build();
+            Option numConsumersOption = Option.builder("nc")
+                    .longOpt("num-consumers")
+                    .desc("Specify number of total consumers")
+                    .hasArg()
+                    .build();
+            Option intervalOption = Option.builder("i")
+                    .longOpt("interval")
+                    .desc("Specify average interval(millisecond) between transactions")
+                    .hasArg()
+                    .build();
+            Option cfgPathOption = Option.builder("c")
+                    .longOpt("cli-config-path")
+                    .desc("Specify client cli config file path")
+                    .hasArg()
+                    .build();
+            Option numActivePartitionOption = Option.builder("ap")
+                    .longOpt("num-active-partitions")
+                    .desc(String.format("Specify number of partitions to interact with. e.g. if set to 3, transactions will"
+                            + "be evenly distributed among partition 0, 1 and 2. Default to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
+                    .hasArg()
+                    .build();
+            Option previousHighWaterMarkValue = Option.builder("phw")
+                    .longOpt("previous-high-watermark")
+                    .desc("Specify what was the high watermark before this test setup. "
+                            + "Expected format for 4 active partitions is as follows: \"-1 -1 42 -1\"")
+                    .hasArg()
+                    .build();
+            Option dlog4jConfigurationPath = Option.builder("d4j")
+                    .longOpt("dlog4j-configuration-path")
+                    .desc("Specify dlog4j configuration path, default: /etc/waltz-client/waltz-log4j.cfg")
+                    .hasArg()
+                    .build();
+
+            txnPerProducerOption.setRequired(true);
+            numProducersOption.setRequired(true);
+            numConsumersOption.setRequired(true);
+            intervalOption.setRequired(true);
+            cfgPathOption.setRequired(true);
+            numActivePartitionOption.setRequired(false);
+            previousHighWaterMarkValue.setRequired(false);
+            dlog4jConfigurationPath.setRequired(false);
+
+            options.addOption(txnPerProducerOption);
+            options.addOption(numProducersOption);
+            options.addOption(numConsumersOption);
+            options.addOption(intervalOption);
+            options.addOption(cfgPathOption);
+            options.addOption(numActivePartitionOption);
+            options.addOption(previousHighWaterMarkValue);
+            options.addOption(dlog4jConfigurationPath);
+        }
+
+        @Override
+        protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
+            try {
+                ArrayList<Process> clients = new ArrayList<>();
+                String[] producerString = createProducerString(cmd);
+                String[] consumerString = createConsumerString(cmd);
+
+                int numOfProducers = Integer.parseInt(cmd.getOptionValue("num-producers"));
+                int numOfConsumers = Integer.parseInt(cmd.getOptionValue("num-consumers"));
+
+                //Start Producers
+                for (int i = 0; i < numOfProducers; i++) {
+                    Process p = Runtime.getRuntime().exec(producerString);
+                    clients.add(p);
+                }
+                //Start Consumers
+                for (int i = 0; i < numOfConsumers; i++) {
+                    Process p = Runtime.getRuntime().exec(consumerString);
+                    clients.add(p);
+                }
+                //Wait till all clients finish
+                for (Process p : clients) {
+                    p.waitFor();
+                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), "UTF-8"));
+                    String output = br.lines().collect(Collectors.joining());
+                    br.close();
+                    if (!output.contains("success")) {
+                        throw new Exception("At least one client crashed");
+                    }
+                }
+            }  catch (Exception e) {
+                throw new SubCommandFailedException(String.format("Transaction validation failed: %s", e.getMessage()));
+            }
+
+        }
+
+        @Override
+        protected String getUsage() {
+            return buildUsage(NAME, DESCRIPTION, getOptions());
+        }
+
+        private String[] createProducerString(CommandLine cmd) throws SubCommandFailedException {
+            String cfgPath = cmd.hasOption("dlog4j-configuration-path") ? cmd.getOptionValue("dlog4j-configuration-path") : DEFAULT_Dlog4j_CONFIG_PATH;
+            String numOfActivePartitions = cmd.hasOption("num-active-partitions") ? cmd.getOptionValue("num-active-partitions") : String.valueOf(DEFAULT_NUMBER_ACTIVE_PARTITIONS);
+
+            return new String[]{
+                "java", "-cp", "/usr/local/waltz/waltz-uber.jar", "-Dlog4j.configuration=" + cfgPath,
+                "com.wepay.waltz.tools.client.ClientCli", "create-producer",
+                "--txn-per-client", cmd.getOptionValue("txn-per-producer"),
+                "--num-clients", cmd.getOptionValue("num-producers"),
+                "--cli-config-path", cmd.getOptionValue("cli-config-path"),
+                "--num-active-partitions", numOfActivePartitions,
+                "--previous-high-watermark", cmd.getOptionValue("previous-high-watermark"),
+                "--interval", cmd.getOptionValue("interval")
+            };
+        }
+
+        private String[] createConsumerString(CommandLine cmd) throws SubCommandFailedException {
+            String cfgPath = cmd.hasOption("dlog4j-configuration-path") ? cmd.getOptionValue("dlog4j-configuration-path") : DEFAULT_Dlog4j_CONFIG_PATH;
+            String numOfActivePartitions = cmd.hasOption("num-active-partitions") ? cmd.getOptionValue("num-active-partitions") : String.valueOf(DEFAULT_NUMBER_ACTIVE_PARTITIONS);
+
+            return new String[]{
+                    "java", "-cp", "/usr/local/waltz/waltz-uber.jar", "-Dlog4j.configuration=" + cfgPath,
+                    "com.wepay.waltz.tools.client.ClientCli", "create-consumer",
+                    "--txn-per-client", cmd.getOptionValue("txn-per-producer"),
+                    "--num-clients", cmd.getOptionValue("num-producers"),
+                    "--cli-config-path", cmd.getOptionValue("cli-config-path"),
+                    "--num-active-partitions", numOfActivePartitions,
+                    "--previous-high-watermark", cmd.getOptionValue("previous-high-watermark")
+            };
+        }
+    }
+
+    /**
+     * Use {@code Consumer} command to create a consumer client that
+     * reads transactions submitted to Waltz server for validation,
+     * including transaction data and optimistic locking.
+     *
+     * Consumer process is closed once total number of processed transactions
+     * reaches number of transactions already stored (previous-high-watermark)
+     * plus txn-per-client * num-clients (number of producing clients).
+     */
+    private static final class Consumer extends Validate {
+        private static final String NAME = "create-consumer";
+        private static final String DESCRIPTION = "Creates one consumer";
+        private static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
+        private static final String[] DEFAULT_HIGH_WATERMARK_VALUE = {"-1"};
+
+        private Consumer(String[] args) {
+            super(args);
+        }
+
+        @Override
+        protected void configureOptions(Options options) {
+            Option txnPerClientOption = Option.builder("tpc")
+                    .longOpt("txn-per-client")
+                    .desc("Specify number of transactions per client")
+                    .hasArg()
+                    .build();
+            Option numClientsOption = Option.builder("nc")
+                    .longOpt("num-clients")
+                    .desc("Specify number of total clients")
+                    .hasArg()
+                    .build();
+            Option cfgPathOption = Option.builder("c")
+                    .longOpt("cli-config-path")
+                    .desc("Specify client cli config file path")
+                    .hasArg()
+                    .build();
+            Option numActivePartitionOption = Option.builder("ap")
+                    .longOpt("num-active-partitions")
+                    .desc(String.format("Specify number of partitions to interact with. e.g. if set to 3, transactions will"
+                            + "be evenly distributed among partition 0, 1 and 2. Default to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
+                    .hasArg()
+                    .build();
+            Option previousHighWaterMarkValue = Option.builder("phw")
+                    .longOpt("previous-high-watermark")
+                    .desc("Specify what was the high watermark before this test setup. "
+                            + "Expected format for 4 active partitions is as follows: \"-1 -1 42 -1\"")
+                    .hasArg()
+                    .build();
+
+            txnPerClientOption.setRequired(true);
+            numClientsOption.setRequired(true);
+            cfgPathOption.setRequired(true);
+            numActivePartitionOption.setRequired(false);
+            previousHighWaterMarkValue.setRequired(false);
+
+            options.addOption(txnPerClientOption);
+            options.addOption(numClientsOption);
+            options.addOption(cfgPathOption);
+            options.addOption(numActivePartitionOption);
+            options.addOption(previousHighWaterMarkValue);
+        }
+
+        @Override
+        protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
+            try {
+                // check required arguments
+                int txnPerClient = Integer.parseInt(cmd.getOptionValue("txn-per-client"));
+                if (txnPerClient < 0) {
+                    throw new IllegalArgumentException("Found negative: txn-per-client must be greater or equals to 0");
+                }
+                int numClients = Integer.parseInt(cmd.getOptionValue("num-clients"));
+                if (numClients < 0) {
+                    throw new IllegalArgumentException("Found negative: num-clients must be greater or equals to 0");
+                }
+                String configFilePath = cmd.getOptionValue("cli-config-path");
+                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath);
+
+                // check optional arguments
+                int numActivePartitions = cmd.hasOption("num-active-partitions") ? Integer.parseInt(cmd.getOptionValue("num-active-partitions")) : DEFAULT_NUMBER_ACTIVE_PARTITIONS;
+                if (numActivePartitions < 1) {
+                    throw new IllegalArgumentException("num-active-partitions must be greater or equals to 1");
+                }
+                String[] prevHighWaterMark = cmd.hasOption("previous-high-watermark") ? cmd.getOptionValue("previous-high-watermark").split(" ") : DEFAULT_HIGH_WATERMARK_VALUE;
+
+                // get number of existing transactions across all partitions
+                long numTxnToSubmit = txnPerClient * numClients;
+                long numExistingTransactions = 0;
+                if (numActivePartitions != prevHighWaterMark.length) {
+                    throw new IllegalArgumentException("previous high-watermark must be a list of values corresponding to number of active partitions "
+                            + "with all numbers greater or equal to -1");
+                }
+                for (int partitionId = 0; partitionId < numActivePartitions; partitionId++) {
+                    long partitionHighWaterMark = Long.parseLong(prevHighWaterMark[partitionId]);
+                    numExistingTransactions += partitionHighWaterMark > -1L ? partitionHighWaterMark + 1 : 0;
+                }
+
+                // each client will receive callback of all transactions
+                int expectNumConsumerCallbacks = toIntExact(numExistingTransactions + numTxnToSubmit);
+                allConsumerTxnCallbackReceived = new CountDownLatch(expectNumConsumerCallbacks);
+
+                consumeAndValidate(waltzClientConfig);
+
+                checkUncaughtExceptions();
+                System.out.println("success");
+            } catch (Exception e) {
+                throw new SubCommandFailedException(String.format("Transaction validation failed: %s", e.getMessage()));
+            }
+        }
+    }
+
+    /**
+     * Use {@code Producer} command to create a producer client that
+     * submits transactions to Waltz server.
+     *
+     * Producer process is closed once total sum of high watermarks for active
+     * partitions reaches number of transactions already stored (previous-high-watermark)
+     * plus txn-per-client * num-clients (number of producing clients).
+     */
+    private static final class Producer extends Validate {
+        private static final String NAME = "create-producer";
+        private static final String DESCRIPTION = "Creates one producer";
+        private static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
+        private static final String[] DEFAULT_HIGH_WATERMARK_VALUE = {"-1"};
+
+        private Producer(String[] args) {
+            super(args);
+        }
+
+        @Override
+        protected void configureOptions(Options options) {
+            Option txnPerClientOption = Option.builder("tpc")
+                    .longOpt("txn-per-client")
+                    .desc("Specify number of transactions per client")
+                    .hasArg()
+                    .build();
+            Option numClientsOption = Option.builder("nc")
+                    .longOpt("num-clients")
+                    .desc("Specify number of total clients")
+                    .hasArg()
+                    .build();
+            Option intervalOption = Option.builder("i")
+                    .longOpt("interval")
+                    .desc("Specify average interval(millisecond) between transactions")
+                    .hasArg()
+                    .build();
+            Option cfgPathOption = Option.builder("c")
+                    .longOpt("cli-config-path")
+                    .desc("Specify client cli config file path")
+                    .hasArg()
+                    .build();
+            Option numActivePartitionOption = Option.builder("ap")
+                    .longOpt("num-active-partitions")
+                    .desc(String.format("Specify number of partitions to interact with. e.g. if set to 3, transactions will"
+                            + "be evenly distributed among partition 0, 1 and 2. Default to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
+                    .hasArg()
+                    .build();
+            Option previousHighWaterMarkValue = Option.builder("phw")
+                    .longOpt("previous-high-watermark")
+                    .desc("Specify what was the high watermark before this test setup. "
+                            + "Expected format for 4 active partitions is as follows: \"-1 -1 42 -1\"")
+                    .hasArg()
+                    .build();
+
+            txnPerClientOption.setRequired(true);
+            numClientsOption.setRequired(true);
+            intervalOption.setRequired(true);
+            cfgPathOption.setRequired(true);
+            numActivePartitionOption.setRequired(false);
+            previousHighWaterMarkValue.setRequired(false);
+
+            options.addOption(txnPerClientOption);
+            options.addOption(numClientsOption);
+            options.addOption(intervalOption);
+            options.addOption(cfgPathOption);
+            options.addOption(numActivePartitionOption);
+            options.addOption(previousHighWaterMarkValue);
+        }
+
+        @Override
+        protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
+            try {
+                // check required arguments
+                int txnPerClient = Integer.parseInt(cmd.getOptionValue("txn-per-client"));
+                if (txnPerClient < 0) {
+                    throw new IllegalArgumentException("Found negative: txn-per-client must be greater or equals to 0");
+                }
+                int numClients = Integer.parseInt(cmd.getOptionValue("num-clients"));
+                if (numClients < 0) {
+                    throw new IllegalArgumentException("Found negative: num-clients must be greater or equals to 0");
+                }
+                int avgInterval = Integer.parseInt(cmd.getOptionValue("interval"));
+                if (avgInterval < 0) {
+                    throw new IllegalArgumentException("Found negative: interval must be greater or equals to 0");
+                }
+                String configFilePath = cmd.getOptionValue("cli-config-path");
+                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath);
+
+                // check optional arguments
+                int numActivePartitions = cmd.hasOption("num-active-partitions") ? Integer.parseInt(cmd.getOptionValue("num-active-partitions")) : DEFAULT_NUMBER_ACTIVE_PARTITIONS;
+                if (numActivePartitions < 1) {
+                    throw new IllegalArgumentException("num-active-partitions must be greater or equals to 1");
+                }
+                String[] prevHighWaterMark = cmd.hasOption("previous-high-watermark") ? cmd.getOptionValue("previous-high-watermark").split(" ") : DEFAULT_HIGH_WATERMARK_VALUE;
+                // get number of existing transactions across all partitions
+                long numTxnToSubmit = txnPerClient * numClients;
+                long numExistingTransactions = 0;
+
+                if (numActivePartitions != prevHighWaterMark.length) {
+                    throw new IllegalArgumentException("previous-highwatermark must be a list of values corresponding to number of active partitions "
+                            + "with all numbers greater or equal to -1");
+                }
+                for (int partitionId = 0; partitionId < numActivePartitions; partitionId++) {
+                    long partitionHighWaterMark = Long.parseLong(prevHighWaterMark[partitionId]);
+                    numExistingTransactions += partitionHighWaterMark > -1L ? partitionHighWaterMark + 1 : 0;
+                }
+
+                // each client will receive callback of all transactions
+                int expectNumProducerCallbacks = toIntExact(numExistingTransactions + numTxnToSubmit);
+
+                allProducerReady = new CountDownLatch(1);
+                allProducerTxnCallbackReceived = new CountDownLatch(expectNumProducerCallbacks);
+
+                produceTransactions(numActivePartitions, 1, txnPerClient, avgInterval, waltzClientConfig);
+
+                checkUncaughtExceptions();
+                System.out.println(" success");
+            } catch (Exception e) {
+                throw new SubCommandFailedException(String.format("Transaction validation failed: %s", e.getMessage()));
+            }
+        }
     }
 
     /**
@@ -80,7 +479,7 @@ public final class ClientCli extends SubcommandCli {
      * 2                            1            1
      * </pre>
      */
-    private static final class Validate extends Cli {
+    protected static class Validate extends Cli {
         private static final String NAME = "validate";
         private static final String DESCRIPTION = "Submit transactions for validation";
         private static final String LOCK_NAME = "validate-lock";
@@ -91,14 +490,14 @@ public final class ClientCli extends SubcommandCli {
 
         private static final List<PartitionLocalLock> LOCKS = Collections.singletonList(new PartitionLocalLock(LOCK_NAME, LOCK_ID));
 
-        private final Map<Integer, ConcurrentHashMap<Integer, Long>> clientHighWaterMarkMap;
-        private final List<String> uncaughtExceptions;
+        protected final Map<Integer, ConcurrentHashMap<Integer, Long>> clientHighWaterMarkMap;
+        protected final List<String> uncaughtExceptions;
 
-        private CountDownLatch allProducerReady;
-        private CountDownLatch allProducerTxnCallbackReceived;
-        private CountDownLatch allConsumerTxnCallbackReceived;
+        protected CountDownLatch allProducerReady;
+        protected CountDownLatch allProducerTxnCallbackReceived;
+        protected CountDownLatch allConsumerTxnCallbackReceived;
 
-        private Validate(String[] args) {
+        protected Validate(String[] args) {
             super(args);
             clientHighWaterMarkMap = new HashMap<>();
             uncaughtExceptions = Collections.synchronizedList(new ArrayList<>());
@@ -197,7 +596,7 @@ public final class ClientCli extends SubcommandCli {
 
         }
 
-        private void checkUncaughtExceptions() {
+        protected void checkUncaughtExceptions() {
             if (!uncaughtExceptions.isEmpty()) {
                 StringBuilder sb = new StringBuilder();
                 for (String errorMsg: uncaughtExceptions) {
@@ -221,8 +620,8 @@ public final class ClientCli extends SubcommandCli {
          * @param config WaltzClientConfig
          * @throws Exception
          */
-        private void produceTransactions(int numActivePartitions, int numClients, int txnPerClient, int avgInterval,
-                                         WaltzClientConfig config) throws Exception {
+        protected void produceTransactions(int numActivePartitions, int numClients, int txnPerClient, int avgInterval,
+                                           WaltzClientConfig config) throws Exception {
             ExecutorService executor = Executors.newFixedThreadPool(numClients);
             for (int i = 0; i < numClients; i++) {
                 ProducerTxnCallbacks producerTnxCallback = new ProducerTxnCallbacks();
@@ -247,7 +646,7 @@ public final class ClientCli extends SubcommandCli {
          * @param config WaltzClientConfig
          * @throws Exception
          */
-        private void consumeAndValidate(WaltzClientConfig config) throws Exception {
+        protected void consumeAndValidate(WaltzClientConfig config) throws Exception {
             ExecutorService executor = Executors.newFixedThreadPool(1);
             ConsumerTxnCallbacks consumerTxnCallback = new ConsumerTxnCallbacks();
             WaltzClient consumer = new WaltzClient(consumerTxnCallback, config);
