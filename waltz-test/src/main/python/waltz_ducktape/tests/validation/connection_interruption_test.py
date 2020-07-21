@@ -25,12 +25,11 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
                  interrupt_duration=10, num_interruptions=3, delay_between_interruptions=5)
     @parametrize(num_active_partitions=4, txn_per_client=100, num_clients=2, interval=1000, timeout=300,
                  interrupt_duration=20, num_interruptions=1, delay_between_interruptions=20)
-    def test_produce_consume_client_server_network_interruption(
-            self, num_active_partitions, txn_per_client, num_clients, interval, timeout, interrupt_duration,
-            num_interruptions, delay_between_interruptions):
+    def test_client_server_network_interruption(self, num_active_partitions, txn_per_client, num_clients, interval, timeout,
+                                                interrupt_duration, num_interruptions, delay_between_interruptions):
         validation_cmd = self.client_cli.validate_txn_cmd(num_active_partitions, txn_per_client, num_clients, interval)
-        self.run_produce_consume_validate(lambda: self.produce_consume_client_server_network_interruption(validation_cmd,
-            timeout, interrupt_duration, num_interruptions, delay_between_interruptions, num_active_partitions, interval/1000))
+        self.run_produce_consume_validate(lambda: self.client_server_network_interruption(validation_cmd, timeout,
+                interrupt_duration, num_interruptions, delay_between_interruptions, num_active_partitions, interval/1000))
 
     def drop_traffic_to_port(self, node, port):
         node.account.ssh_capture("sudo iptables -I INPUT -p tcp --destination-port {} -j DROP".format(port))
@@ -38,7 +37,7 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
     def enable_traffic_to_port(self, node, port):
         node.account.ssh_capture("sudo iptables -D INPUT -p tcp --destination-port {} -j DROP".format(port))
 
-    def produce_consume_client_server_network_interruption(self, validation_cmd, timeout, interrupt_duration, num_interruptions,
+    def client_server_network_interruption(self, validation_cmd, timeout, interrupt_duration, num_interruptions,
                                                   delay_between_interruptions, num_active_partitions, processing_duration):
         """
         Set up waltz and interrupt network between a waltz client node and a server node.
