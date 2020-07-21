@@ -28,7 +28,7 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
     def test_produce_consume_with_network_interruption(self, num_active_partitions, txn_per_client, num_clients, interval, timeout,
                                                 interruption_duration, num_interruptions, delay_between_interruptions):
         validation_cmd = self.client_cli.validate_txn_cmd(num_active_partitions, txn_per_client, num_clients, interval)
-        self.run_produce_consume_validate(lambda: self.produce_consume_with_network_interruption(validation_cmd, timeout, interruption_duration, num_interruptions, delay_between_interruptions, num_active_partitions))
+        self.run_produce_consume_validate(lambda: self.produce_consume_with_network_interruption(validation_cmd, timeout, interruption_duration, num_interruptions, delay_between_interruptions, num_active_partitions, interval))
 
     def drop_traffic_to_port(self, node, port):
         node.account.ssh_capture("sudo iptables -I INPUT -p tcp --destination-port {} -j DROP".format(port))
@@ -36,16 +36,17 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
     def enable_traffic_to_port(self, node, port):
         node.account.ssh_capture("sudo iptables -D INPUT -p tcp --destination-port {} -j DROP".format(port))
 
-    def produce_consume_with_network_interruption(self, validation_cmd, timeout, interruption_duration, num_interruptions, delay_between_interruptions, num_active_partitions):
+    def produce_consume_with_network_interruption(self, validation_cmd, timeout, interruption_duration, num_interruptions, delay_between_interruptions, num_active_partitions, interval):
         """
         Set up waltz and interrupt network between a waltz client node and a server node.
 
         :param validation_cmd: The command that is send to ClientCli
         :param timeout: Test timeout
-        :param interruption_duration: Interval in seconds during which client won't be able to connect to server, must be at least 1
+        :param interruption_duration: Interval in seconds during which client won't be able to connect to server
         :param num_interruptions: Number of connection interruption cycles
         :param delay_between_interruptions: Interval in seconds that represents duration between network interruptions
         :param num_active_partitions: Number of active partitions
+        :param interval: Average interval(millisecond) between transactions
         """
 
         partition = randrange(num_active_partitions)
@@ -64,12 +65,12 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
             # disable connection on port
             self.drop_traffic_to_port(node, self.waltz_server.port)
 
-            # wait for 1 second to propagate any transaction processed in waltz server
-            # and verify that new transactions aren't processed
-            sleep(1)
+            #verify that new transactions aren't processed
+            sleep(interval)
             cur_high_watermark = self.get_storage_max_transaction_id(storage, port, partition)
-            sleep(max(interruption_duration - 1, 0))
+            sleep(max(interruption_duration - interval, 0))
             if self.is_max_transaction_id_updated(storage, port, partition, cur_high_watermark):
+                # delete added iptable rule as it is not removed with the end of waltz process
                 self.enable_traffic_to_port(node, self.waltz_server.port)
                 raise Exception('Network interruption failed')
 
