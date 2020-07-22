@@ -21,8 +21,8 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
         super(ConnectionInterruptionTest, self).__init__(test_context=test_context)
 
     @cluster(cluster_spec=MIN_CLUSTER_SPEC)
-    @parametrize(num_active_partitions=1, txn_per_client=100, num_clients=2, interval=600, timeout=360,
-                 interrupt_duration=10, num_interruptions=3, delay_between_interruptions=5)
+    @parametrize(num_active_partitions=1, txn_per_client=150, num_clients=2, interval=600, timeout=360,
+                 interrupt_duration=10, num_interruptions=3, delay_between_interruptions=25)
     @parametrize(num_active_partitions=4, txn_per_client=100, num_clients=2, interval=1000, timeout=300,
                  interrupt_duration=20, num_interruptions=1, delay_between_interruptions=20)
     def test_client_server_network_interruption(self, num_active_partitions, txn_per_client, num_clients, interval, timeout,
