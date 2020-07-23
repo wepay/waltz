@@ -67,14 +67,11 @@ public final class PerformanceCli extends SubcommandCli {
         private CountDownLatch allClientsReady;
         private CountDownLatch allMountComplete;
 
-        private Map<Integer, Long> partitionHighWaterMark;
-
         private RunProducers(String[] args) {
             super(args);
             this.totalResponseTimeMilli = new AtomicLong(0);
             this.lockPoolSize = DEFAULT_LOCK_POOL_SIZE;
             this.toMountClients = new HashSet<>();
-            this.partitionHighWaterMark = new HashMap<>();
         }
 
         @Override
@@ -116,9 +113,9 @@ public final class PerformanceCli extends SubcommandCli {
                             + "No transaction gets rejected when size is 0. Default to %d", DEFAULT_LOCK_POOL_SIZE))
                     .hasArg()
                     .build();
-            Option updateClientHighWaterMark = Option.builder("uc")
+            Option mountFromLatestHighWaterMark = Option.builder("uc")
                     .longOpt("up_to_date_watermark")
-                    .desc(String.format("Pretend that waltz client already knows previous transactions and thus does not need waltz server to send them back."))
+                    .desc(String.format("Waltz Client would be mounted from the latest HighWaterMark (for a partition) on Waltz"))
                     .build();
 
             txnSizeOption.setRequired(true);
@@ -128,7 +125,7 @@ public final class PerformanceCli extends SubcommandCli {
             cliCfgOption.setRequired(true);
             numActivePartitionOption.setRequired(false);
             lockPoolSizeOption.setRequired(false);
-            updateClientHighWaterMark.setRequired(false);
+            mountFromLatestHighWaterMark.setRequired(false);
 
             options.addOption(txnSizeOption);
             options.addOption(txnPerThreadOption);
@@ -137,7 +134,7 @@ public final class PerformanceCli extends SubcommandCli {
             options.addOption(cliCfgOption);
             options.addOption(numActivePartitionOption);
             options.addOption(lockPoolSizeOption);
-            options.addOption(updateClientHighWaterMark);
+            options.addOption(mountFromLatestHighWaterMark);
         }
 
         @Override
@@ -176,9 +173,9 @@ public final class PerformanceCli extends SubcommandCli {
                         throw new IllegalArgumentException("Found negative: lock-pool-size must be greater or equals to 0");
                     }
                 }
-                if (cmd.hasOption("up_to_date_watermark")) {
-                    partitionHighWaterMark = getHighWaterMark(partitionHighWaterMark, waltzClientConfig, numActivePartitions);
-                }
+                Map<Integer, Long> partitionHighWaterMarkMap = cmd.hasOption("up_to_date_watermark")
+                        ? getHighWaterMarkPerPartition(waltzClientConfig, numActivePartitions)
+                        : new HashMap<>();
 
                 int totalTxnSent = (txnPerThread + EXTRA_TRANSACTION_PER_THREAD) * numThread;
                 allClientsReady = new CountDownLatch(numThread);
@@ -187,7 +184,7 @@ public final class PerformanceCli extends SubcommandCli {
 
                 ExecutorService executor = Executors.newFixedThreadPool(numThread);
                 for (int i = 0; i < numThread; i++) {
-                    DummyCallbacks callbacks = new DummyCallbacks(partitionHighWaterMark);
+                    DummyCallbacks callbacks = new DummyCallbacks(partitionHighWaterMarkMap);
                     WaltzClient client = new WaltzClient(callbacks, waltzClientConfig);
                     toMountClients.add(client.clientId());
 
@@ -299,8 +296,8 @@ public final class PerformanceCli extends SubcommandCli {
          */
         private final class DummyCallbacks extends BaseCallbacks {
 
-            private DummyCallbacks(Map<Integer, Long> partitionHighWaterMark) {
-                super(partitionHighWaterMark);
+            private DummyCallbacks(Map<Integer, Long> partitionHighWaterMarkMap) {
+                super(partitionHighWaterMarkMap);
             }
 
             @Override
@@ -312,8 +309,8 @@ public final class PerformanceCli extends SubcommandCli {
                 }
                 // update client side high water mark
                 int partition = transaction.reqId.partitionId();
-                if (transaction.transactionId - 1 == partitionHighWaterMark.get(partition)) {
-                    partitionHighWaterMark.put(partition, transaction.transactionId);
+                if (transaction.transactionId - 1 == partitionHighWaterMarkMap.getOrDefault(partition, -1L)) {
+                    partitionHighWaterMarkMap.put(partition, transaction.transactionId);
                 }
             }
         }
@@ -378,7 +375,6 @@ public final class PerformanceCli extends SubcommandCli {
 
         private int numTxn;
         private CountDownLatch allTxnRead;
-        private Map<Integer, Long> partitionHighWaterMark = new HashMap<>();
 
         private RunConsumers(String[] args) {
             super(args);
@@ -407,22 +403,22 @@ public final class PerformanceCli extends SubcommandCli {
                             + "distributed among partition 0, 1 and 2. Default to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
                     .hasArg()
                     .build();
-            Option updateClientHighWaterMark = Option.builder("uc")
+            Option mountFromLatestHighWaterMark = Option.builder("uc")
                     .longOpt("up_to_date_watermark")
-                    .desc(String.format("Pretend that waltz client already knows previous transactions and thus does not need waltz server to send them back."))
+                    .desc(String.format("Waltz Client would be mounted from the latest HighWaterMark (for a partition) on Waltz"))
                     .build();
 
             txnSizeOption.setRequired(true);
             numTxnOption.setRequired(true);
             cliCfgOption.setRequired(true);
             numActivePartitionOption.setRequired(false);
-            updateClientHighWaterMark.setRequired(false);
+            mountFromLatestHighWaterMark.setRequired(false);
 
             options.addOption(txnSizeOption);
             options.addOption(numTxnOption);
             options.addOption(cliCfgOption);
             options.addOption(numActivePartitionOption);
-            options.addOption(updateClientHighWaterMark);
+            options.addOption(mountFromLatestHighWaterMark);
         }
 
         @Override
@@ -449,9 +445,9 @@ public final class PerformanceCli extends SubcommandCli {
                         throw new IllegalArgumentException("Number of active partitions must be greater of equals to 1");
                     }
                 }
-                if (cmd.hasOption("up_to_date_watermark")) {
-                    getHighWaterMark(partitionHighWaterMark, waltzClientConfig, numActivePartitions);
-                }
+                Map<Integer, Long> partitionHighWaterMarkMap = cmd.hasOption("up_to_date_watermark")
+                        ? getHighWaterMarkPerPartition(waltzClientConfig, numActivePartitions)
+                        : new HashMap<>();
 
                 // produce transactions to consume
                 // since we only care about consumer performance, we can create
@@ -460,13 +456,15 @@ public final class PerformanceCli extends SubcommandCli {
                 int txnPerThread = numTxn / numThread;
                 ExecutorService executor = Executors.newFixedThreadPool(numThread);
                 for (int i = 0; i < numThread; i++) {
-                    ProducerCallbacks callbacks = new ProducerCallbacks(partitionHighWaterMark);
+                    ProducerCallbacks callbacks = new ProducerCallbacks(partitionHighWaterMarkMap);
                     WaltzClient client = new WaltzClient(callbacks, waltzClientConfig);
+                    // result of numTxn / numThrea might not be a full number so last producer takes care of left out transactions
+                    txnPerThread = i < numThread - 1 ? txnPerThread : txnPerThread + numTxn % numThread;
                     executor.execute(new ProducerThread(txnPerThread, client));
                 }
 
                 // consume transactions when all committed
-                new ConsumerThread(waltzClientConfig).run();
+                new ConsumerThread(waltzClientConfig, partitionHighWaterMarkMap).run();
 
                 // wait until all transaction consumed
                 allTxnRead.await();
@@ -576,9 +574,11 @@ public final class PerformanceCli extends SubcommandCli {
 
             private WaltzClient consumer;
             private WaltzClientConfig config;
+            private Map<Integer, Long> partitionHighWaterMarkMap;
 
-            ConsumerThread(WaltzClientConfig config) {
+            ConsumerThread(WaltzClientConfig config, Map<Integer, Long> partitionHighWaterMarkMap) {
                 this.config = config;
+                this.partitionHighWaterMarkMap = partitionHighWaterMarkMap;
             }
 
             @Override
@@ -588,7 +588,7 @@ public final class PerformanceCli extends SubcommandCli {
                     allTxnReceived.await();
 
                     // consumer starts to receive feeds until allTxnRead count down to 0
-                    consumer = new WaltzClient(new ConsumerCallbacks(partitionHighWaterMark), config);
+                    consumer = new WaltzClient(new ConsumerCallbacks(partitionHighWaterMarkMap), config);
                 } catch (NumberFormatException ex) {
                     throw new SubCommandFailedException(ex);
                 } catch (Exception ex) {
@@ -612,8 +612,8 @@ public final class PerformanceCli extends SubcommandCli {
          */
         private final class ConsumerCallbacks extends BaseCallbacks {
 
-            private ConsumerCallbacks(Map<Integer, Long> partitionHighWaterMark) {
-                super(partitionHighWaterMark);
+            private ConsumerCallbacks(Map<Integer, Long> partitionHighWaterMarkMap) {
+                super(partitionHighWaterMarkMap);
             }
 
             @Override
@@ -633,16 +633,16 @@ public final class PerformanceCli extends SubcommandCli {
          */
         protected final class ProducerCallbacks extends BaseCallbacks {
 
-            private ProducerCallbacks(Map<Integer, Long> partitionHighWaterMark) {
-                super(partitionHighWaterMark);
+            private ProducerCallbacks(Map<Integer, Long> partitionHighWaterMarkMap) {
+                super(partitionHighWaterMarkMap);
             }
 
             @Override
             public void applyTransaction(Transaction transaction) {
                 // update client side high water mark
                 int partition = transaction.reqId.partitionId();
-                if (transaction.transactionId - 1 == partitionHighWaterMark.get(partition)) {
-                    partitionHighWaterMark.put(partition, transaction.transactionId);
+                if (transaction.transactionId - 1 == partitionHighWaterMarkMap.getOrDefault(partition, -1L)) {
+                    partitionHighWaterMarkMap.put(partition, transaction.transactionId);
                 }
             }
         }
@@ -669,18 +669,17 @@ public final class PerformanceCli extends SubcommandCli {
          */
         protected abstract class BaseCallbacks implements WaltzClientCallbacks {
 
-            protected Map<Integer, Long> partitionHighWaterMark = new HashMap<>();
+            protected Map<Integer, Long> partitionHighWaterMarkMap = new HashMap<>();
 
-            private BaseCallbacks(Map<Integer, Long> partitionHighWaterMark) {
-                for (Map.Entry<Integer, Long> entry : partitionHighWaterMark.entrySet()) {
-                    this.partitionHighWaterMark.put(entry.getKey(), entry.getValue());
+            private BaseCallbacks(Map<Integer, Long> partitionHighWaterMarkMap) {
+                for (Map.Entry<Integer, Long> entry : partitionHighWaterMarkMap.entrySet()) {
+                    this.partitionHighWaterMarkMap.put(entry.getKey(), entry.getValue());
                 }
             }
 
             @Override
             public long getClientHighWaterMark(int partitionId) {
-                partitionHighWaterMark.putIfAbsent(partitionId, -1L);
-                return partitionHighWaterMark.get(partitionId);
+                return partitionHighWaterMarkMap.getOrDefault(partitionId, -1L);
             }
 
             @Override
@@ -703,15 +702,16 @@ public final class PerformanceCli extends SubcommandCli {
         }
     }
 
-    private static Map<Integer, Long> getHighWaterMark(Map<Integer, Long> partitionHighWaterMark, WaltzClientConfig config, int numActivePartitions) throws Exception {
+    private static Map<Integer, Long> getHighWaterMarkPerPartition(WaltzClientConfig config, int numActivePartitions) throws Exception {
+        Map<Integer, Long> partitionHighWaterMarkMap = new HashMap<>();
         WaltzClient client = null;
         try {
             ClientCli.DummyTxnCallbacks callbacks = new ClientCli.DummyTxnCallbacks();
             client = new WaltzClient(callbacks, config);
             for (int partition = 0; partition < numActivePartitions; partition++) {
-                partitionHighWaterMark.put(partition, Long.max(-1L, client.getHighWaterMark(partition)));
+                partitionHighWaterMarkMap.put(partition, Long.max(-1L, client.getHighWaterMark(partition)));
             }
-            return partitionHighWaterMark;
+            return partitionHighWaterMarkMap;
         } finally {
             if (client != null) {
                 client.close();
