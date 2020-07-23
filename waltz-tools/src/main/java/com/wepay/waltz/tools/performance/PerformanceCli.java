@@ -10,7 +10,7 @@ import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.common.util.Cli;
 import com.wepay.waltz.common.util.SubcommandCli;
 import com.wepay.waltz.exception.SubCommandFailedException;
-import com.wepay.waltz.tools.client.ClientCli;
+import com.wepay.waltz.tools.UtilsCli.DummyTxnCallbacks;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
@@ -114,7 +114,7 @@ public final class PerformanceCli extends SubcommandCli {
                     .hasArg()
                     .build();
             Option mountFromLatestHighWaterMark = Option.builder("uc")
-                    .longOpt("up_to_date_watermark")
+                    .longOpt("mount_from_latest")
                     .desc(String.format("Waltz Client would be mounted from the latest HighWaterMark (for a partition) on Waltz"))
                     .build();
 
@@ -173,7 +173,7 @@ public final class PerformanceCli extends SubcommandCli {
                         throw new IllegalArgumentException("Found negative: lock-pool-size must be greater or equals to 0");
                     }
                 }
-                Map<Integer, Long> partitionHighWaterMarkMap = cmd.hasOption("up_to_date_watermark")
+                Map<Integer, Long> partitionHighWaterMarkMap = cmd.hasOption("mount_from_latest")
                         ? getHighWaterMarkPerPartition(waltzClientConfig, numActivePartitions)
                         : new HashMap<>();
 
@@ -404,7 +404,7 @@ public final class PerformanceCli extends SubcommandCli {
                     .hasArg()
                     .build();
             Option mountFromLatestHighWaterMark = Option.builder("uc")
-                    .longOpt("up_to_date_watermark")
+                    .longOpt("mount_from_latest")
                     .desc(String.format("Waltz Client would be mounted from the latest HighWaterMark (for a partition) on Waltz"))
                     .build();
 
@@ -445,7 +445,7 @@ public final class PerformanceCli extends SubcommandCli {
                         throw new IllegalArgumentException("Number of active partitions must be greater of equals to 1");
                     }
                 }
-                Map<Integer, Long> partitionHighWaterMarkMap = cmd.hasOption("up_to_date_watermark")
+                Map<Integer, Long> partitionHighWaterMarkMap = cmd.hasOption("mount_from_latest")
                         ? getHighWaterMarkPerPartition(waltzClientConfig, numActivePartitions)
                         : new HashMap<>();
 
@@ -710,7 +710,7 @@ public final class PerformanceCli extends SubcommandCli {
         Map<Integer, Long> partitionHighWaterMarkMap = new HashMap<>();
         WaltzClient client = null;
         try {
-            ClientCli.DummyTxnCallbacks callbacks = new ClientCli.DummyTxnCallbacks();
+            DummyTxnCallbacks callbacks = new DummyTxnCallbacks();
             client = new WaltzClient(callbacks, config);
             for (int partition = 0; partition < numActivePartitions; partition++) {
                 partitionHighWaterMarkMap.put(partition, Long.max(-1L, client.getHighWaterMark(partition)));

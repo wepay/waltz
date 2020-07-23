@@ -122,45 +122,23 @@ public class PerformanceCliTest {
 
             String expectedCmdOutput = "Read 10 transactions";
             assertTrue(outContent.toString("UTF-8").contains(expectedCmdOutput));
-        } finally {
-            helper.closeAll();
-        }
-    }
 
-    @Test
-    public void testRunConsumerUpToDateWaterMark() throws Exception {
-        Properties properties =  new Properties();
-        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/consumer/perf/cli/test");
-        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, "3");
-        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
+            String[] argsMountLatest = {
+                    "test-consumers",
+                    "--txn-size",
+                    "128",
+                    "--num-txn",
+                    "10",
+                    "--cli-config-path",
+                    configFilePath,
+                    "--num-active-partitions",
+                    "1",
+                    "--mount_from_latest"
+            };
+            PerformanceCli.testMain(argsMountLatest);
 
-        IntegrationTestHelper helper = new IntegrationTestHelper(properties);
-        Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
-                helper.getZkSessionTimeout(), helper.getSslSetup());
-        String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
-        String[] args = {
-                "test-consumers",
-                "--txn-size",
-                "128",
-                "--num-txn",
-                "10",
-                "--cli-config-path",
-                configFilePath,
-                "--num-active-partitions",
-                "1",
-                "--up_to_date_watermark"
-        };
-
-        try {
-            helper.startZooKeeperServer();
-            helper.startWaltzStorage(true);
-            helper.setWaltzStorageAssignment(true);
-            helper.startWaltzServer(true);
-
-            PerformanceCli.testMain(args);
-
-            String expectedCmdOutput = "Read 10 transactions";
             assertTrue(outContent.toString("UTF-8").contains(expectedCmdOutput));
+
         } finally {
             helper.closeAll();
         }

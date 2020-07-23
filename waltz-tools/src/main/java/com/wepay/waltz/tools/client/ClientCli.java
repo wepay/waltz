@@ -11,6 +11,7 @@ import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.common.util.Cli;
 import com.wepay.waltz.common.util.SubcommandCli;
 import com.wepay.waltz.exception.SubCommandFailedException;
+import com.wepay.waltz.tools.UtilsCli.DummyTxnCallbacks;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
@@ -553,25 +554,7 @@ public final class ClientCli extends SubcommandCli {
         return client.getHighWaterMark(partitionId);
     }
 
-    /**
-     * A transaction callback to help construct {@link WaltzClient}. It is dummy because
-     * it is not suppose to receive any callbacks.
-     */
-    public static final class DummyTxnCallbacks implements WaltzClientCallbacks {
 
-        @Override
-        public long getClientHighWaterMark(int partitionId) {
-            return -1L;
-        }
-
-        @Override
-        public void applyTransaction(Transaction transaction) {
-        }
-
-        @Override
-        public void uncaughtException(int partitionId, long transactionId, Throwable exception) {
-        }
-    }
 
     public static void testMain(String[] args) {
         new ClientCli(args, true).processCmd();
