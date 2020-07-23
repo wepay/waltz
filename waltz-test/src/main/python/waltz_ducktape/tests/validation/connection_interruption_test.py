@@ -38,7 +38,7 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
         node.account.ssh_capture("sudo iptables -D INPUT -p tcp --destination-port {} -j DROP".format(port))
 
     def client_server_network_interruption(self, validation_cmd, timeout, interrupt_duration, num_interruptions,
-                                                  delay_between_interruptions, num_active_partitions, processing_duration):
+                                           delay_between_interruptions, num_active_partitions, processing_duration):
         """
         Set up waltz and interrupt network between a waltz client node and a server node.
 
