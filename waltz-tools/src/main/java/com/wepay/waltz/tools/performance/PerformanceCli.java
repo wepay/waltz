@@ -454,13 +454,17 @@ public final class PerformanceCli extends SubcommandCli {
                 // transactions with multiple producer to expedite the test
                 int numThread = numTxn > DEFAULT_NUM_PRODUCERS ? DEFAULT_NUM_PRODUCERS : numTxn;
                 int txnPerThread = numTxn / numThread;
+                int leftOutTransactions = numTxn % numThread;
                 ExecutorService executor = Executors.newFixedThreadPool(numThread);
                 for (int i = 0; i < numThread; i++) {
                     ProducerCallbacks callbacks = new ProducerCallbacks(partitionHighWaterMarkMap);
                     WaltzClient client = new WaltzClient(callbacks, waltzClientConfig);
-                    // result of numTxn / numThrea might not be a full number so last producer takes care of left out transactions
-                    txnPerThread = i < numThread - 1 ? txnPerThread : txnPerThread + numTxn % numThread;
-                    executor.execute(new ProducerThread(txnPerThread, client));
+                    if (leftOutTransactions > 0) {
+                        executor.execute(new ProducerThread(txnPerThread + 1, client));
+                        leftOutTransactions--;
+                    } else {
+                        executor.execute(new ProducerThread(txnPerThread, client));
+                    }
                 }
 
                 // consume transactions when all committed
