@@ -30,9 +30,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.io.InputStreamReader;
-import java.io.BufferedReader;
-import java.util.stream.Collectors;
 
 
 import static java.lang.Math.toIntExact;
@@ -50,12 +47,12 @@ public final class ClientCli extends SubcommandCli {
                 new Subcommand(HighWaterMark.NAME, HighWaterMark.DESCRIPTION, HighWaterMark::new),
                 new Subcommand(Producer.NAME, Producer.DESCRIPTION, Producer::new),
                 new Subcommand(Consumer.NAME, Consumer.DESCRIPTION, Consumer::new),
-                new Subcommand(ClientProcessesSetup.NAME, ClientProcessesSetup.DESCRIPTION, ClientProcessesSetup::new)
+                new Subcommand(ClientProcessesCreation.NAME, ClientProcessesCreation.DESCRIPTION, ClientProcessesCreation::new)
         ));
     }
 
     /**
-     * Use {@code ClientProcessesSetup} command to submit transactions to Waltz
+     * Use {@code ClientProcessesCreation} command to submit transactions to Waltz
      * server for testing, and consume the transactions for validation,
      * including transaction data and optimistic locking. Unlike when running
      * {@code Validate} every single client (producer & consumer) is an independent
@@ -67,13 +64,13 @@ public final class ClientCli extends SubcommandCli {
      * client is done the same way as in {@code Validate}. Main thread waits for all processes to finish
      * and checks their input stream for validation.
      */
-    private static final class ClientProcessesSetup extends Cli {
+    private static final class ClientProcessesCreation extends Cli {
         private static final String NAME = "client-processes-setup";
         private static final String DESCRIPTION = "Creates multiple processes of producers and consumers";
         private static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
         private static final String DEFAULT_Dlog4j_CONFIG_PATH = "/etc/waltz-client/waltz-log4j.cfg";
 
-        private ClientProcessesSetup(String[] args) {
+        private ClientProcessesCreation(String[] args) {
             super(args);
         }
 
@@ -151,25 +148,20 @@ public final class ClientCli extends SubcommandCli {
                 int numOfProducers = Integer.parseInt(cmd.getOptionValue("num-producers"));
                 int numOfConsumers = Integer.parseInt(cmd.getOptionValue("num-consumers"));
 
-                //Start Producers
+                // Start Producers
                 for (int i = 0; i < numOfProducers; i++) {
                     Process p = Runtime.getRuntime().exec(producerString);
                     clients.add(p);
                 }
-                //Start Consumers
+                // Start Consumers
                 for (int i = 0; i < numOfConsumers; i++) {
                     Process p = Runtime.getRuntime().exec(consumerString);
                     clients.add(p);
                 }
-                //Wait till all clients finish
+                // Wait till all clients finish
                 for (Process p : clients) {
                     p.waitFor();
-                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), "UTF-8"));
-                    String output = br.lines().collect(Collectors.joining());
-                    br.close();
-                    if (!output.contains("success")) {
-                        throw new Exception("At least one client crashed");
-                    }
+                    assert p.exitValue() == 0 : "At least one client crashed";
                 }
             }  catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Transaction validation failed: %s", e.getMessage()));
@@ -317,7 +309,6 @@ public final class ClientCli extends SubcommandCli {
                 consumeAndValidate(waltzClientConfig);
 
                 checkUncaughtExceptions();
-                System.out.println("success");
             } catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Transaction validation failed: %s", e.getMessage()));
             }
@@ -439,7 +430,6 @@ public final class ClientCli extends SubcommandCli {
                 produceTransactions(numActivePartitions, 1, txnPerClient, avgInterval, waltzClientConfig);
 
                 checkUncaughtExceptions();
-                System.out.println(" success");
             } catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Transaction validation failed: %s", e.getMessage()));
             }
