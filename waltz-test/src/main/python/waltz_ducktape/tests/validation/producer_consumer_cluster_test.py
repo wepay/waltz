@@ -23,27 +23,6 @@ class ProducerConsumerClusterTest(ProduceConsumeValidateTest):
     @parametrize(num_active_partitions=1, txn_per_client=75, num_producers=3, num_consumers=2, interval=250, timeout=360)
     @parametrize(num_active_partitions=4, txn_per_client=75, num_producers=2, num_consumers=2, interval=500, timeout=360)
     def test_produce_consume_no_torture(self, num_active_partitions, txn_per_client, num_producers, num_consumers, interval, timeout):
-        self.run_produce_consume_validate(lambda: self.setup_client_side(num_active_partitions, txn_per_client, num_producers, num_consumers, interval, timeout))
-
-
-
-    def setup_client_side(self, num_active_partitions, txn_per_client, num_producers, num_consumers, interval, timeout):
-        previous_high_watermark = self.get_watermark_for_active_partitions(num_active_partitions)
-        validation_producer_consumer_cluster = self.client_cli.validate_consumer_producer_cluster_cmd(num_active_partitions, txn_per_client, num_producers, num_consumers, interval, previous_high_watermark)
-
-        self.verifiable_client.start(validation_producer_consumer_cluster)
-
-        wait_until(lambda: self.verifiable_client.task_complete() == True, timeout_sec=timeout,
-                   err_msg="verifiable_client failed to complete task in %d seconds." % timeout)
-
-    def get_watermark_for_active_partitions(self, num_active_partitions):
-        watermarks = []
-        admin_port = self.waltz_storage.admin_port
-        port = self.waltz_storage.port
-
-        storage_node_hostname = self.waltz_storage.nodes[0].account.ssh_hostname
-        for partition in range(num_active_partitions):
-            watermark = self.get_storage_max_transaction_id(self.get_host(storage_node_hostname, admin_port), port, partition, False)
-            watermarks.append(max(watermark, -1))
-        return watermarks
+        validation_cmd = self.client_cli.validate_consumer_producer_cluster_cmd(num_active_partitions, txn_per_client, num_producers, num_consumers, interval)
+        self.run_produce_consume_validate(lambda: self.simple_validation_func(validation_cmd, timeout));
 

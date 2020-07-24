@@ -37,7 +37,7 @@ class ClientCli(Cli):
         ]
         return self.build_cmd(cmd_arr)
 
-    def validate_consumer_producer_cluster_cmd(self, num_active_partitions, txn_per_producer, num_producers, num_consumers, interval, previous_high_watermark):
+    def validate_consumer_producer_cluster_cmd(self, num_active_partitions, txn_per_producer, num_producers, num_consumers, interval):
         """
         Return validation cli command to submit and validate client transactions, which
         includes validating high water mark, transaction data and optimistic lock.
@@ -51,7 +51,6 @@ class ClientCli(Cli):
             --interval <average interval(millisecond) between transactions> \
             --cli-config-path <client cli config file path> \
             --num-active-partitions <number of partitions to interact with> \
-            --previous-high-watermark <array of active partition high watermarks value>
         """
         cmd_arr = [
             "java -cp /usr/local/waltz/waltz-uber.jar ",
@@ -63,7 +62,6 @@ class ClientCli(Cli):
             "--interval", interval,
             "--cli-config-path", self.cli_config_path,
             "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else "",
-            "--previous-high-watermark \"{}\"".format(" ".join(str(watermark) for watermark in previous_high_watermark)) if num_active_partitions is not None else "",
             "--dlog4j-configuration-path /etc/waltz-client/waltz-log4j.cfg"
         ]
         return self.build_cmd(cmd_arr)
