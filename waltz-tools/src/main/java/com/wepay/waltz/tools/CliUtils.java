@@ -4,7 +4,7 @@ import com.wepay.waltz.client.Transaction;
 import com.wepay.waltz.client.WaltzClient;
 import com.wepay.waltz.client.WaltzClientCallbacks;
 
-public final class UtilsCli {
+public final class CliUtils {
 
     /**
      * A transaction callback to help construct {@link WaltzClient}. It is dummy because

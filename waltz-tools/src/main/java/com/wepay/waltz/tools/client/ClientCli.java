@@ -11,7 +11,7 @@ import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.common.util.Cli;
 import com.wepay.waltz.common.util.SubcommandCli;
 import com.wepay.waltz.exception.SubCommandFailedException;
-import com.wepay.waltz.tools.UtilsCli.DummyTxnCallbacks;
+import com.wepay.waltz.tools.CliUtils.DummyTxnCallbacks;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;

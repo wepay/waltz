@@ -122,6 +122,7 @@ public class PerformanceCliTest {
 
             String expectedCmdOutput = "Read 10 transactions";
             assertTrue(outContent.toString("UTF-8").contains(expectedCmdOutput));
+            outContent.reset();
 
             String[] argsMountLatest = {
                     "test-consumers",

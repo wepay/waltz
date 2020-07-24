@@ -26,7 +26,7 @@ class PerformanceCli(Cli):
             --cli-config-path <the path to cli config file> \
             --lock-pool-size <size of lock pool> \
             --num-active-partitions <number of partitions to interact with>
-            --mount_from_latest client will be initialized with up-to-date water mark from waltz server
+            --mount_from_latest Waltz Client would be mounted from the latest HighWaterMark (for a partition) on Waltz
         """
         cmd_arr = [
             "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
@@ -52,7 +52,7 @@ class PerformanceCli(Cli):
             --num-txn <number of transactions to send> \
             --cli-config-path <the path to cli config file> \
             --num-active-partitions <number of active partitions>
-            --mount_from_latest client will be initialized with up-to-date water mark from waltz server
+            --mount_from_latest Waltz Client would be mounted from the latest HighWaterMark (for a partition) on Waltz
         """
         cmd_arr = [
             "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),

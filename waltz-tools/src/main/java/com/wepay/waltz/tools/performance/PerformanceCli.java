@@ -10,7 +10,7 @@ import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.common.util.Cli;
 import com.wepay.waltz.common.util.SubcommandCli;
 import com.wepay.waltz.exception.SubCommandFailedException;
-import com.wepay.waltz.tools.UtilsCli.DummyTxnCallbacks;
+import com.wepay.waltz.tools.CliUtils.DummyTxnCallbacks;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
@@ -113,7 +113,7 @@ public final class PerformanceCli extends SubcommandCli {
                             + "No transaction gets rejected when size is 0. Default to %d", DEFAULT_LOCK_POOL_SIZE))
                     .hasArg()
                     .build();
-            Option mountFromLatestHighWaterMark = Option.builder("uc")
+            Option mountFromLatestHighWaterMark = Option.builder("ml")
                     .longOpt("mount_from_latest")
                     .desc(String.format("Waltz Client would be mounted from the latest HighWaterMark (for a partition) on Waltz"))
                     .build();
@@ -403,7 +403,7 @@ public final class PerformanceCli extends SubcommandCli {
                             + "distributed among partition 0, 1 and 2. Default to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
                     .hasArg()
                     .build();
-            Option mountFromLatestHighWaterMark = Option.builder("uc")
+            Option mountFromLatestHighWaterMark = Option.builder("ml")
                     .longOpt("mount_from_latest")
                     .desc(String.format("Waltz Client would be mounted from the latest HighWaterMark (for a partition) on Waltz"))
                     .build();
