@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 
 import static java.lang.Math.toIntExact;
@@ -107,12 +108,6 @@ public final class ClientCli extends SubcommandCli {
                             + "be evenly distributed among partition 0, 1 and 2. Default to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
                     .hasArg()
                     .build();
-            Option previousHighWaterMarkValue = Option.builder("phw")
-                    .longOpt("previous-high-watermark")
-                    .desc("Specify what was the high watermark before this test setup. "
-                            + "Expected format for 4 active partitions is as follows: \"-1 -1 42 -1\"")
-                    .hasArg()
-                    .build();
             Option dlog4jConfigurationPath = Option.builder("d4j")
                     .longOpt("dlog4j-configuration-path")
                     .desc("Specify dlog4j configuration path, default: /etc/waltz-client/waltz-log4j.cfg")
@@ -125,7 +120,6 @@ public final class ClientCli extends SubcommandCli {
             intervalOption.setRequired(true);
             cfgPathOption.setRequired(true);
             numActivePartitionOption.setRequired(false);
-            previousHighWaterMarkValue.setRequired(false);
             dlog4jConfigurationPath.setRequired(false);
 
             options.addOption(txnPerProducerOption);
@@ -134,7 +128,6 @@ public final class ClientCli extends SubcommandCli {
             options.addOption(intervalOption);
             options.addOption(cfgPathOption);
             options.addOption(numActivePartitionOption);
-            options.addOption(previousHighWaterMarkValue);
             options.addOption(dlog4jConfigurationPath);
         }
 
@@ -142,8 +135,9 @@ public final class ClientCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             try {
                 ArrayList<Process> clients = new ArrayList<>();
-                String[] producerString = createProducerString(cmd);
-                String[] consumerString = createConsumerString(cmd);
+                long[] watermarks = getCurrenHightWatermarks(cmd);
+                String[] producerString = createProducerString(cmd, watermarks);
+                String[] consumerString = createConsumerString(cmd, watermarks);
 
                 int numOfProducers = Integer.parseInt(cmd.getOptionValue("num-producers"));
                 int numOfConsumers = Integer.parseInt(cmd.getOptionValue("num-consumers"));
@@ -174,7 +168,7 @@ public final class ClientCli extends SubcommandCli {
             return buildUsage(NAME, DESCRIPTION, getOptions());
         }
 
-        private String[] createProducerString(CommandLine cmd) throws SubCommandFailedException {
+        private String[] createProducerString(CommandLine cmd, long[] watermarks) throws SubCommandFailedException {
             String cfgPath = cmd.hasOption("dlog4j-configuration-path") ? cmd.getOptionValue("dlog4j-configuration-path") : DEFAULT_Dlog4j_CONFIG_PATH;
             String numOfActivePartitions = cmd.hasOption("num-active-partitions") ? cmd.getOptionValue("num-active-partitions") : String.valueOf(DEFAULT_NUMBER_ACTIVE_PARTITIONS);
 
@@ -185,12 +179,12 @@ public final class ClientCli extends SubcommandCli {
                 "--num-clients", cmd.getOptionValue("num-producers"),
                 "--cli-config-path", cmd.getOptionValue("cli-config-path"),
                 "--num-active-partitions", numOfActivePartitions,
-                "--previous-high-watermark", cmd.getOptionValue("previous-high-watermark"),
+                "--previous-high-watermark", Arrays.stream(watermarks).mapToObj(String::valueOf).collect(Collectors.joining(" ")),
                 "--interval", cmd.getOptionValue("interval")
             };
         }
 
-        private String[] createConsumerString(CommandLine cmd) throws SubCommandFailedException {
+        private String[] createConsumerString(CommandLine cmd, long[] watermarks) throws SubCommandFailedException {
             String cfgPath = cmd.hasOption("dlog4j-configuration-path") ? cmd.getOptionValue("dlog4j-configuration-path") : DEFAULT_Dlog4j_CONFIG_PATH;
             String numOfActivePartitions = cmd.hasOption("num-active-partitions") ? cmd.getOptionValue("num-active-partitions") : String.valueOf(DEFAULT_NUMBER_ACTIVE_PARTITIONS);
 
@@ -201,8 +195,19 @@ public final class ClientCli extends SubcommandCli {
                     "--num-clients", cmd.getOptionValue("num-producers"),
                     "--cli-config-path", cmd.getOptionValue("cli-config-path"),
                     "--num-active-partitions", numOfActivePartitions,
-                    "--previous-high-watermark", cmd.getOptionValue("previous-high-watermark")
+                    "--previous-high-watermark", Arrays.stream(watermarks).mapToObj(String::valueOf).collect(Collectors.joining(" "))
             };
+        }
+
+        private long[] getCurrenHightWatermarks(CommandLine cmd) throws Exception {
+            int numOfActivePartitions = cmd.hasOption("num-active-partitions") ? Integer.parseInt(cmd.getOptionValue("num-active-partitions")) : DEFAULT_NUMBER_ACTIVE_PARTITIONS;
+            long[] highWaterMarks = new long[numOfActivePartitions];
+            String configFilePath = cmd.getOptionValue("cli-config-path");
+            WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath);
+            for (int i = 0; i < numOfActivePartitions; i++) {
+                highWaterMarks[i] = getHighWaterMark(i, waltzClientConfig);
+            }
+            return highWaterMarks;
         }
     }
 
