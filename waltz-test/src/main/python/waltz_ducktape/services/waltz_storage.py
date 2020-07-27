@@ -57,4 +57,4 @@ class WaltzStorageService(BaseWaltzService):
     def render_service_config_file(self):
         return self.render('waltz_storage.yaml', port=self.port, admin_port=self.admin_port, jetty_port=self.jetty_port,
                            data_directory=self.data_dir, cluster_num_partitions=self.cluster_num_partitions,
-                           cluster_key=self.cluster_key, zk_connect=self.zk)
+                           cluster_key=self.cluster_key, zk_connect=self.zk, cluster_root=self.cluster_root)

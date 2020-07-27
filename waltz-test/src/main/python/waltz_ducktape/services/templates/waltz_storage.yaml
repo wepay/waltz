@@ -17,6 +17,7 @@ storage:
 cluster:
     numPartitions: {{ cluster_num_partitions }}
     key: {{ cluster_key }}
+    root: {{ cluster_root }}
 
 zookeeper:
     connectString: {{ zk_connect }}
