@@ -17,3 +17,7 @@ storage:
 cluster:
     numPartitions: {{ cluster_num_partitions }}
     key: {{ cluster_key }}
+
+zookeeper:
+    connectString: {{ zk_connect }}
+    sessionTimeout: 30000
