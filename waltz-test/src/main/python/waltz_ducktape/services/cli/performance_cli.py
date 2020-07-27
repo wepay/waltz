@@ -13,7 +13,7 @@ class PerformanceCli(Cli):
         """
         super(PerformanceCli, self).__init__(cli_config_path)
 
-    def producer_test_cmd(self, txn_size, txn_per_thread, num_thread, interval, lock_pool_size=None, num_active_partitions=None):
+    def producer_test_cmd(self, config_file_dir, txn_size, txn_per_thread, num_thread, interval, lock_pool_size=None, num_active_partitions=None):
         """
         Return producer performance test command:
 
@@ -28,7 +28,7 @@ class PerformanceCli(Cli):
             --num-active-partitions <number of partitions to interact with>
         """
         cmd_arr = [
-            "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
+            "java -Dlog4j.configuration=file:{}/waltz-log4j.cfg".format(config_file_dir), self.java_cli_class_name(),
             "test-producers",
             "--txn-size", txn_size,
             "--txn-per-thread", txn_per_thread,
@@ -40,7 +40,7 @@ class PerformanceCli(Cli):
         ]
         return self.build_cmd(cmd_arr)
 
-    def consumer_test_cmd(self, txn_size, num_txn, num_active_partitions=None):
+    def consumer_test_cmd(self, config_file_dir, txn_size, num_txn, num_active_partitions=None):
         """
         Return consumer performance test command:
 
@@ -52,7 +52,7 @@ class PerformanceCli(Cli):
             --num-active-partitions <number of active partitions>
         """
         cmd_arr = [
-            "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
+            "java -Dlog4j.configuration=file:{}/waltz-log4j.cfg".format(config_file_dir), self.java_cli_class_name(),
             "test-consumers",
             "--txn-size", txn_size,
             "--num-txn", num_txn,
