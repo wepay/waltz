@@ -13,7 +13,7 @@ class ClientCli(Cli):
         """
         super(ClientCli, self).__init__(cli_config_path)
 
-    def validate_txn_cmd(self, num_active_partitions, txn_per_client, num_clients, interval):
+    def validate_txn_cmd(self, log_file_path, num_active_partitions, txn_per_client, num_clients, interval):
         """
         Return validation cli command to submit and validate transactions, which
         includes validating high water mark, transaction data and optimistic lock.
@@ -27,7 +27,7 @@ class ClientCli(Cli):
             --num-active-partitions <number of partitions to interact with>
         """
         cmd_arr = [
-            "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
+            "java -Dlog4j.configuration=file:{}".format(log_file_path), self.java_cli_class_name(),
             "validate",
             "--txn-per-client", txn_per_client,
             "--num-clients", num_clients,

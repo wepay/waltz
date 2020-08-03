@@ -31,14 +31,13 @@ class ProduceConsumeValidateTest(WaltzTest):
         self.num_storage_nodes = num_storage_nodes
         self.num_server_nodes = num_server_nodes
         self.num_client_nodes = num_client_nodes
+        self.waltz_storage = self.get_storage_service(self.num_storage_nodes)
         self.waltz_server = self.get_server_service(cluster_num_partitions, self.num_server_nodes)
         self.verifiable_client = self.get_verifiable_client(self.num_client_nodes)
-        # waltz storage will be initiated in reset_cluster()
-        # because cluster key is generated after created cluster
-        self.waltz_storage = None
 
         # initialize waltz cli instances
         self.admin_node = self.waltz_server.get_admin_node()
+        self.log_file_path = self.verifiable_client.log_file_path()
         self.cli_config_path = self.waltz_server.cli_config_file_path()
         self.client_config_path = self.verifiable_client.config_file_path()
         self.zk_cli = ZkCli(self.admin_node, self.cli_config_path)
@@ -114,9 +113,6 @@ class ProduceConsumeValidateTest(WaltzTest):
 
         self.logger.info("Creating Waltz cluster: {}".format(cluster_name))
         self.zk_cli.create_cluster(cluster_name, cluster_num_partitions)
-
-        cluster_key = self.get_cluster_key()
-        self.waltz_storage = self.get_storage_service(cluster_key, cluster_num_partitions, self.num_storage_nodes)
 
     def stop_waltz_client(self):
         self.verifiable_client.stop()

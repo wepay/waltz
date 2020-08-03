@@ -1,0 +1,16 @@
+[Unit]
+Description=waltz-server
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=waltz
+ExecStart=/bin/java \
+    -Dlog4j.configuration=file:/etc/waltz/waltz-log4j.cfg \
+    -cp /usr/local/waltz/waltz-uber.jar \
+    com.wepay.waltz.server.WaltzServer /etc/waltz/waltz_server.yml
+
+[Install]
+WantedBy=multi-user.target

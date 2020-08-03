@@ -13,7 +13,8 @@ class PerformanceCli(Cli):
         """
         super(PerformanceCli, self).__init__(cli_config_path)
 
-    def producer_test_cmd(self, txn_size, txn_per_thread, num_thread, interval, lock_pool_size=None, num_active_partitions=None, mount_from_latest=None):
+    def producer_test_cmd(self, log_file_path, txn_size, txn_per_thread, num_thread, interval, lock_pool_size=None,
+                          num_active_partitions=None, mount_from_latest=None):
         """
         Return producer performance test command:
 
@@ -29,7 +30,7 @@ class PerformanceCli(Cli):
             --mount_from_latest Waltz Client would be mounted from the latest HighWaterMark (for a partition) on Waltz
         """
         cmd_arr = [
-            "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
+            "java -Dlog4j.configuration=file:{}".format(log_file_path), self.java_cli_class_name(),
             "test-producers",
             "--txn-size", txn_size,
             "--txn-per-thread", txn_per_thread,
@@ -42,7 +43,7 @@ class PerformanceCli(Cli):
         ]
         return self.build_cmd(cmd_arr)
 
-    def consumer_test_cmd(self, txn_size, num_txn, num_active_partitions=None, mount_from_latest=None):
+    def consumer_test_cmd(self, log_file_path, txn_size, num_txn, num_active_partitions=None, mount_from_latest=None):
         """
         Return consumer performance test command:
 
@@ -55,7 +56,7 @@ class PerformanceCli(Cli):
             --mount_from_latest Waltz Client would be mounted from the latest HighWaterMark (for a partition) on Waltz
         """
         cmd_arr = [
-            "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
+            "java -Dlog4j.configuration=file:{}".format(log_file_path), self.java_cli_class_name(),
             "test-consumers",
             "--txn-size", txn_size,
             "--num-txn", num_txn,

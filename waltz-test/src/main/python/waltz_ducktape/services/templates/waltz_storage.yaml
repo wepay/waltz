@@ -6,14 +6,16 @@ storage:
     segment.size.threshold: 268435456
     ssl:
         keyStore:
-            location: /etc/waltz-storage/keystore.jks
-            password: devops
+            location: {{ ssl_keystore_loc }}
+            password: {{ ssl_keystore_pwd }}
             type: JKS
         trustStore:
-            location: /etc/waltz-storage/truststore.jks
-            password: devops
+            location: {{ ssl_truststore_loc }}
+            password: {{ ssl_truststore_pwd }}
             type: JKS
 
-cluster:
-    numPartitions: {{ cluster_num_partitions }}
-    key: {{ cluster_key }}
+cluster.root: {{ cluster_root }}
+
+zookeeper:
+    connectString: {{ zk_connect }}
+    sessionTimeout: 30000

@@ -1,3 +1,5 @@
 # prepare keystore and truststore file
-sudo cp /vagrant/keystore.jks /etc/waltz-server
-sudo cp /vagrant/truststore.jks /etc/waltz-server
+sudo mkdir /etc/waltz
+sudo chmod a+w /etc/waltz
+sudo cp /vagrant/"$(hostname)".jks /etc/waltz/keystore.jks
+sudo cp /vagrant/truststore.jks /etc/waltz

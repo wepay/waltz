@@ -28,6 +28,7 @@ class BaseWaltzService(Service):
         super(BaseWaltzService, self).__init__(context, cluster_spec=cluster_spec)
 
     def start_node(self, node):
+        self.load_service_file(node)
         self.chown_config_file_dir(node)
         self.load_service_config_file(node)
         self.load_log_config_file(node)
@@ -70,6 +71,13 @@ class BaseWaltzService(Service):
         # Suppose we want to put config file under /etc/waltz-*,
         # make self the directory owner
         node.account.ssh("sudo chown -R `whoami` {}".format(self.config_file_dir))
+
+    def load_service_file(self, node):
+        node.account.ssh("sudo chown -R `whoami` /etc/systemd/system")
+        service_file = self.render_service_file()
+        service_file_path = self.service_file_path()
+        node.account.ssh("sudo rm -rf {}".format(service_file_path))
+        node.account.create_file(service_file_path, service_file)
 
     def load_service_config_file(self, node):
         # Load config file.
@@ -121,7 +129,10 @@ class BaseWaltzService(Service):
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
     def service_config_file_path(self):
-        return "{}/{}.yml".format(self.config_file_dir, "config")
+        raise NotImplementedError
+
+    def service_file_path(self):
+        raise NotImplementedError
 
     def log_file_path(self):
         return "{}/waltz-log4j.cfg".format(self.config_file_dir)
@@ -154,4 +165,7 @@ class BaseWaltzService(Service):
         raise NotImplementedError
 
     def render_cli_config_file(self):
+        raise NotImplementedError
+
+    def render_service_file(self):
         raise NotImplementedError

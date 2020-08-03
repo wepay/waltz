@@ -33,15 +33,19 @@ vagrant plugin install vagrant-hostmanager
 #### Prepare keystore and truststore
 
 Put `keystore.jks` and `truststore.jks` under `waltz/vagrant/sync/server` and `waltz/vagrant/sync/storage`'
+Save keystore files as <Vagrant_hostname>.jks
 ```
 waltz
 └─waltz/vagrant
   └─waltz/vagrant/sync
+    ├─waltz/vagrant/sync/client
+    │ ├─waltz/vagrant/sync/client/<Vagrant_hostname>.jks
+    │ └─waltz/vagrant/sync/client/truststore.jks
     ├─waltz/vagrant/sync/server
-    │ ├─waltz/vagrant/sync/server/keystore.jks
+    │ ├─waltz/vagrant/sync/server/<Vagrant_hostname>.jks
     │ └─waltz/vagrant/sync/server/truststore.jks
     └─waltz/vagrant/sync/storage
-      ├─waltz/vagrant/sync/storage/keystore.jks
+      ├─waltz/vagrant/sync/storage/<Vagrant_hostname>.jks
       └─waltz/vagrant/sync/storage/truststore.jks
 ```
 #### Set configuration file
@@ -74,6 +78,11 @@ WaltzServerBootDiskSizeGb=
 # Waltz client GCE configuration (Please fill in all fields)
 WaltzClientImage=
 WaltzClientBootDiskSizeGb=
+
+#======================================================================
+[Zookeeper]
+#======================================================================
+ZkUrl=
 ```
 
 #### Start Vagrant
