@@ -24,14 +24,16 @@ class SmokeTest(ProduceConsumeValidateTest):
     @parametrize(num_active_partitions=1, txn_per_client=500, num_clients=10, interval=120, timeout=240)
     @parametrize(num_active_partitions=4, txn_per_client=500, num_clients=10, interval=120, timeout=240)
     def test_produce_consume_no_torture(self, num_active_partitions, txn_per_client, num_clients, interval, timeout):
-        validation_cmd = self.client_cli.validate_txn_cmd(num_active_partitions, txn_per_client, num_clients, interval)
+        validation_cmd = self.client_cli.validate_txn_cmd(self.log_file_path, num_active_partitions, txn_per_client,
+                                                          num_clients, interval)
         self.run_produce_consume_validate(lambda: self.simple_validation_func(validation_cmd, timeout))
 
     @cluster(cluster_spec=MIN_CLUSTER_SPEC)
     @parametrize(num_active_partitions=1, txn_per_client=500, num_clients=10, interval=120, timeout=480)
     @parametrize(num_active_partitions=4, txn_per_client=500, num_clients=10, interval=120, timeout=480)
     def test_produce_consume_while_bouncing_storage_nodes(self, num_active_partitions, txn_per_client, num_clients, interval, timeout):
-        validation_cmd = self.client_cli.validate_txn_cmd(num_active_partitions, txn_per_client, num_clients, interval)
+        validation_cmd = self.client_cli.validate_txn_cmd(self.log_file_path, num_active_partitions, txn_per_client,
+                                                          num_clients, interval)
         validation_result = self.run_produce_consume_validate(lambda: self.simple_validation_func(validation_cmd, timeout),
                                                               lambda: self._bounce_storage_nodes(3))
         assert "exception" not in validation_result.lower(), "Test failed with exception:\n{}".format(validation_result)
@@ -40,7 +42,8 @@ class SmokeTest(ProduceConsumeValidateTest):
     @parametrize(num_active_partitions=1, txn_per_client=500, num_clients=2, interval=120, timeout=240)
     @parametrize(num_active_partitions=4, txn_per_client=500, num_clients=2, interval=120, timeout=240)
     def test_produce_consume_while_killing_a_server_node(self, num_active_partitions, txn_per_client, num_clients, interval, timeout):
-        validation_cmd = self.client_cli.validate_txn_cmd(num_active_partitions, txn_per_client, num_clients, interval)
+        validation_cmd = self.client_cli.validate_txn_cmd(self.log_file_path, num_active_partitions, txn_per_client,
+                                                          num_clients, interval)
         self.run_produce_consume_validate(lambda: self.simple_validation_func(validation_cmd, timeout),
                                           lambda: self._kill_a_server_node(num_active_partitions))
 

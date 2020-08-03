@@ -3,12 +3,12 @@ server:
     jetty.port: {{ jetty_port }}
     ssl:
         keyStore:
-            location: /etc/waltz-server/keystore.jks
-            password: devops
+            location: {{ ssl_keystore_loc }}
+            password: {{ ssl_keystore_pwd }}
             type: JKS
         trustStore:
-            location: /etc/waltz-server/truststore.jks
-            password: devops
+            location: {{ ssl_truststore_loc }}
+            password: {{ ssl_truststore_pwd }}
             type: JKS
 
 zookeeper:

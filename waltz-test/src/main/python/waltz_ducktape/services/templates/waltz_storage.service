@@ -1,0 +1,17 @@
+[Unit]
+Description=waltz-storage
+After=network.target
+Requires=waltzdata.mount
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=waltz
+ExecStart=/bin/java \
+    -Dlog4j.configuration=file:/etc/waltz/waltz-log4j.cfg \
+    -cp /usr/local/waltz/waltz-uber.jar \
+    com.wepay.waltz.storage.WaltzStorage /etc/waltz/waltz_storage.yml
+
+[Install]
+WantedBy=multi-user.target

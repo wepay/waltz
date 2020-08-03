@@ -27,7 +27,8 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
                  interrupt_duration=20, num_interruptions=1, delay_between_interruptions=20)
     def test_client_server_network_interruption(self, num_active_partitions, txn_per_client, num_clients, interval, timeout,
                                                 interrupt_duration, num_interruptions, delay_between_interruptions):
-        validation_cmd = self.client_cli.validate_txn_cmd(num_active_partitions, txn_per_client, num_clients, interval)
+        validation_cmd = self.client_cli.validate_txn_cmd(self.log_file_path, num_active_partitions, txn_per_client,
+                                                          num_clients, interval)
         self.run_produce_consume_validate(lambda: self.client_server_network_interruption(validation_cmd, timeout,
                 interrupt_duration, num_interruptions, delay_between_interruptions, num_active_partitions, interval/1000))
 

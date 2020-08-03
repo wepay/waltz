@@ -3,12 +3,12 @@ from waltz_ducktape.services.base_waltz_service import BaseWaltzService
 
 class WaltzServerService(BaseWaltzService):
     """
-    WaltzStorageService is the service class for Waltz Storage.
+    WaltzServerService is the service class for Waltz Server.
     """
     def __init__(self, context, cluster_spec, zk, cluster_root, cluster_name, cluster_num_partitions, port, jetty_port,
                  lib_dir, config_file_dir, ssl_configs):
         """
-        Construct a new 'WaltzStorageService' object.
+        Construct a new 'WaltzServerService' object.
 
         :param context: The test context
         :param cluster_spec: The cluster specifics
@@ -49,12 +49,22 @@ class WaltzServerService(BaseWaltzService):
     def provision_cmd(self):
         return ""
 
+    def service_config_file_path(self):
+        return "{}/{}.yml".format(self.config_file_dir, "waltz_server")
+
+    def service_file_path(self):
+        return "/etc/systemd/system/waltz-server.service"
+
     def render_log_file(self):
         return self.render('log4j.properties')
 
     def render_service_config_file(self):
-        return self.render('waltz_server.yaml', cluster_root=self.cluster_root, \
-            zk_connect=self.zk, port=self.port, jetty_port=self.jetty_port)
+        return self.render('waltz_server.yaml', cluster_root=self.cluster_root,
+                           zk_connect=self.zk, port=self.port, jetty_port=self.jetty_port,
+                           ssl_keystore_loc=self.ssl_configs["ssl_keystore_loc"],
+                           ssl_keystore_pwd=self.ssl_configs["ssl_keystore_pwd"],
+                           ssl_truststore_loc=self.ssl_configs["ssl_truststore_loc"],
+                           ssl_truststore_pwd=self.ssl_configs["ssl_truststore_pwd"])
 
     def render_cli_config_file(self):
         return self.render('cli.yaml', cluster_root=self.cluster_root,
@@ -64,3 +74,5 @@ class WaltzServerService(BaseWaltzService):
                            ssl_truststore_loc=self.ssl_configs["ssl_truststore_loc"],
                            ssl_truststore_pwd=self.ssl_configs["ssl_truststore_pwd"])
 
+    def render_service_file(self):
+        return self.render('waltz_server.service')

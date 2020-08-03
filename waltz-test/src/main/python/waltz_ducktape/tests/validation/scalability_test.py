@@ -52,7 +52,8 @@ class ScalabilityTest(ProduceConsumeValidateTest):
         partition = randrange(num_active_partitions)
 
         # Step 1: Produce transactions with current cluster.
-        cmd = self.client_cli.validate_txn_cmd(num_active_partitions, txn_per_client, num_clients, interval)
+        cmd = self.client_cli.validate_txn_cmd(self.log_file_path, num_active_partitions, txn_per_client, num_clients,
+                                               interval)
         self.verifiable_client.start(cmd)
         wait_until(lambda: self.is_max_transaction_id_updated(src_storage, port, partition, -1), timeout_sec=timeout)
 

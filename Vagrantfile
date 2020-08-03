@@ -6,7 +6,7 @@ file = IniFile.load('waltz-test/src/main/python/waltz_ducktape/config.ini')
 cfg = file['Vagrant Google']
 
 Vagrant.configure("2") do |config|
-  # Eanble hostmanager so nodes can talk to eachother by DNS
+  # Enable hostmanager so nodes can talk to eachother by DNS
   config.hostmanager.enabled = true
   config.hostmanager.manage_host = true
   config.hostmanager.include_offline = false
@@ -19,7 +19,6 @@ Vagrant.configure("2") do |config|
       node.vm.provider :google do |google, override|
         # google project & service account
         google.google_project_id = cfg['GoogleProjectId']
-        google.google_client_email = cfg['GoogleClientEmail']
         google.google_json_key_location = cfg['GoogleJsonKeyLocation']
 
         # gce image config
@@ -59,7 +58,6 @@ Vagrant.configure("2") do |config|
       node.vm.provider :google do |google, override|
         # google project & service account
         google.google_project_id = cfg['GoogleProjectId']
-        google.google_client_email = cfg['GoogleClientEmail']
         google.google_json_key_location = cfg['GoogleJsonKeyLocation']
 
         # gce image config
@@ -95,7 +93,6 @@ Vagrant.configure("2") do |config|
       node.vm.provider :google do |google, override|
         # google project & service account
         google.google_project_id = cfg['GoogleProjectId']
-        google.google_client_email = cfg['GoogleClientEmail']
         google.google_json_key_location = cfg['GoogleJsonKeyLocation']
 
         # gce image config

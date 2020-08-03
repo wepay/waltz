@@ -5,6 +5,6 @@ zookeeper:
 cluster.root: {{ cluster_root }}
 
 client.ssl.keyStore.location: {{ ssl_keystore_loc }}
-client.ssl.keyStore.password: {{ ssl_keystore_pwd}}
+client.ssl.keyStore.password: {{ ssl_keystore_pwd }}
 client.ssl.trustStore.location: {{ ssl_truststore_loc }}
 client.ssl.trustStore.password: {{ ssl_truststore_pwd }}

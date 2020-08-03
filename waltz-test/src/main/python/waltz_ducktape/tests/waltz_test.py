@@ -27,12 +27,11 @@ class WaltzTest(Test):
         self.server_cfg = config['Waltz Server']
         self.client_cfg = config['Waltz Client']
 
-    def get_storage_service(self, cluster_key, cluster_num_partitions=None, num_nodes=None):
+    def get_storage_service(self, num_nodes=None):
         """
         Return a Waltz Storage service that uses config.ini for configuration.
         Optional arguments can be pass to override default settings.
         """
-        cluster_num_partitions = cluster_num_partitions or int(self.zk_cfg['ClusterNumPartitions'])
         num_nodes = num_nodes or int(self.storage_cfg['NumNodes'])
         cpu = int(self.storage_cfg['NumCpuCores'])
         mem = self.storage_cfg['MemSize']
@@ -47,9 +46,13 @@ class WaltzTest(Test):
         lib_dir = self.storage_cfg['LibDir']
         data_dir = self.storage_cfg['DataDir']
         config_file_dir = self.storage_cfg['ConfigFileDir']
+        ssl_configs = {"ssl_keystore_loc": self.storage_cfg['SslKeystoreLoc'],
+                       "ssl_keystore_pwd": self.storage_cfg['SslKeystorePwd'],
+                       "ssl_truststore_loc": self.storage_cfg['SslTruststoreLoc'],
+                       "ssl_truststore_pwd": self.storage_cfg['SslTruststorePwd']}
 
-        return WaltzStorageService(self.test_context, cluster_spec, zk, cluster_root, cluster_num_partitions, \
-                                   cluster_key, port, admin_port, jetty_port, lib_dir, data_dir, config_file_dir)
+        return WaltzStorageService(self.test_context, cluster_spec, zk, cluster_root, port, admin_port, jetty_port,
+                                   lib_dir, data_dir, config_file_dir, ssl_configs)
 
     def get_server_service(self, cluster_num_partitions=None, num_nodes=None):
         """
@@ -74,8 +77,8 @@ class WaltzTest(Test):
                        "ssl_truststore_loc": self.server_cfg['SslTruststoreLoc'],
                        "ssl_truststore_pwd": self.server_cfg['SslTruststorePwd']}
 
-        return WaltzServerService(self.test_context, cluster_spec, zk, cluster_root, cluster_name, cluster_num_partitions, \
-                                  port, jetty_port, lib_dir, config_file_dir, ssl_configs)
+        return WaltzServerService(self.test_context, cluster_spec, zk, cluster_root, cluster_name,
+                                  cluster_num_partitions, port, jetty_port, lib_dir, config_file_dir, ssl_configs)
 
     def get_verifiable_client(self, num_nodes=None):
         """
