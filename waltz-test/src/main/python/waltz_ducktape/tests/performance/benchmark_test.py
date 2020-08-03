@@ -18,7 +18,7 @@ class BenchmarkTest(ProduceConsumeValidateTest):
         super(BenchmarkTest, self).__init__(test_context=test_context)
 
     @cluster(cluster_spec=MIN_CLUSTER_SPEC)
-    @parametrize(txn_size=512, txn_per_thread=1000, num_thread=10, interval=10, lock_pool_size=0, num_active_partitions=1, timeout=360)
+    @parametrize(txn_size=512, txn_per_thread=1000, num_thread=100, interval=10, lock_pool_size=0, num_active_partitions=1, timeout=360)
     @parametrize(txn_size=512, txn_per_thread=1000, num_thread=100, interval=20, lock_pool_size=0, num_active_partitions=1, timeout=360)
     @parametrize(txn_size=512, txn_per_thread=2000, num_thread=50, interval=10, lock_pool_size=0, num_active_partitions=1, timeout=360)
     @parametrize(txn_size=1024, txn_per_thread=1000, num_thread=100, interval=10, lock_pool_size=0, num_active_partitions=1, timeout=360)
