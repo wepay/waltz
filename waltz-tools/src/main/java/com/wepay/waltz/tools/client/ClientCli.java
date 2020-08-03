@@ -561,5 +561,4 @@ public final class ClientCli extends SubcommandCli {
     public static void main(String[] args) {
         new ClientCli(args, false).processCmd();
     }
-
 }
