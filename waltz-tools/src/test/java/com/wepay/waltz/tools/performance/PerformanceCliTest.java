@@ -122,9 +122,24 @@ public class PerformanceCliTest {
 
             String expectedCmdOutput = "Read 10 transactions";
             assertTrue(outContent.toString("UTF-8").contains(expectedCmdOutput));
+            outContent.reset();
+
+            String[] argsMountLatest = {
+                    "test-consumers",
+                    "--txn-size",
+                    "128",
+                    "--num-txn",
+                    "10",
+                    "--cli-config-path",
+                    configFilePath,
+                    "--num-active-partitions",
+                    "1",
+                    "--mount_from_latest"
+            };
+            PerformanceCli.testMain(argsMountLatest);
+            assertTrue(outContent.toString("UTF-8").contains(expectedCmdOutput));
         } finally {
             helper.closeAll();
         }
     }
-
 }

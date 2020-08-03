@@ -13,7 +13,7 @@ class PerformanceCli(Cli):
         """
         super(PerformanceCli, self).__init__(cli_config_path)
 
-    def producer_test_cmd(self, txn_size, txn_per_thread, num_thread, interval, lock_pool_size=None, num_active_partitions=None):
+    def producer_test_cmd(self, txn_size, txn_per_thread, num_thread, interval, lock_pool_size=None, num_active_partitions=None, mount_from_latest=None):
         """
         Return producer performance test command:
 
@@ -26,6 +26,7 @@ class PerformanceCli(Cli):
             --cli-config-path <the path to cli config file> \
             --lock-pool-size <size of lock pool> \
             --num-active-partitions <number of partitions to interact with>
+            --mount_from_latest Waltz Client would be mounted from the latest HighWaterMark (for a partition) on Waltz
         """
         cmd_arr = [
             "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
@@ -36,11 +37,12 @@ class PerformanceCli(Cli):
             "--interval", interval,
             "--cli-config-path", self.cli_config_path,
             "--lock-pool-size {}".format(lock_pool_size) if lock_pool_size is not None else "",
-            "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else ""
+            "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else "",
+            "--mount_from_latest" if mount_from_latest is not None else ""
         ]
         return self.build_cmd(cmd_arr)
 
-    def consumer_test_cmd(self, txn_size, num_txn, num_active_partitions=None):
+    def consumer_test_cmd(self, txn_size, num_txn, num_active_partitions=None, mount_from_latest=None):
         """
         Return consumer performance test command:
 
@@ -50,6 +52,7 @@ class PerformanceCli(Cli):
             --num-txn <number of transactions to send> \
             --cli-config-path <the path to cli config file> \
             --num-active-partitions <number of active partitions>
+            --mount_from_latest Waltz Client would be mounted from the latest HighWaterMark (for a partition) on Waltz
         """
         cmd_arr = [
             "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
@@ -57,7 +60,8 @@ class PerformanceCli(Cli):
             "--txn-size", txn_size,
             "--num-txn", num_txn,
             "--cli-config-path", self.cli_config_path,
-            "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else ""
+            "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else "",
+            "--mount_from_latest" if mount_from_latest is not None else ""
         ]
         return self.build_cmd(cmd_arr)
 
