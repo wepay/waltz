@@ -723,7 +723,6 @@ public final class PerformanceCli extends SubcommandCli {
         }
     }
 
-
     public static void testMain(String[] args) {
         new PerformanceCli(args, true).processCmd();
     }

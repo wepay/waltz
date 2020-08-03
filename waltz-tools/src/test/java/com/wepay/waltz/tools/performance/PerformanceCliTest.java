@@ -137,12 +137,9 @@ public class PerformanceCliTest {
                     "--mount_from_latest"
             };
             PerformanceCli.testMain(argsMountLatest);
-
             assertTrue(outContent.toString("UTF-8").contains(expectedCmdOutput));
-
         } finally {
             helper.closeAll();
         }
     }
-
 }
