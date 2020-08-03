@@ -554,8 +554,6 @@ public final class ClientCli extends SubcommandCli {
         return client.getHighWaterMark(partitionId);
     }
 
-
-
     public static void testMain(String[] args) {
         new ClientCli(args, true).processCmd();
     }
