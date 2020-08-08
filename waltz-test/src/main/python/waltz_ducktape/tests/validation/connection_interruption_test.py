@@ -1,10 +1,12 @@
 from waltz_ducktape.tests.produce_consume_validate import ProduceConsumeValidateTest
+from ducktape.cluster.remoteaccount import RemoteCommandError
 from ducktape.mark.resource import cluster
 from ducktape.mark import parametrize
 from ducktape.cluster.cluster_spec import ClusterSpec
 from ducktape.utils.util import wait_until
 from time import sleep
 from random import randrange
+from random import sample
 
 
 class ConnectionInterruptionTest(ProduceConsumeValidateTest):
@@ -31,6 +33,21 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
                                                           num_clients, interval)
         self.run_produce_consume_validate(lambda: self.client_server_network_interruption(validation_cmd, timeout,
                 interrupt_duration, num_interruptions, delay_between_interruptions, num_active_partitions, interval/1000))
+
+    @cluster(cluster_spec=MIN_CLUSTER_SPEC)
+    @parametrize(num_active_partitions=1, txn_per_client=200, num_clients=1, interval=100, timeout=240,
+                 interrupt_duration=5, num_of_nodes_to_bounce=2)
+    @parametrize(num_active_partitions=4, txn_per_client=200, num_clients=2, interval=100, timeout=240,
+                 interrupt_duration=5, num_of_nodes_to_bounce=2)
+    @parametrize(num_active_partitions=1, txn_per_client=200, num_clients=1, interval=100, timeout=240,
+                 interrupt_duration=5, num_of_nodes_to_bounce=1)
+    @parametrize(num_active_partitions=4, txn_per_client=200, num_clients=2, interval=100, timeout=300,
+                 interrupt_duration=5, num_of_nodes_to_bounce=1)
+    def test_storage_node_network_interruption(self, num_active_partitions, txn_per_client, num_clients, interval, timeout,
+                                               interrupt_duration, num_of_nodes_to_bounce):
+        validation_cmd = self.client_cli.validate_txn_cmd(num_active_partitions, txn_per_client, num_clients, interval)
+        self.run_produce_consume_validate(lambda: self.storage_node_network_interruption(validation_cmd, num_active_partitions,
+                                          txn_per_client, num_clients, timeout, interrupt_duration, num_of_nodes_to_bounce))
 
     def drop_traffic_to_port(self, node, port):
         node.account.ssh_capture("sudo iptables -I INPUT -p tcp --destination-port {} -j DROP".format(port))
@@ -77,15 +94,96 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
                 assert not self.is_max_transaction_id_updated(storage, port, partition, cur_high_watermark), \
                     'Network interruption failed, newly stored transactions detected'
 
-                # enable connection on port
-                self.enable_traffic_to_port(node, self.waltz_server.port)
             finally:
                 """
                 delete the added iptable rule as it is not removed with the end of waltz process and could persist on 
-                waltz-server VM, if process is signaled to end (^C) or an exception is thrown during execution of the try block. 
-                If iptable rule is not present (already deleted) nothing happens on the waltz-server VM side.
+                waltz-server VM, if process is signaled to end (^C) or an exception is thrown during execution of the try block.
                 """
                 self.enable_traffic_to_port(node, self.waltz_server.port)
 
         wait_until(lambda: self.verifiable_client.task_complete() == True, timeout_sec=timeout,
                    err_msg="verifiable_client failed to complete task in %d seconds." % timeout)
+
+    class StorageNodeInfo:
+        """
+        Representation of a storage node and number of transactions stored on a node
+        """
+        def __init__(self, node):
+            self.node = node
+            self.total_number_of_existing_transactions_across_partitions = 0
+
+    def storage_node_network_interruption(self, validation_cmd, num_active_partitions, txn_per_client, num_clients, timeout,
+                                          interrupt_duration, num_of_nodes_to_bounce):
+        """
+        A validate function to test bouncing network connection between server and storage. Verification of correctness
+        is done by comparing expected number of stored transactions with current transactions in the Waltz Cluster.
+
+        :param validation_cmd: The command that is send to ClientCli
+        :param num_active_partitions: Number of active partitions
+        :param txn_per_client: Number of transactions per client
+        :param num_clients: Number of waltz clients
+        :param timeout: Test timeout
+        :param interrupt_duration: Duration (milliseconds) of communication interruption between server and storage
+        :param num_of_nodes_to_bounce: Number of storage nodes to bounce. This may affect the quorum
+        """
+
+        bounced_nodes = []
+        for node_number in sample(range(len(self.waltz_storage.nodes)), num_of_nodes_to_bounce):
+            bounced_nodes.append(self.StorageNodeInfo(self.waltz_storage.nodes[node_number]))
+
+        admin_port = self.waltz_storage.admin_port
+        port = self.waltz_storage.port
+
+        # Step 1: Get sum of current max_transaction_ids
+        for bounced_node_info in bounced_nodes:
+            for partition in range(num_active_partitions):
+                bounced_node_info.total_number_of_existing_transactions_across_partitions += max(-1, self.get_storage_max_transaction_id(
+                    self.get_host(bounced_node_info.node.account.ssh_hostname, admin_port), port, partition))
+
+        # Step 2: Submit transactions to all replicas.
+        self.verifiable_client.start(validation_cmd)
+        wait_until(lambda: self.is_max_transaction_id_updated(self.get_host(bounced_nodes[0].node.account.ssh_hostname, admin_port), port,
+                                                       randrange(num_active_partitions), -1), timeout_sec=timeout)
+        try:
+            # Step 3: Interrupt connection
+            for bounced_node_info in bounced_nodes:
+                self.drop_traffic_to_port(bounced_node_info.node, port)
+
+            # Step 4: Verify that storage port is closed
+            for bounced_node_info in bounced_nodes:
+                partition = randrange(num_active_partitions)
+
+                # RemoteCommandError raised when get_storage_max_transaction_id request fails
+                # because connection to the storage node port is blocked
+                try:
+                    self.get_storage_max_transaction_id(self.get_host(bounced_node_info.node.account.ssh_hostname, admin_port), port, partition)
+                    raise AssertionError("Network interruption failed. get_storage_max_transaction_id didn't return RemoteCommandError")
+                except RemoteCommandError:
+                    pass
+
+            sleep(interrupt_duration)
+        finally:
+            # Step 5: Enable connection, Do this step even when the Step 4 fails, as the added iptable
+            # rules aren't removed from VM with the end of this process
+            for bounced_node_info in bounced_nodes:
+                self.enable_traffic_to_port(bounced_node_info.node, port)
+
+        # Step 6: Verify that total number of expected transactions matches number of transactions stored in waltz storage nodes
+        for bounced_node_info in bounced_nodes:
+            expected_number_of_transactions = (txn_per_client * num_clients) + bounced_node_info.total_number_of_existing_transactions_across_partitions
+            wait_until(lambda: expected_number_of_transactions == self.sum_of_transactions(bounced_node_info, admin_port, port, num_active_partitions),
+                timeout_sec=timeout, err_msg="number of transactions stored in storage partition does not match with all the transactions sent by client. "
+                                             "Client {}, Strage = {} after {} seconds" \
+                .format(expected_number_of_transactions, self.sum_of_transactions(bounced_node_info, admin_port, port, num_active_partitions), timeout))
+
+    def sum_of_transactions(self, bounced_node_info, admin_port, port, num_active_partitions):
+        """
+        :returns Sum of all stored transactions under active partitions in a storage node
+        """
+
+        total_sum = 0
+        for partition in range(num_active_partitions):
+            total_sum += self.get_storage_max_transaction_id(self.get_host(bounced_node_info.node.account.ssh_hostname, admin_port),
+                                                             port, partition)
+        return total_sum
+
