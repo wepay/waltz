@@ -53,8 +53,7 @@ class ClientCli(Cli):
             --num-active-partitions <number of partitions to interact with> \
         """
         cmd_arr = [
-            "java -cp /usr/local/waltz/waltz-uber.jar ",
-            "-Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
+            "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
             "client-processes-setup",
             "--txn-per-producer", txn_per_producer,
             "--num-producers", num_producers,
