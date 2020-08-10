@@ -56,10 +56,16 @@ class ProducerConsumerClusterTest(ProduceConsumeValidateTest):
 
         # Step 2: Wait until verifiable client ends its task
         wait_until(lambda: self.verifiable_client.task_complete() == True, timeout_sec=timeout,
-                   err_msg="verifiable_client failed to complete task in {} seconds.".format(timeout))
+                   err_msg=lambda: "verifiable_client failed to complete task in {} seconds. Number of producers still running: {}, "
+                           "number of consumers still running: {}".format(timeout, self.number_of_running_producers(), self.number_of_running_consumers()))
 
         # Step 3: Verify child processes of a main process finished successfully (exit code 0 received)
         num_failed_processes = int(re.search('failed processes: (\d+)', self.verifiable_client.get_validation_result()).group(1))
         assert num_failed_processes == 0, "number of failed processes: {}".format(num_failed_processes)
 
+    def number_of_running_producers(self):
+        return int(self.verifiable_client.nodes[0].account.ssh_output("ps -eo command | grep -c \"^java .* create-producer\" | cat").strip())
 
+
+    def number_of_running_consumers(self):
+        return int(self.verifiable_client.nodes[0].account.ssh_output("ps -eo command | grep -c \"^java .* create-consumer\" | cat").strip())

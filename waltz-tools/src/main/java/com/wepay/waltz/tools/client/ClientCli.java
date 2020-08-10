@@ -45,13 +45,13 @@ public final class ClientCli extends SubcommandCli {
         super(args, useByTest, Arrays.asList(
                 new Subcommand(Validate.NAME, Validate.DESCRIPTION, Validate::new),
                 new Subcommand(HighWaterMark.NAME, HighWaterMark.DESCRIPTION, HighWaterMark::new),
-                new Subcommand(Producer.NAME, Producer.DESCRIPTION, Producer::new),
-                new Subcommand(Consumer.NAME, Consumer.DESCRIPTION, Consumer::new)
+                new Subcommand(CreateProducer.NAME, CreateProducer.DESCRIPTION, CreateProducer::new),
+                new Subcommand(CreateConsumer.NAME, CreateConsumer.DESCRIPTION, CreateConsumer::new)
                 ));
     }
 
     /**
-     * {@code ClientCliBaseClass} serves as a parent class other client classes build on top of.
+     * {@code ClientCliBaseClass} serves as a base class for few Client Cli classes.
      * It handles production of transactions, its consumption and validation.
      *
      * <pre>
@@ -84,11 +84,12 @@ public final class ClientCli extends SubcommandCli {
         private static final int LOCK_ID = 0;
         private static final int LAMBDA = 1;
         private static final Random RANDOM = new Random();
+        protected static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
 
         private static final List<PartitionLocalLock> LOCKS = Collections.singletonList(new PartitionLocalLock(LOCK_NAME, LOCK_ID));
 
-        protected final Map<Integer, ConcurrentHashMap<Integer, Long>> clientHighWaterMarkMap;
-        protected final List<String> uncaughtExceptions;
+        private final Map<Integer, ConcurrentHashMap<Integer, Long>> clientHighWaterMarkMap;
+        private final List<String> uncaughtExceptions;
 
         protected CountDownLatch allProducerReady;
         protected CountDownLatch allProducerTxnCallbackReceived;
@@ -382,7 +383,6 @@ public final class ClientCli extends SubcommandCli {
     private static final class Validate extends ClientCliBaseClass {
         private static final String NAME = "validate";
         private static final String DESCRIPTION = "Submit transactions for validation";
-        private static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
 
         protected Validate(String[] args) {
             super(args);
@@ -544,12 +544,11 @@ public final class ClientCli extends SubcommandCli {
      * Producer process is closed once total sum of high watermarks for active
      * partitions reaches num-callbacks.
      */
-    private static final class Producer extends ClientCliBaseClass {
+    private static final class CreateProducer extends ClientCliBaseClass {
         private static final String NAME = "create-producer";
         private static final String DESCRIPTION = "Creates one producer";
-        private static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
 
-        private Producer(String[] args) {
+        private CreateProducer(String[] args) {
             super(args);
         }
 
@@ -645,12 +644,11 @@ public final class ClientCli extends SubcommandCli {
      * Consumer process is closed once total number of processed transactions
      * reaches num-callbacks.
      */
-    private static final class Consumer extends ClientCliBaseClass {
+    private static final class CreateConsumer extends ClientCliBaseClass {
         private static final String NAME = "create-consumer";
         private static final String DESCRIPTION = "Creates one consumer";
-        private static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
 
-        private Consumer(String[] args) {
+        private CreateConsumer(String[] args) {
             super(args);
         }
 
