@@ -37,7 +37,7 @@ class ClientCli(Cli):
         ]
         return self.build_cmd(cmd_arr)
 
-    def validate_consumer_producer_cluster_cmd(self, num_active_partitions, txn_per_producer, num_producers, num_consumers, interval):
+    def start_producer_cmd(self, num_produced_txn, num_callbacks, interval, num_active_partitions):
         """
         Return validation cli command to submit and validate client transactions, which
         includes validating high water mark, transaction data and optimistic lock.
@@ -45,23 +45,42 @@ class ClientCli(Cli):
 
         java com.wepay.waltz.tools.client.ClientCli \
             client-processes-setup \
-            --txn-per-producer <number of transactions per producer> \
-            --num-producers <number of total producers>
-            --num-consumers <number of total consumers> \
+            --num-produced-txn <number of transactions per producer> \
+            --num-callbacks <number of callbacks>
             --interval <average interval(millisecond) between transactions> \
             --cli-config-path <client cli config file path> \
-            --num-active-partitions <number of partitions to interact with> \
         """
         cmd_arr = [
-            "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
-            "client-processes-setup",
-            "--txn-per-producer", txn_per_producer,
-            "--num-producers", num_producers,
-            "--num-consumers", num_consumers,
+            "java -cp /usr/local/waltz/waltz-uber.jar ",
+            "-Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
+            "create-producer",
+            "--num-produced-txn", num_produced_txn,
+            "--num-callbacks", num_callbacks,
             "--interval", interval,
-            "--cli-config-path", self.cli_config_path,
             "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else "",
-            "--dlog4j-configuration-path /etc/waltz-client/waltz-log4j.cfg"
+            "--cli-config-path", self.cli_config_path
+        ]
+        return self.build_cmd(cmd_arr)
+
+    def start_consumer_cmd(self, num_callbacks, num_active_partitions):
+        """
+        Return validation cli command to submit and validate client transactions, which
+        includes validating high water mark, transaction data and optimistic lock.
+        Every client will be an independent process.
+
+        java com.wepay.waltz.tools.client.ClientCli \
+            client-processes-setup \
+            --num-callbacks <number of callbacks>
+            --interval <average interval(millisecond) between transactions> \
+            --cli-config-path <client cli config file path> \
+        """
+        cmd_arr = [
+            "java -cp /usr/local/waltz/waltz-uber.jar ",
+            "-Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
+            "create-consumer",
+            "--num-callbacks", num_callbacks,
+            "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else "",
+            "--cli-config-path", self.cli_config_path
         ]
         return self.build_cmd(cmd_arr)
 
