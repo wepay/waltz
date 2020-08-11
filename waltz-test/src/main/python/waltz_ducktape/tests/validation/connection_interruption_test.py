@@ -45,7 +45,7 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
                  interrupt_duration=5, num_of_nodes_to_bounce=1)
     def test_storage_node_network_interruption(self, num_active_partitions, txn_per_client, num_clients, interval, timeout,
                                                interrupt_duration, num_of_nodes_to_bounce):
-        validation_cmd = self.client_cli.validate_txn_cmd(num_active_partitions, txn_per_client, num_clients, interval)
+        validation_cmd = self.client_cli.validate_txn_cmd(self.log_file_path, num_active_partitions, txn_per_client, num_clients, interval)
         self.run_produce_consume_validate(lambda: self.storage_node_network_interruption(validation_cmd, num_active_partitions,
                                           txn_per_client, num_clients, timeout, interrupt_duration, num_of_nodes_to_bounce))
 
@@ -110,7 +110,7 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
         """
         def __init__(self, node):
             self.node = node
-            self.total_number_of_existing_transactions_across_partitions = 0
+            self.sum_of_high_watermarks_across_partitions = 0
 
     def storage_node_network_interruption(self, validation_cmd, num_active_partitions, txn_per_client, num_clients, timeout,
                                           interrupt_duration, num_of_nodes_to_bounce):
@@ -137,7 +137,7 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
         # Step 1: Get sum of current max_transaction_ids
         for bounced_node_info in bounced_nodes:
             for partition in range(num_active_partitions):
-                bounced_node_info.total_number_of_existing_transactions_across_partitions += max(-1, self.get_storage_max_transaction_id(
+                bounced_node_info.sum_of_high_watermarks_across_partitions += max(-1, self.get_storage_max_transaction_id(
                     self.get_host(bounced_node_info.node.account.ssh_hostname, admin_port), port, partition))
 
         # Step 2: Submit transactions to all replicas.
@@ -170,7 +170,7 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
 
         # Step 6: Verify that total number of expected transactions matches number of transactions stored in waltz storage nodes
         for bounced_node_info in bounced_nodes:
-            expected_number_of_transactions = (txn_per_client * num_clients) + bounced_node_info.total_number_of_existing_transactions_across_partitions
+            expected_number_of_transactions = (txn_per_client * num_clients) + bounced_node_info.sum_of_high_watermarks_across_partitions
             wait_until(lambda: expected_number_of_transactions == self.sum_of_transactions(bounced_node_info, admin_port, port, num_active_partitions),
                 timeout_sec=timeout, err_msg="number of transactions stored in storage partition does not match with all the transactions sent by client. "
                                              "Client {}, Strage = {} after {} seconds" \
