@@ -5,13 +5,13 @@ class ServerCli(Cli):
     """
     ServerCli is an utility class to interact with com.wepay.waltz.tools.server.ServerCli.
     """
-    def __init__(self, node):
+    def __init__(self, node, cli_config_path):
         """
         Construct a new 'ServerCli' object.
 
         :param node: The node to run cli command
         """
-        super(ServerCli, self).__init__(node, None)
+        super(ServerCli, self).__init__(cli_config_path)
         self.node = node
 
     def list_partition(self, server):
