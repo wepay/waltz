@@ -156,7 +156,6 @@ public class ClientCliTest {
             String[] producer1 = {
                     "create-producer",
                     "--num-produced-txn", "50",
-                    "--num-callbacks", "50",
                     "--interval", "20",
                     "--num-active-partitions", "3",
                     "--cli-config-path", configFilePath
@@ -164,7 +163,6 @@ public class ClientCliTest {
             String[] producer2 = {
                     "create-producer",
                     "--num-produced-txn", "50",
-                    "--num-callbacks", "100",
                     "--interval", "20",
                     "--num-active-partitions", "3",
                     "--cli-config-path", configFilePath

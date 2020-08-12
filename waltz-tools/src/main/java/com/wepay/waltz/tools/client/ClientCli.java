@@ -92,7 +92,7 @@ public final class ClientCli extends SubcommandCli {
         private final List<String> uncaughtExceptions;
 
         protected CountDownLatch allProducerReady;
-        protected CountDownLatch allProducerTxnCallbackReceived;
+        protected CountDownLatch allProducerDone;
         protected CountDownLatch allConsumerTxnCallbackReceived;
 
         protected ClientCliBaseClass(String[] args) {
@@ -136,8 +136,7 @@ public final class ClientCli extends SubcommandCli {
                 executor.execute(new ProducerThread(numActivePartitions, txnPerClient, avgInterval, producer));
                 allProducerReady.countDown();
             }
-
-            allProducerTxnCallbackReceived.await();
+            allProducerDone.await();
             executor.shutdown();
         }
 
@@ -171,12 +170,14 @@ public final class ClientCli extends SubcommandCli {
             private int txnPerThread;
             private int avgInterval;
             private WaltzClient client;
+            private CountDownLatch producerTransactionsCompleted;
 
             ProducerThread(int numActivePartitions, int txnPerThread, int avgInterval, WaltzClient client) {
                 this.numActivePartitions = numActivePartitions;
                 this.txnPerThread = txnPerThread;
                 this.avgInterval = avgInterval;
                 this.client = client;
+                this.producerTransactionsCompleted = new CountDownLatch(txnPerThread);
             }
 
             @Override
@@ -187,13 +188,14 @@ public final class ClientCli extends SubcommandCli {
                     // fire transactions
                     for (int j = 0; j < txnPerThread; j++) {
                         int partitionId = RANDOM.nextInt(numActivePartitions);
-                        client.submit(new HighWaterMarkTxnContext(partitionId, client.clientId()));
+                        client.submit(new HighWaterMarkTxnContext(partitionId, client.clientId(), producerTransactionsCompleted));
 
                         // By adjusting the distribution parameter of the random sleep,
                         // we can test various congestion scenarios.
                         Thread.sleep(nextExponentialDistributedInterval(avgInterval));
                     }
-                    allProducerTxnCallbackReceived.await();
+                    producerTransactionsCompleted.await();
+                    allProducerDone.countDown();
                 } catch (InterruptedException ex) {
                     client.close();
                     throw new SubCommandFailedException(ex);
@@ -255,7 +257,6 @@ public final class ClientCli extends SubcommandCli {
                 long curHighWaterMark = clientHighWaterMarkMap.get(clientId).getOrDefault(partitionId, -1L);
                 if (transaction.transactionId == curHighWaterMark + 1) {
                     clientHighWaterMarkMap.get(clientId).put(partitionId, transaction.transactionId);
-                    allProducerTxnCallbackReceived.countDown();
                 } else {
                     throw new SubCommandFailedException(String.format("expect callback transaction id to be %s, but got %s",
                                                                       curHighWaterMark + 1, transaction.transactionId));
@@ -321,10 +322,12 @@ public final class ClientCli extends SubcommandCli {
         private final class HighWaterMarkTxnContext extends TransactionContext {
             private final int partitionId;
             private final int clientId;
+            private final CountDownLatch producerTransactionsCompleted;
 
-            HighWaterMarkTxnContext(int partitionId, int clientId) {
+            HighWaterMarkTxnContext(int partitionId, int clientId, CountDownLatch producerTransactionsCompleted) {
                 this.partitionId = partitionId;
                 this.clientId = clientId;
+                this.producerTransactionsCompleted = producerTransactionsCompleted;
             }
 
             @Override
@@ -338,6 +341,13 @@ public final class ClientCli extends SubcommandCli {
                 builder.setTransactionData(clientHighWaterMark + 1, HighWaterMarkSerializer.INSTANCE);
                 builder.setWriteLocks(LOCKS);
                 return true;
+            }
+
+            @Override
+            public void onCompletion(boolean result) {
+                if (result) {
+                    this.producerTransactionsCompleted.countDown();
+                }
             }
         }
 
@@ -464,10 +474,9 @@ public final class ClientCli extends SubcommandCli {
                 }
 
                 // each client will receive callback of all transactions
-                int expectNumProducerCallbacks = toIntExact((numExistingTransactions + numTxnToSubmit) * numClients);
                 int expectNumConsumerCallbacks = toIntExact((numExistingTransactions + numTxnToSubmit) * 1);
                 allProducerReady = new CountDownLatch(numClients);
-                allProducerTxnCallbackReceived = new CountDownLatch(expectNumProducerCallbacks);
+                allProducerDone = new CountDownLatch(numClients);
                 allConsumerTxnCallbackReceived = new CountDownLatch(expectNumConsumerCallbacks);
 
                 produceTransactions(numActivePartitions, numClients, txnPerClient, avgInterval, waltzClientConfig);
@@ -478,14 +487,12 @@ public final class ClientCli extends SubcommandCli {
             } catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Transaction validation failed: %s", e.getMessage()));
             }
-
         }
 
         @Override
         protected String getUsage() {
             return buildUsage(NAME, DESCRIPTION, getOptions());
         }
-
     }
 
     /**
@@ -559,11 +566,6 @@ public final class ClientCli extends SubcommandCli {
                     .desc("Specify number of transactions to be produced")
                     .hasArg()
                     .build();
-            Option numClientsOption = Option.builder("nc")
-                    .longOpt("num-callbacks")
-                    .desc("Specify total number of num-callbacks")
-                    .hasArg()
-                    .build();
             Option intervalOption = Option.builder("i")
                     .longOpt("interval")
                     .desc("Specify average interval(millisecond) between transactions")
@@ -582,13 +584,11 @@ public final class ClientCli extends SubcommandCli {
                     .build();
 
             txnPerClientOption.setRequired(true);
-            numClientsOption.setRequired(true);
             intervalOption.setRequired(true);
             cfgPathOption.setRequired(true);
             numActivePartitionOption.setRequired(false);
 
             options.addOption(txnPerClientOption);
-            options.addOption(numClientsOption);
             options.addOption(intervalOption);
             options.addOption(cfgPathOption);
             options.addOption(numActivePartitionOption);
@@ -601,10 +601,6 @@ public final class ClientCli extends SubcommandCli {
                 int numOfProducedTransactions = Integer.parseInt(cmd.getOptionValue("num-produced-txn"));
                 if (numOfProducedTransactions < 0) {
                     throw new IllegalArgumentException("Found negative: num-produced-txn must be greater or equals to 0");
-                }
-                int numOfCallbacks = Integer.parseInt(cmd.getOptionValue("num-callbacks"));
-                if (numOfCallbacks < 0) {
-                    throw new IllegalArgumentException("Found negative: num-callbacks must be greater or equals to 0");
                 }
                 int avgInterval = Integer.parseInt(cmd.getOptionValue("interval"));
                 if (avgInterval < 0) {
@@ -620,7 +616,7 @@ public final class ClientCli extends SubcommandCli {
                 }
 
                 allProducerReady = new CountDownLatch(1);
-                allProducerTxnCallbackReceived = new CountDownLatch(numOfCallbacks);
+                allProducerDone = new CountDownLatch(1);
 
                 produceTransactions(numActivePartitions, 1, numOfProducedTransactions, avgInterval, waltzClientConfig);
 
