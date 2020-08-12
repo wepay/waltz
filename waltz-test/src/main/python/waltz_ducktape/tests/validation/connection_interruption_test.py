@@ -106,11 +106,11 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
 
     class StorageNodeInfo:
         """
-        Representation of a storage node and number of transactions stored on a node
+        Representation of a storage node and number of transactions stored on a storage node
         """
         def __init__(self, node):
             self.node = node
-            self.sum_of_high_watermarks_across_partitions = 0
+            self.total_num_of_transactions = 0
 
     def storage_node_network_interruption(self, validation_cmd, num_active_partitions, txn_per_client, num_clients, timeout,
                                           interrupt_duration, num_of_nodes_to_bounce):
@@ -134,11 +134,11 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
         admin_port = self.waltz_storage.admin_port
         port = self.waltz_storage.port
 
-        # Step 1: Get sum of current max_transaction_ids
+        # Step 1: Get current sum of transactions across partitions
         for bounced_node_info in bounced_nodes:
             for partition in range(num_active_partitions):
-                bounced_node_info.sum_of_high_watermarks_across_partitions += max(-1, self.get_storage_max_transaction_id(
-                    self.get_host(bounced_node_info.node.account.ssh_hostname, admin_port), port, partition))
+                bounced_node_info.total_num_of_transactions += max(0, self.get_storage_max_transaction_id(
+                    self.get_host(bounced_node_info.node.account.ssh_hostname, admin_port), port, partition) + 1)
 
         # Step 2: Submit transactions to all replicas.
         self.verifiable_client.start(validation_cmd)
@@ -170,20 +170,21 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
 
         # Step 6: Verify that total number of expected transactions matches number of transactions stored in waltz storage nodes
         for bounced_node_info in bounced_nodes:
-            expected_number_of_transactions = (txn_per_client * num_clients) + bounced_node_info.sum_of_high_watermarks_across_partitions
-            wait_until(lambda: expected_number_of_transactions == self.sum_of_transactions(bounced_node_info, admin_port, port, num_active_partitions),
-                timeout_sec=timeout, err_msg="number of transactions stored in storage partition does not match with all the transactions sent by client. "
+            expected_number_of_transactions = (txn_per_client * num_clients) + bounced_node_info.total_num_of_transactions
+            wait_until(lambda: expected_number_of_transactions == self.num_of_transactions_on_storage_node(bounced_node_info, admin_port, port, num_active_partitions),
+                       timeout_sec=timeout, err_msg="number of transactions stored in storage partition does not match with all the transactions sent by client. "
                                              "Client {}, Strage = {} after {} seconds" \
-                .format(expected_number_of_transactions, self.sum_of_transactions(bounced_node_info, admin_port, port, num_active_partitions), timeout))
+                       .format(expected_number_of_transactions, self.num_of_transactions_on_storage_node(bounced_node_info, admin_port, port, num_active_partitions), timeout))
 
-    def sum_of_transactions(self, bounced_node_info, admin_port, port, num_active_partitions):
+    def num_of_transactions_on_storage_node(self, bounced_node_info, admin_port, port, num_active_partitions):
         """
-        :returns Sum of all stored transactions under active partitions in a storage node
+        :returns Total number of all transactions stored under active partitions in a storage node
+        (i.e. (partition1 high watermark + 1) + (partition2 high watermark + 1) ...), where transactions starts at index -1
         """
 
-        total_sum = 0
+        total_num_of_transaction = 0
         for partition in range(num_active_partitions):
-            total_sum += self.get_storage_max_transaction_id(self.get_host(bounced_node_info.node.account.ssh_hostname, admin_port),
-                                                             port, partition)
-        return total_sum
+            total_num_of_transaction += self.get_storage_max_transaction_id(self.get_host(bounced_node_info.node.account.ssh_hostname, admin_port),
+                                                                            port, partition) + 1
+        return total_num_of_transaction
 
