@@ -37,7 +37,7 @@ class ClientCli(Cli):
         ]
         return self.build_cmd(cmd_arr)
 
-    def create_producer_cmd(self, txn_per_client, interval, num_active_partitions):
+    def create_producer_cmd(self, log_file_path, txn_per_client, interval, num_active_partitions):
         """
         Return producer cli command to submit client transactions in a single process,
         which includes validation of each and every transaction successful completion.
@@ -49,7 +49,7 @@ class ClientCli(Cli):
             --cli-config-path <client cli config file path>
         """
         cmd_arr = [
-            "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
+            "java -Dlog4j.configuration=file:{}".format(log_file_path), self.java_cli_class_name(),
             "create-producer",
             "--txn-per-client", txn_per_client,
             "--interval", interval,
@@ -58,7 +58,7 @@ class ClientCli(Cli):
         ]
         return self.build_cmd(cmd_arr)
 
-    def create_consumer_cmd(self, txn_per_client, num_active_partitions):
+    def create_consumer_cmd(self, log_file_path, txn_per_client, num_active_partitions):
         """
         Return consumer cli command to create a consumer client process, which reads
         transactions stored in waltz. Validation is successful if consumer consumes
@@ -71,7 +71,7 @@ class ClientCli(Cli):
             --cli-config-path <client cli config file path>
         """
         cmd_arr = [
-            "java -Dlog4j.configuration=file:/etc/waltz-client/waltz-log4j.cfg", self.java_cli_class_name(),
+            "java -Dlog4j.configuration=file:{}".format(log_file_path), self.java_cli_class_name(),
             "create-consumer",
             "--txn-per-client", txn_per_client,
             "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else "",

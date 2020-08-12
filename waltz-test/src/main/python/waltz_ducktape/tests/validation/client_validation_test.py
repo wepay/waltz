@@ -33,10 +33,10 @@ class ClientValidationTest(ProduceConsumeValidateTest):
         cmd_parallel = ""
 
         for i in range(num_producers):
-            cmd_parallel += self.client_cli.create_producer_cmd(txn_per_client, interval, num_active_partitions)
+            cmd_parallel += self.client_cli.create_producer_cmd(self.log_file_path, txn_per_client, interval, num_active_partitions)
             cmd_parallel += " & "
         for i in range(num_consumers):
-            cmd_parallel += self.client_cli.create_consumer_cmd(txn_per_client * num_producers, num_active_partitions)
+            cmd_parallel += self.client_cli.create_consumer_cmd(self.log_file_path, txn_per_client * num_producers, num_active_partitions)
             cmd_parallel += " & "
 
         cmd_parallel += self.get_num_failed_processes_cmd()
