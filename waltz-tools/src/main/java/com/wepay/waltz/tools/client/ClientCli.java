@@ -44,18 +44,15 @@ public final class ClientCli extends SubcommandCli {
     private ClientCli(String[] args,  boolean useByTest) {
         super(args, useByTest, Arrays.asList(
                 new Subcommand(Validate.NAME, Validate.DESCRIPTION, Validate::new),
-                new Subcommand(HighWaterMark.NAME, HighWaterMark.DESCRIPTION, HighWaterMark::new)
-        ));
+                new Subcommand(HighWaterMark.NAME, HighWaterMark.DESCRIPTION, HighWaterMark::new),
+                new Subcommand(CreateProducer.NAME, CreateProducer.DESCRIPTION, CreateProducer::new),
+                new Subcommand(CreateConsumer.NAME, CreateConsumer.DESCRIPTION, CreateConsumer::new)
+                ));
     }
 
     /**
-     * Use {@code Validate} command to submit transactions to Waltz
-     * server for testing, and consume the transactions for validation,
-     * including transaction data and optimistic locking.
-     *
-     * When running {@code Validate} command, there should not be any external
-     * client that is producing TXNs of the same partition (different partition
-     * is okay). Otherwise, the validation result will be unpredictable.
+     * {@code ClientCliBaseClass} serves as a base class for few Client Cli classes.
+     * It handles production of transactions, its consumption and validation.
      *
      * <pre>
      * How validation is done:
@@ -81,124 +78,29 @@ public final class ClientCli extends SubcommandCli {
      * 2                            1            1
      * </pre>
      */
-    private static final class Validate extends Cli {
-        private static final String NAME = "validate";
-        private static final String DESCRIPTION = "Submit transactions for validation";
+
+    protected abstract static class ClientCliBaseClass extends Cli {
         private static final String LOCK_NAME = "validate-lock";
         private static final int LOCK_ID = 0;
         private static final int LAMBDA = 1;
-        private static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
         private static final Random RANDOM = new Random();
-
         private static final List<PartitionLocalLock> LOCKS = Collections.singletonList(new PartitionLocalLock(LOCK_NAME, LOCK_ID));
+        protected static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
 
         private final Map<Integer, ConcurrentHashMap<Integer, Long>> clientHighWaterMarkMap;
         private final List<String> uncaughtExceptions;
 
-        private CountDownLatch allProducerReady;
-        private CountDownLatch allProducerTxnCallbackReceived;
-        private CountDownLatch allConsumerTxnCallbackReceived;
+        protected CountDownLatch allProducerReady;
+        protected CountDownLatch allProducerTxnCompleted;
+        protected CountDownLatch allConsumerTxnCallbackReceived;
 
-        private Validate(String[] args) {
+        protected ClientCliBaseClass(String[] args) {
             super(args);
             clientHighWaterMarkMap = new HashMap<>();
             uncaughtExceptions = Collections.synchronizedList(new ArrayList<>());
         }
 
-        @Override
-        protected void configureOptions(Options options) {
-            Option txnPerClientOption = Option.builder("tpc")
-                    .longOpt("txn-per-client")
-                    .desc("Specify number of transactions per client")
-                    .hasArg()
-                    .build();
-            Option numClientsOption = Option.builder("nc")
-                    .longOpt("num-clients")
-                    .desc("Specify number of total clients")
-                    .hasArg()
-                    .build();
-            Option intervalOption = Option.builder("i")
-                    .longOpt("interval")
-                    .desc("Specify average interval(millisecond) between transactions")
-                    .hasArg()
-                    .build();
-            Option cfgPathOption = Option.builder("c")
-                    .longOpt("cli-config-path")
-                    .desc("Specify client cli config file path")
-                    .hasArg()
-                    .build();
-            Option numActivePartitionOption = Option.builder("ap")
-                    .longOpt("num-active-partitions")
-                    .desc(String.format("Specify number of partitions to interact with. e.g. if set to 3, transactions will"
-                            + "be evenly distributed among partition 0, 1 and 2. Default to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
-                    .hasArg()
-                    .build();
-
-            txnPerClientOption.setRequired(true);
-            numClientsOption.setRequired(true);
-            intervalOption.setRequired(true);
-            cfgPathOption.setRequired(true);
-            numActivePartitionOption.setRequired(false);
-
-            options.addOption(txnPerClientOption);
-            options.addOption(numClientsOption);
-            options.addOption(intervalOption);
-            options.addOption(cfgPathOption);
-            options.addOption(numActivePartitionOption);
-        }
-
-        @Override
-        protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
-            try {
-                // check required arguments
-                int txnPerClient = Integer.parseInt(cmd.getOptionValue("txn-per-client"));
-                if (txnPerClient < 0) {
-                    throw new IllegalArgumentException("Found negative: txn-per-client must be greater or equals to 0");
-                }
-                int numClients = Integer.parseInt(cmd.getOptionValue("num-clients"));
-                if (numClients < 0) {
-                    throw new IllegalArgumentException("Found negative: num-clients must be greater or equals to 0");
-                }
-                int avgInterval = Integer.parseInt(cmd.getOptionValue("interval"));
-                if (avgInterval < 0) {
-                    throw new IllegalArgumentException("Found negative: interval must be greater or equals to 0");
-                }
-                String configFilePath = cmd.getOptionValue("cli-config-path");
-                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath);
-
-                // check optional argument
-                int numActivePartitions = cmd.hasOption("num-active-partitions") ? Integer.parseInt(cmd.getOptionValue("num-active-partitions")) : DEFAULT_NUMBER_ACTIVE_PARTITIONS;
-                if (numActivePartitions < 1) {
-                    throw new IllegalArgumentException("num-active-partitions must be greater or equals to 1");
-                }
-
-                // get number of existing transactions across all partitions
-                long numTxnToSubmit = txnPerClient * numClients;
-                long numExistingTransactions = 0;
-                for (int partitionId = 0; partitionId < numActivePartitions; partitionId++) {
-                    long partitionHighWaterMark = getHighWaterMark(partitionId, waltzClientConfig);
-                    numExistingTransactions += partitionHighWaterMark > -1L ? partitionHighWaterMark + 1 : 0;
-                }
-
-                // each client will receive callback of all transactions
-                int expectNumProducerCallbacks = toIntExact((numExistingTransactions + numTxnToSubmit) * numClients);
-                int expectNumConsumerCallbacks = toIntExact((numExistingTransactions + numTxnToSubmit) * 1);
-                allProducerReady = new CountDownLatch(numClients);
-                allProducerTxnCallbackReceived = new CountDownLatch(expectNumProducerCallbacks);
-                allConsumerTxnCallbackReceived = new CountDownLatch(expectNumConsumerCallbacks);
-
-                produceTransactions(numActivePartitions, numClients, txnPerClient, avgInterval, waltzClientConfig);
-
-                consumeAndValidate(waltzClientConfig);
-
-                checkUncaughtExceptions();
-            } catch (Exception e) {
-                throw new SubCommandFailedException(String.format("Transaction validation failed: %s", e.getMessage()));
-            }
-
-        }
-
-        private void checkUncaughtExceptions() {
+        protected void checkUncaughtExceptions() {
             if (!uncaughtExceptions.isEmpty()) {
                 StringBuilder sb = new StringBuilder();
                 for (String errorMsg: uncaughtExceptions) {
@@ -206,11 +108,6 @@ public final class ClientCli extends SubcommandCli {
                 }
                 throw new SubCommandFailedException(sb.toString());
             }
-        }
-
-        @Override
-        protected String getUsage() {
-            return buildUsage(NAME, DESCRIPTION, getOptions());
         }
 
         /**
@@ -222,8 +119,8 @@ public final class ClientCli extends SubcommandCli {
          * @param config WaltzClientConfig
          * @throws Exception
          */
-        private void produceTransactions(int numActivePartitions, int numClients, int txnPerClient, int avgInterval,
-                                         WaltzClientConfig config) throws Exception {
+        protected void produceTransactions(int numActivePartitions, int numClients, int txnPerClient, int avgInterval,
+                                           WaltzClientConfig config) throws Exception {
             ExecutorService executor = Executors.newFixedThreadPool(numClients);
             for (int i = 0; i < numClients; i++) {
                 ProducerTxnCallbacks producerTnxCallback = new ProducerTxnCallbacks();
@@ -238,8 +135,7 @@ public final class ClientCli extends SubcommandCli {
                 executor.execute(new ProducerThread(numActivePartitions, txnPerClient, avgInterval, producer));
                 allProducerReady.countDown();
             }
-
-            allProducerTxnCallbackReceived.await();
+            allProducerTxnCompleted.await();
             executor.shutdown();
         }
 
@@ -248,7 +144,7 @@ public final class ClientCli extends SubcommandCli {
          * @param config WaltzClientConfig
          * @throws Exception
          */
-        private void consumeAndValidate(WaltzClientConfig config) throws Exception {
+        protected void consumeAndValidate(WaltzClientConfig config) throws Exception {
             ExecutorService executor = Executors.newFixedThreadPool(1);
             ConsumerTxnCallbacks consumerTxnCallback = new ConsumerTxnCallbacks();
             WaltzClient consumer = new WaltzClient(consumerTxnCallback, config);
@@ -295,7 +191,7 @@ public final class ClientCli extends SubcommandCli {
                         // we can test various congestion scenarios.
                         Thread.sleep(nextExponentialDistributedInterval(avgInterval));
                     }
-                    allProducerTxnCallbackReceived.await();
+                    allProducerTxnCompleted.await();
                 } catch (InterruptedException ex) {
                     client.close();
                     throw new SubCommandFailedException(ex);
@@ -357,7 +253,6 @@ public final class ClientCli extends SubcommandCli {
                 long curHighWaterMark = clientHighWaterMarkMap.get(clientId).getOrDefault(partitionId, -1L);
                 if (transaction.transactionId == curHighWaterMark + 1) {
                     clientHighWaterMarkMap.get(clientId).put(partitionId, transaction.transactionId);
-                    allProducerTxnCallbackReceived.countDown();
                 } else {
                     throw new SubCommandFailedException(String.format("expect callback transaction id to be %s, but got %s",
                                                                       curHighWaterMark + 1, transaction.transactionId));
@@ -441,6 +336,13 @@ public final class ClientCli extends SubcommandCli {
                 builder.setWriteLocks(LOCKS);
                 return true;
             }
+
+            @Override
+            public void onCompletion(boolean result) {
+                if (result) {
+                    allProducerTxnCompleted.countDown();
+                }
+            }
         }
 
         private static final class HighWaterMarkSerializer implements Serializer<Long> {
@@ -470,6 +372,120 @@ public final class ClientCli extends SubcommandCli {
         private static int nextExponentialDistributedInterval(int avgInterval) {
             // LAMBDA defaults to 1, so average interval is decided by avgInterval
             return (int) (avgInterval * (Math.log(1 - Math.random()) / -LAMBDA));
+        }
+    }
+
+    /**
+     * Use {@code Validate} command to submit transactions to Waltz
+     * server for testing, and consume the transactions for validation,
+     * including transaction data and optimistic locking.
+     *
+     * When running {@code Validate} command, there should not be any external
+     * client that is producing TXNs of the same partition (different partition
+     * is okay). Otherwise, the validation result will be unpredictable.
+     */
+    private static final class Validate extends ClientCliBaseClass {
+        private static final String NAME = "validate";
+        private static final String DESCRIPTION = "Submit transactions for validation";
+
+        protected Validate(String[] args) {
+            super(args);
+        }
+
+        @Override
+        protected void configureOptions(Options options) {
+            Option txnPerClientOption = Option.builder("tpc")
+                    .longOpt("txn-per-client")
+                    .desc("Specify number of transactions per client")
+                    .hasArg()
+                    .build();
+            Option numClientsOption = Option.builder("nc")
+                    .longOpt("num-clients")
+                    .desc("Specify number of total clients")
+                    .hasArg()
+                    .build();
+            Option intervalOption = Option.builder("i")
+                    .longOpt("interval")
+                    .desc("Specify average interval(millisecond) between transactions")
+                    .hasArg()
+                    .build();
+            Option cfgPathOption = Option.builder("c")
+                    .longOpt("cli-config-path")
+                    .desc("Specify client cli config file path")
+                    .hasArg()
+                    .build();
+            Option numActivePartitionOption = Option.builder("ap")
+                    .longOpt("num-active-partitions")
+                    .desc(String.format("Specify number of partitions to interact with. e.g. if set to 3, transactions will"
+                            + "be evenly distributed among partition 0, 1 and 2. Default to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
+                    .hasArg()
+                    .build();
+
+            txnPerClientOption.setRequired(true);
+            numClientsOption.setRequired(true);
+            intervalOption.setRequired(true);
+            cfgPathOption.setRequired(true);
+            numActivePartitionOption.setRequired(false);
+
+            options.addOption(txnPerClientOption);
+            options.addOption(numClientsOption);
+            options.addOption(intervalOption);
+            options.addOption(cfgPathOption);
+            options.addOption(numActivePartitionOption);
+        }
+
+        @Override
+        protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
+            try {
+                // check required arguments
+                int txnPerClient = Integer.parseInt(cmd.getOptionValue("txn-per-client"));
+                if (txnPerClient < 0) {
+                    throw new IllegalArgumentException("Found negative: txn-per-client must be greater or equals to 0");
+                }
+                int numClients = Integer.parseInt(cmd.getOptionValue("num-clients"));
+                if (numClients < 0) {
+                    throw new IllegalArgumentException("Found negative: num-clients must be greater or equals to 0");
+                }
+                int avgInterval = Integer.parseInt(cmd.getOptionValue("interval"));
+                if (avgInterval < 0) {
+                    throw new IllegalArgumentException("Found negative: interval must be greater or equals to 0");
+                }
+                String configFilePath = cmd.getOptionValue("cli-config-path");
+                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath);
+
+                // check optional argument
+                int numActivePartitions = cmd.hasOption("num-active-partitions") ? Integer.parseInt(cmd.getOptionValue("num-active-partitions")) : DEFAULT_NUMBER_ACTIVE_PARTITIONS;
+                if (numActivePartitions < 1) {
+                    throw new IllegalArgumentException("num-active-partitions must be greater or equals to 1");
+                }
+
+                // get number of existing transactions across all partitions
+                long numTxnToSubmit = txnPerClient * numClients;
+                long numExistingTransactions = 0;
+                for (int partitionId = 0; partitionId < numActivePartitions; partitionId++) {
+                    long partitionHighWaterMark = getHighWaterMark(partitionId, waltzClientConfig);
+                    numExistingTransactions += partitionHighWaterMark > -1L ? partitionHighWaterMark + 1 : 0;
+                }
+
+                // each client will receive callback of all transactions
+                int expectNumConsumerCallbacks = toIntExact((numExistingTransactions + numTxnToSubmit) * 1);
+                allProducerReady = new CountDownLatch(numClients);
+                allProducerTxnCompleted = new CountDownLatch(toIntExact(numTxnToSubmit));
+                allConsumerTxnCallbackReceived = new CountDownLatch(expectNumConsumerCallbacks);
+
+                produceTransactions(numActivePartitions, numClients, txnPerClient, avgInterval, waltzClientConfig);
+
+                consumeAndValidate(waltzClientConfig);
+
+                checkUncaughtExceptions();
+            } catch (Exception e) {
+                throw new SubCommandFailedException(String.format("Transaction validation failed: %s", e.getMessage()));
+            }
+        }
+
+        @Override
+        protected String getUsage() {
+            return buildUsage(NAME, DESCRIPTION, getOptions());
         }
     }
 
@@ -513,6 +529,171 @@ public final class ClientCli extends SubcommandCli {
                 System.out.println(String.format("Partition %s current high watermark: %d", partitionId, highWaterMark));
             } catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Failed to get high watermark of partition %s. %n%s", partitionId, e.getMessage()));
+            }
+        }
+
+        @Override
+        protected String getUsage() {
+            return buildUsage(NAME, DESCRIPTION, getOptions());
+        }
+    }
+
+    /**
+     * Use {@code CreateProducer} command to create a producer client that
+     * submits transactions to Waltz server.
+     *
+     * Producer process is closed once total sum of high watermarks for active
+     * partitions reaches num-callbacks.
+     */
+    private static final class CreateProducer extends ClientCliBaseClass {
+        private static final String NAME = "create-producer";
+        private static final String DESCRIPTION = "Creates one producer";
+
+        private CreateProducer(String[] args) {
+            super(args);
+        }
+
+        @Override
+        protected void configureOptions(Options options) {
+            Option txnPerClientOption = Option.builder("tpc")
+                    .longOpt("txn-per-client")
+                    .desc("Specify number of transactions to be produced on this client")
+                    .hasArg()
+                    .build();
+            Option intervalOption = Option.builder("i")
+                    .longOpt("interval")
+                    .desc("Specify average interval(millisecond) between transactions")
+                    .hasArg()
+                    .build();
+            Option cfgPathOption = Option.builder("c")
+                    .longOpt("cli-config-path")
+                    .desc("Specify client cli config file path")
+                    .hasArg()
+                    .build();
+            Option numActivePartitionOption = Option.builder("ap")
+                    .longOpt("num-active-partitions")
+                    .desc(String.format("Specify number of partitions to interact with. e.g. if set to 3, transactions will"
+                            + "be evenly distributed among partition 0, 1 and 2. Default to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
+                    .hasArg()
+                    .build();
+
+            txnPerClientOption.setRequired(true);
+            intervalOption.setRequired(true);
+            cfgPathOption.setRequired(true);
+            numActivePartitionOption.setRequired(false);
+
+            options.addOption(txnPerClientOption);
+            options.addOption(intervalOption);
+            options.addOption(cfgPathOption);
+            options.addOption(numActivePartitionOption);
+        }
+
+        @Override
+        protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
+            try {
+                // check required arguments
+                int numOfProducedTransactions = Integer.parseInt(cmd.getOptionValue("txn-per-client"));
+                if (numOfProducedTransactions < 0) {
+                    throw new IllegalArgumentException("Found negative: txn-per-client must be greater or equals to 0");
+                }
+                int avgInterval = Integer.parseInt(cmd.getOptionValue("interval"));
+                if (avgInterval < 0) {
+                    throw new IllegalArgumentException("Found negative: interval must be greater or equals to 0");
+                }
+                String configFilePath = cmd.getOptionValue("cli-config-path");
+                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath);
+
+                // check optional arguments
+                int numActivePartitions = cmd.hasOption("num-active-partitions") ? Integer.parseInt(cmd.getOptionValue("num-active-partitions")) : DEFAULT_NUMBER_ACTIVE_PARTITIONS;
+                if (numActivePartitions < 1) {
+                    throw new IllegalArgumentException("num-active-partitions must be greater or equals to 1");
+                }
+
+                allProducerReady = new CountDownLatch(1);
+                allProducerTxnCompleted = new CountDownLatch(numOfProducedTransactions);
+
+                produceTransactions(numActivePartitions, 1, numOfProducedTransactions, avgInterval, waltzClientConfig);
+
+                checkUncaughtExceptions();
+            } catch (Exception e) {
+                throw new SubCommandFailedException(String.format("Transaction validation failed: %s", e.getMessage()));
+            }
+        }
+
+        @Override
+        protected String getUsage() {
+            return buildUsage(NAME, DESCRIPTION, getOptions());
+        }
+    }
+
+    /**
+     * Use {@code CreateConsumer} command to create a consumer client that
+     * reads transactions submitted to Waltz server for validation,
+     * including transaction data and optimistic locking.
+     *
+     * Consumer process is closed once total number of processed transactions
+     * reaches num-callbacks.
+     */
+    private static final class CreateConsumer extends ClientCliBaseClass {
+        private static final String NAME = "create-consumer";
+        private static final String DESCRIPTION = "Creates one consumer";
+
+        private CreateConsumer(String[] args) {
+            super(args);
+        }
+
+        @Override
+        protected void configureOptions(Options options) {
+            Option txnPerClientOption = Option.builder("tpc")
+                    .longOpt("txn-per-client")
+                    .desc("Specify number of transactions to be consumed")
+                    .hasArg()
+                    .build();
+            Option cfgPathOption = Option.builder("c")
+                    .longOpt("cli-config-path")
+                    .desc("Specify client cli config file path")
+                    .hasArg()
+                    .build();
+            Option numActivePartitionOption = Option.builder("ap")
+                    .longOpt("num-active-partitions")
+                    .desc(String.format("Specify number of partitions to interact with. e.g. if set to 3, transactions will"
+                            + "be evenly distributed among partition 0, 1 and 2. Default to %d", DEFAULT_NUMBER_ACTIVE_PARTITIONS))
+                    .hasArg()
+                    .build();
+
+            txnPerClientOption.setRequired(true);
+            cfgPathOption.setRequired(true);
+            numActivePartitionOption.setRequired(false);
+
+            options.addOption(txnPerClientOption);
+            options.addOption(cfgPathOption);
+            options.addOption(numActivePartitionOption);
+        }
+
+        @Override
+        protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
+            try {
+                // check required arguments
+                int numOfConsumedTransactions = Integer.parseInt(cmd.getOptionValue("txn-per-client"));
+                if (numOfConsumedTransactions < 0) {
+                    throw new IllegalArgumentException("Found negative: txn-per-client must be greater or equals to 0");
+                }
+                String configFilePath = cmd.getOptionValue("cli-config-path");
+                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath);
+
+                // check optional arguments
+                int numActivePartitions = cmd.hasOption("num-active-partitions") ? Integer.parseInt(cmd.getOptionValue("num-active-partitions")) : DEFAULT_NUMBER_ACTIVE_PARTITIONS;
+                if (numActivePartitions < 1) {
+                    throw new IllegalArgumentException("num-active-partitions must be greater or equals to 1");
+                }
+
+                // consumer will receive numCallbacks callbacks
+                allConsumerTxnCallbackReceived = new CountDownLatch(numOfConsumedTransactions);
+                consumeAndValidate(waltzClientConfig);
+
+                checkUncaughtExceptions();
+            } catch (Exception e) {
+                throw new SubCommandFailedException(String.format("Transaction validation failed: %s", e.getMessage()));
             }
         }
 

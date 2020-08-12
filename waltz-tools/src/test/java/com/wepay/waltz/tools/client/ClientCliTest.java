@@ -133,6 +133,57 @@ public class ClientCliTest {
     }
 
     @Test
+    public void testCreateProducerConsumer() throws Exception {
+        Properties properties = new Properties();
+        properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/client/cli/test");
+        properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, String.valueOf(CLUSTER_NUM_PARTITIONS));
+        properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
+        IntegrationTestHelper helper = new IntegrationTestHelper(properties);
+        Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
+                helper.getZkSessionTimeout(), helper.getSslSetup());
+        String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
+
+        helper.startZooKeeperServer();
+        helper.startWaltzStorage(true);
+
+        String storage = helper.getHost() + ":" + helper.getStorageAdminPort();
+        addPartitionsToStorage(CLUSTER_NUM_PARTITIONS, storage, configFilePath);
+
+        helper.startWaltzServer(true);
+
+        try {
+            // validate with multi-partitions
+            String[] producer1 = {
+                    "create-producer",
+                    "--txn-per-client", "50",
+                    "--interval", "20",
+                    "--num-active-partitions", "3",
+                    "--cli-config-path", configFilePath
+            };
+            String[] producer2 = {
+                    "create-producer",
+                    "--txn-per-client", "50",
+                    "--interval", "20",
+                    "--num-active-partitions", "3",
+                    "--cli-config-path", configFilePath
+            };
+            String[] consumer1 = {
+                    "create-consumer",
+                    "--txn-per-client", "100",
+                    "--num-active-partitions", "3",
+                    "--cli-config-path", configFilePath
+            };
+            ClientCli.testMain(producer1);
+            ClientCli.testMain(producer2);
+            ClientCli.testMain(consumer1);
+
+            assertFalse(errContent.toString("UTF-8").contains("Error"));
+        } finally {
+            helper.closeAll();
+        }
+    }
+
+    @Test
     public void testGetHighWaterMark() throws Exception {
         Properties properties = new Properties();
         properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/client/cli/test");
