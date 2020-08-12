@@ -155,21 +155,21 @@ public class ClientCliTest {
             // validate with multi-partitions
             String[] producer1 = {
                     "create-producer",
-                    "--num-produced-txn", "50",
+                    "--txn-per-client", "50",
                     "--interval", "20",
                     "--num-active-partitions", "3",
                     "--cli-config-path", configFilePath
             };
             String[] producer2 = {
                     "create-producer",
-                    "--num-produced-txn", "50",
+                    "--txn-per-client", "50",
                     "--interval", "20",
                     "--num-active-partitions", "3",
                     "--cli-config-path", configFilePath
             };
             String[] consumer1 = {
                     "create-consumer",
-                    "--num-callbacks", "100",
+                    "--txn-per-client", "100",
                     "--num-active-partitions", "3",
                     "--cli-config-path", configFilePath
             };

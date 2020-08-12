@@ -84,15 +84,14 @@ public final class ClientCli extends SubcommandCli {
         private static final int LOCK_ID = 0;
         private static final int LAMBDA = 1;
         private static final Random RANDOM = new Random();
-        protected static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
-
         private static final List<PartitionLocalLock> LOCKS = Collections.singletonList(new PartitionLocalLock(LOCK_NAME, LOCK_ID));
+        protected static final int DEFAULT_NUMBER_ACTIVE_PARTITIONS = 1;
 
         private final Map<Integer, ConcurrentHashMap<Integer, Long>> clientHighWaterMarkMap;
         private final List<String> uncaughtExceptions;
 
         protected CountDownLatch allProducerReady;
-        protected CountDownLatch allProducerDone;
+        protected CountDownLatch allProducerTxnCompleted;
         protected CountDownLatch allConsumerTxnCallbackReceived;
 
         protected ClientCliBaseClass(String[] args) {
@@ -136,7 +135,7 @@ public final class ClientCli extends SubcommandCli {
                 executor.execute(new ProducerThread(numActivePartitions, txnPerClient, avgInterval, producer));
                 allProducerReady.countDown();
             }
-            allProducerDone.await();
+            allProducerTxnCompleted.await();
             executor.shutdown();
         }
 
@@ -170,14 +169,12 @@ public final class ClientCli extends SubcommandCli {
             private int txnPerThread;
             private int avgInterval;
             private WaltzClient client;
-            private CountDownLatch producerTransactionsCompleted;
 
             ProducerThread(int numActivePartitions, int txnPerThread, int avgInterval, WaltzClient client) {
                 this.numActivePartitions = numActivePartitions;
                 this.txnPerThread = txnPerThread;
                 this.avgInterval = avgInterval;
                 this.client = client;
-                this.producerTransactionsCompleted = new CountDownLatch(txnPerThread);
             }
 
             @Override
@@ -188,14 +185,13 @@ public final class ClientCli extends SubcommandCli {
                     // fire transactions
                     for (int j = 0; j < txnPerThread; j++) {
                         int partitionId = RANDOM.nextInt(numActivePartitions);
-                        client.submit(new HighWaterMarkTxnContext(partitionId, client.clientId(), producerTransactionsCompleted));
+                        client.submit(new HighWaterMarkTxnContext(partitionId, client.clientId()));
 
                         // By adjusting the distribution parameter of the random sleep,
                         // we can test various congestion scenarios.
                         Thread.sleep(nextExponentialDistributedInterval(avgInterval));
                     }
-                    producerTransactionsCompleted.await();
-                    allProducerDone.countDown();
+                    allProducerTxnCompleted.await();
                 } catch (InterruptedException ex) {
                     client.close();
                     throw new SubCommandFailedException(ex);
@@ -322,12 +318,10 @@ public final class ClientCli extends SubcommandCli {
         private final class HighWaterMarkTxnContext extends TransactionContext {
             private final int partitionId;
             private final int clientId;
-            private final CountDownLatch producerTransactionsCompleted;
 
-            HighWaterMarkTxnContext(int partitionId, int clientId, CountDownLatch producerTransactionsCompleted) {
+            HighWaterMarkTxnContext(int partitionId, int clientId) {
                 this.partitionId = partitionId;
                 this.clientId = clientId;
-                this.producerTransactionsCompleted = producerTransactionsCompleted;
             }
 
             @Override
@@ -346,7 +340,7 @@ public final class ClientCli extends SubcommandCli {
             @Override
             public void onCompletion(boolean result) {
                 if (result) {
-                    this.producerTransactionsCompleted.countDown();
+                    allProducerTxnCompleted.countDown();
                 }
             }
         }
@@ -476,7 +470,7 @@ public final class ClientCli extends SubcommandCli {
                 // each client will receive callback of all transactions
                 int expectNumConsumerCallbacks = toIntExact((numExistingTransactions + numTxnToSubmit) * 1);
                 allProducerReady = new CountDownLatch(numClients);
-                allProducerDone = new CountDownLatch(numClients);
+                allProducerTxnCompleted = new CountDownLatch(toIntExact(numTxnToSubmit));
                 allConsumerTxnCallbackReceived = new CountDownLatch(expectNumConsumerCallbacks);
 
                 produceTransactions(numActivePartitions, numClients, txnPerClient, avgInterval, waltzClientConfig);
@@ -561,9 +555,9 @@ public final class ClientCli extends SubcommandCli {
 
         @Override
         protected void configureOptions(Options options) {
-            Option txnPerClientOption = Option.builder("npt")
-                    .longOpt("num-produced-txn")
-                    .desc("Specify number of transactions to be produced")
+            Option txnPerClientOption = Option.builder("tpc")
+                    .longOpt("txn-per-client")
+                    .desc("Specify number of transactions to be produced on this client")
                     .hasArg()
                     .build();
             Option intervalOption = Option.builder("i")
@@ -598,9 +592,9 @@ public final class ClientCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             try {
                 // check required arguments
-                int numOfProducedTransactions = Integer.parseInt(cmd.getOptionValue("num-produced-txn"));
+                int numOfProducedTransactions = Integer.parseInt(cmd.getOptionValue("txn-per-client"));
                 if (numOfProducedTransactions < 0) {
-                    throw new IllegalArgumentException("Found negative: num-produced-txn must be greater or equals to 0");
+                    throw new IllegalArgumentException("Found negative: txn-per-client must be greater or equals to 0");
                 }
                 int avgInterval = Integer.parseInt(cmd.getOptionValue("interval"));
                 if (avgInterval < 0) {
@@ -616,7 +610,7 @@ public final class ClientCli extends SubcommandCli {
                 }
 
                 allProducerReady = new CountDownLatch(1);
-                allProducerDone = new CountDownLatch(1);
+                allProducerTxnCompleted = new CountDownLatch(numOfProducedTransactions);
 
                 produceTransactions(numActivePartitions, 1, numOfProducedTransactions, avgInterval, waltzClientConfig);
 
@@ -650,9 +644,9 @@ public final class ClientCli extends SubcommandCli {
 
         @Override
         protected void configureOptions(Options options) {
-            Option txnPerClientOption = Option.builder("nc")
-                    .longOpt("num-callbacks")
-                    .desc("Specify number of transactions per client")
+            Option txnPerClientOption = Option.builder("tpc")
+                    .longOpt("txn-per-client")
+                    .desc("Specify number of transactions to be consumed")
                     .hasArg()
                     .build();
             Option cfgPathOption = Option.builder("c")
@@ -680,9 +674,9 @@ public final class ClientCli extends SubcommandCli {
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             try {
                 // check required arguments
-                int numCallbacks = Integer.parseInt(cmd.getOptionValue("num-callbacks"));
-                if (numCallbacks < 0) {
-                    throw new IllegalArgumentException("Found negative: num-callbacks must be greater or equals to 0");
+                int numOfConsumedTransactions = Integer.parseInt(cmd.getOptionValue("txn-per-client"));
+                if (numOfConsumedTransactions < 0) {
+                    throw new IllegalArgumentException("Found negative: txn-per-client must be greater or equals to 0");
                 }
                 String configFilePath = cmd.getOptionValue("cli-config-path");
                 WaltzClientConfig waltzClientConfig = getWaltzClientConfig(configFilePath);
@@ -694,8 +688,7 @@ public final class ClientCli extends SubcommandCli {
                 }
 
                 // consumer will receive numCallbacks callbacks
-                allConsumerTxnCallbackReceived = new CountDownLatch(numCallbacks);
-
+                allConsumerTxnCallbackReceived = new CountDownLatch(numOfConsumedTransactions);
                 consumeAndValidate(waltzClientConfig);
 
                 checkUncaughtExceptions();
