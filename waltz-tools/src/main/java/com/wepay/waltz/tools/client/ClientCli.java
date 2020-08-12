@@ -539,7 +539,7 @@ public final class ClientCli extends SubcommandCli {
     }
 
     /**
-     * Use {@code Producer} command to create a producer client that
+     * Use {@code CreateProducer} command to create a producer client that
      * submits transactions to Waltz server.
      *
      * Producer process is closed once total sum of high watermarks for active
@@ -627,7 +627,7 @@ public final class ClientCli extends SubcommandCli {
     }
 
     /**
-     * Use {@code Consumer} command to create a consumer client that
+     * Use {@code CreateConsumer} command to create a consumer client that
      * reads transactions submitted to Waltz server for validation,
      * including transaction data and optimistic locking.
      *

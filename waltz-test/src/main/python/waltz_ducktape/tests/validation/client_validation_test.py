@@ -26,7 +26,6 @@ class ClientValidationTest(ProduceConsumeValidateTest):
                                                            num_consumers, interval)
         self.run_produce_consume_validate(lambda: self.produce_consume_no_torture(validation_cmd, timeout))
 
-
     def get_num_failed_processes_cmd(self):
         return "fail=0; for job in `jobs -p`; do wait $job || let \"fail+=1\"; done ; echo \"number of failed processes: $fail\""
 
