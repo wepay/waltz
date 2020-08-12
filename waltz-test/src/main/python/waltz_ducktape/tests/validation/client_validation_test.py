@@ -6,7 +6,7 @@ from ducktape.utils.util import wait_until
 import re
 
 
-class ProducerConsumerClusterTest(ProduceConsumeValidateTest):
+class ClientValidationTest(ProduceConsumeValidateTest):
     """
     A class of waltz tests where each client (producer/consumer) in waltz cluster is run as a single process.
     """
@@ -16,7 +16,7 @@ class ProducerConsumerClusterTest(ProduceConsumeValidateTest):
         {'cpu':1, 'mem':'1GB', 'disk':'25GB', 'num_nodes':1}])
 
     def __init__(self, test_context):
-        super(ProducerConsumerClusterTest, self).__init__(test_context=test_context)
+        super(ClientValidationTest, self).__init__(test_context=test_context)
 
     @cluster(cluster_spec=MIN_CLUSTER_SPEC)
     @parametrize(num_active_partitions=1, txn_per_client=75, num_producers=3, num_consumers=2, interval=500, timeout=360)
