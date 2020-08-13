@@ -90,7 +90,7 @@ class ClientValidationTest(ProduceConsumeValidateTest):
         :param timeout: Test timeout
         :param expected_number_of_transactions: The expected number of created transaction during this test
         :param num_active_partitions: Number of active partitions
-        :param num_consumers_to_stop: Number of producers to stop with kill SIGTERM command
+        :param num_consumers_to_stop: Number of consumers to stop with kill SIGTERM command
         :param delay_before_torture: The delay in seconds between first transaction being processed and beginning of the torture test
         :param num_consumers: Total number of consumer clients
         """
@@ -118,10 +118,8 @@ class ClientValidationTest(ProduceConsumeValidateTest):
         wait_until(lambda: self.verifiable_client.task_complete() == True, timeout_sec=timeout,
                    err_msg="verifiable_client failed to complete task in {} seconds.".format(timeout))
 
-        print num_consumers_to_stop
         # Step 6: Verify child processes of a main process finished as expected (num_consumers_to_stop exited with other code than 0)
         num_failed_processes = int(re.search('failed processes: (\d+)', self.verifiable_client.get_validation_result()).group(1))
-        print num_failed_processes
         assert num_failed_processes == num_consumers_to_stop, "number of failed processes: {}, expected: {}".format(num_failed_processes, num_consumers_to_stop)
 
         # Step 7: Assert all transactions are persistently stored.
