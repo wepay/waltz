@@ -183,6 +183,16 @@ class ProduceConsumeValidateTest(WaltzTest):
         filtered_partition_info = search(filter_regex, partition_info).group()
         return int(search("localLowWaterMark:\s*(-?\d+)|$", filtered_partition_info).group(1))
 
+    def get_storage_num_of_all_transactions(self, storage, port, num_active_partitions):
+        """
+        :returns Total number of all transactions stored under active partitions in a storage node
+        (i.e. (partition1 high watermark + 1) + (partition2 high watermark + 1) ...), where transactions starts at index -1
+        """
+        total_num_of_transaction = 0
+        for partition in range(num_active_partitions):
+            total_num_of_transaction += self.get_storage_max_transaction_id(storage, port, partition) + 1
+        return total_num_of_transaction
+
     def get_storage_session_id(self, storage, partition):
         """
         Return session id of a storage node.

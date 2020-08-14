@@ -171,20 +171,8 @@ class ConnectionInterruptionTest(ProduceConsumeValidateTest):
         # Step 6: Verify that total number of expected transactions matches number of transactions stored in waltz storage nodes
         for bounced_node_info in bounced_nodes:
             expected_number_of_transactions = (txn_per_client * num_clients) + bounced_node_info.total_num_of_transactions
-            wait_until(lambda: expected_number_of_transactions == self.num_of_transactions_on_storage_node(bounced_node_info, admin_port, port, num_active_partitions),
+            storage = self.get_host(bounced_node_info.node.account.ssh_hostname, admin_port)
+            wait_until(lambda: expected_number_of_transactions == self.get_storage_num_of_all_transactions(storage, port, num_active_partitions),
                        timeout_sec=timeout, err_msg="number of transactions stored in storage partition does not match with all the transactions sent by client. "
                                              "Client {}, Strage = {} after {} seconds" \
-                       .format(expected_number_of_transactions, self.num_of_transactions_on_storage_node(bounced_node_info, admin_port, port, num_active_partitions), timeout))
-
-    def num_of_transactions_on_storage_node(self, bounced_node_info, admin_port, port, num_active_partitions):
-        """
-        :returns Total number of all transactions stored under active partitions in a storage node
-        (i.e. (partition1 high watermark + 1) + (partition2 high watermark + 1) ...), where transactions starts at index -1
-        """
-
-        total_num_of_transaction = 0
-        for partition in range(num_active_partitions):
-            total_num_of_transaction += self.get_storage_max_transaction_id(self.get_host(bounced_node_info.node.account.ssh_hostname, admin_port),
-                                                                            port, partition) + 1
-        return total_num_of_transaction
-
+                       .format(expected_number_of_transactions, self.get_storage_num_of_all_transactions(storage, port, num_active_partitions), timeout))
