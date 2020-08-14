@@ -186,7 +186,7 @@ class ProduceConsumeValidateTest(WaltzTest):
     def get_storage_num_of_all_transactions(self, storage, port, num_active_partitions):
         """
         :returns Total number of all transactions stored under active partitions in a storage node
-        (i.e. (partition1 high watermark + 1) + (partition2 high watermark + 1) ...), where transactions starts at index -1
+        (i.e. (partition1 high watermark + 1) + (partition2 high watermark + 1) ...), where transactions starts from index 0.
         """
         total_num_of_transaction = 0
         for partition in range(num_active_partitions):
