@@ -222,17 +222,6 @@ class ProduceConsumeValidateTest(WaltzTest):
         """
         self.storage_nodes_to_ignore = nodes_idx
 
-    def shrink_and_reallocate_waltz_server(self, num_of_ignored_nodes):
-        """
-        Deallocate server nodes (which sets free otherwise occupied space in waltz cluster)
-        and reallocate waltz server nodes with updated number of nodes,
-        which is original number of nodes minus num_of_ignored_nodes
-        """
-        cluster_num_partitions = self.waltz_server.cluster_num_partitions
-        self.waltz_server.clean()
-        self.waltz_server.free()
-        self.waltz_server = self.get_server_service(cluster_num_partitions, int(self.server_cfg['NumNodes']) - num_of_ignored_nodes)
-
     def trigger_recovery(self, bounce_node_idx, interval=10):
         """
         Bounce a storage node to trigger recovery procedure. This will force

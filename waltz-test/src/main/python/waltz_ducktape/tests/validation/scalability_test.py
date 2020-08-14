@@ -17,7 +17,7 @@ class ScalabilityTest(ProduceConsumeValidateTest):
         {'cpu':1, 'mem':'1GB', 'disk':'25GB', 'num_nodes':1}])
 
     def __init__(self, test_context):
-        super(ScalabilityTest, self).__init__(test_context=test_context, num_storage_nodes=4)
+        super(ScalabilityTest, self).__init__(test_context=test_context, num_storage_nodes=4, num_server_nodes=1)
 
     @cluster(cluster_spec=MIN_CLUSTER_SPEC)
     @parametrize(num_active_partitions=1, txn_per_client=500, num_clients=1, interval=100, timeout=240)
@@ -33,7 +33,6 @@ class ScalabilityTest(ProduceConsumeValidateTest):
     @parametrize(num_active_partitions=4, txn_per_client=500, num_clients=1, interval=100, timeout=240)
     @parametrize(num_active_partitions=1, txn_per_client=200, num_clients=1, interval=200, timeout=240)
     def test_scale_up_server_nodes(self, num_active_partitions, txn_per_client, num_clients, interval, timeout):
-        self.shrink_and_reallocate_waltz_server(1)
         self.run_produce_consume_validate(lambda: self.scale_up_server(num_active_partitions, txn_per_client, num_clients,
                                                                        interval, timeout))
 
@@ -131,10 +130,10 @@ class ScalabilityTest(ProduceConsumeValidateTest):
         partition = randrange(num_active_partitions)
 
         server_cli = ServerCli(self.verifiable_client.nodes[0], self.client_config_path)
-        added_server_nodes = self.get_server_service(int(self.zk_cfg['ClusterNumPartitions']), 1)
+        added_server_node = self.get_server_service(int(self.zk_cfg['ClusterNumPartitions']), 1)
 
         original_server = self.get_random_server_node_instance(self.waltz_server)
-        added_server = self.get_random_server_node_instance(added_server_nodes)
+        added_server = self.get_random_server_node_instance(added_server_node)
 
         # Step 1: Produce transactions with current cluster.
         cmd = self.client_cli.validate_txn_cmd(self.log_file_path, num_active_partitions, txn_per_client, num_clients,
@@ -146,15 +145,14 @@ class ScalabilityTest(ProduceConsumeValidateTest):
         original_server_num_assigned_partitions_before_scale_up = self.get_number_of_partitions_assigned_to_server(server_cli, original_server)
 
         # Step 3: Start new server nodes
-        added_server_nodes.start()
+        added_server_node.start()
 
         # Step 4: Get partition assignments after adding new server nodes
         original_server_num_assigned_partitions_after_scale_up = self.get_number_of_partitions_assigned_to_server(server_cli, original_server)
         added_server_num_assigned_partitions_after_scale_up = self.get_number_of_partitions_assigned_to_server(server_cli, added_server)
 
         assert added_server_num_assigned_partitions_after_scale_up > 0 and \
-               (original_server_num_assigned_partitions_after_scale_up < original_server_num_assigned_partitions_before_scale_up or
-                original_server_num_assigned_partitions_before_scale_up == 1), \
+               original_server_num_assigned_partitions_after_scale_up < original_server_num_assigned_partitions_before_scale_up, \
             "Number of assigned partitions to server nodes haven't changed after adding new server node {} = {}, or " \
             "no partition is assigned to newly added node {}" \
             .format(original_server_num_assigned_partitions_before_scale_up, original_server_num_assigned_partitions_after_scale_up,
