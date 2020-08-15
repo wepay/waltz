@@ -98,14 +98,14 @@ class ClientValidationTest(ProduceConsumeValidateTest):
         admin_port = self.waltz_storage.admin_port
         port = self.waltz_storage.port
         node = self.waltz_storage.nodes[randrange(len(self.waltz_storage.nodes))]
+        storage = self.get_host(node.account.ssh_hostname, admin_port)
         random_active_partition = randrange(num_active_partitions)
 
         # Step 1: Start waltz cluster and execute validation command
         self.verifiable_client.start(validation_cmd)
 
         # Step 2: Wait till transactions get processed
-        wait_until(lambda: self.is_max_transaction_id_updated(self.get_host(node.account.ssh_hostname, admin_port),
-                                                             port, random_active_partition, -1), timeout_sec=timeout)
+        wait_until(lambda: self.is_max_transaction_id_updated(storage, port, random_active_partition, -1), timeout_sec=timeout)
 
         # Step 3: Wait before staring torture test
         sleep(delay_before_torture)
@@ -123,27 +123,14 @@ class ClientValidationTest(ProduceConsumeValidateTest):
         assert num_failed_processes == num_consumers_to_stop, "number of failed processes: {}, expected: {}".format(num_failed_processes, num_consumers_to_stop)
 
         # Step 7: Assert all transactions are persistently stored.
-        assert expected_number_of_transactions == self.num_of_transactions_on_storage_node(node, admin_port, port,
-                                                                                           num_active_partitions), \
+        assert expected_number_of_transactions == self.get_storage_num_of_all_transactions(storage, port, num_active_partitions), \
             "number of transactions stored in storage partition does not match with all the transactions sent by producers. " \
             "Client {}, Storage = {}" \
                 .format(expected_number_of_transactions,
-                        self.num_of_transactions_on_storage_node(node, admin_port, port, num_active_partitions))
+                        self.get_storage_num_of_all_transactions(storage, port, num_active_partitions))
 
     def abrupt_stop_of_consumer_node(self, number_of_consumers):
         # parent process is on the first line and indexing of rows starts with 1, thus number_of_consumers + 2
         get_pid = "ps -ef | grep \"create-consumer\" | awk \'{{print $2}}\' | head -n -1 | sort -n | sed -n {0}p".format(randrange(number_of_consumers) + 2)
         cmd = "kill -SIGTERM `{}`".format(get_pid)
         self.verifiable_client.nodes[0].account.ssh_capture(cmd)
-
-    def num_of_transactions_on_storage_node(self, node, admin_port, port, num_active_partitions):
-        """
-        :returns Total number of all transactions stored under active partitions in a storage node
-        (i.e. (partition1 high watermark + 1) + (partition2 high watermark + 1) ...), where transactions starts at index -1
-        """
-
-        total_num_of_transaction = 0
-        for partition in range(num_active_partitions):
-            total_num_of_transaction += self.get_storage_max_transaction_id(self.get_host(node.account.ssh_hostname, admin_port),
-                                                                            port, partition) + 1
-        return total_num_of_transaction
