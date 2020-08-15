@@ -218,6 +218,9 @@ class ProduceConsumeValidateTest(WaltzTest):
         regex = "server=(\d)*,\s*partition={}".format(partition)
         return int(search(regex, zookeeper_metadata).group(1)) - 1
 
+    def get_number_of_partitions_assigned_to_server(self, server_cli, server):
+        return int(search('There are (\d+) partitions for current server', server_cli.list_partition(server)).group(1))
+
     def get_host(self, hostname, port):
         return "{}:{}".format(hostname, port)
 

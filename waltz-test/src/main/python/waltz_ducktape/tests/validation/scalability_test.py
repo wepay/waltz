@@ -4,6 +4,7 @@ from ducktape.mark.resource import cluster
 from ducktape.cluster.cluster_spec import ClusterSpec
 from ducktape.utils.util import wait_until
 from waltz_ducktape.tests.produce_consume_validate import ProduceConsumeValidateTest
+from waltz_ducktape.services.cli.server_cli import ServerCli
 
 
 class ScalabilityTest(ProduceConsumeValidateTest):
@@ -16,7 +17,7 @@ class ScalabilityTest(ProduceConsumeValidateTest):
         {'cpu':1, 'mem':'1GB', 'disk':'25GB', 'num_nodes':1}])
 
     def __init__(self, test_context):
-        super(ScalabilityTest, self).__init__(test_context=test_context, num_storage_nodes=4)
+        super(ScalabilityTest, self).__init__(test_context=test_context, num_storage_nodes=4, num_server_nodes=1)
 
     @cluster(cluster_spec=MIN_CLUSTER_SPEC)
     @parametrize(num_active_partitions=1, txn_per_client=500, num_clients=1, interval=100, timeout=240)
@@ -27,6 +28,13 @@ class ScalabilityTest(ProduceConsumeValidateTest):
         self.set_storage_nodes_to_ignore([added_node_idx])
         self.run_produce_consume_validate(lambda: self.scale_up_replica(src_node_idx, added_node_idx, num_active_partitions,
                                                                         txn_per_client, num_clients, interval, timeout))
+
+    @cluster(cluster_spec=MIN_CLUSTER_SPEC)
+    @parametrize(num_active_partitions=4, txn_per_client=500, num_clients=1, interval=100, timeout=240)
+    @parametrize(num_active_partitions=1, txn_per_client=200, num_clients=1, interval=200, timeout=240)
+    def test_scale_up_server_nodes(self, num_active_partitions, txn_per_client, num_clients, interval, timeout):
+        self.run_produce_consume_validate(lambda: self.scale_up_server(num_active_partitions, txn_per_client, num_clients,
+                                                                       interval, timeout))
 
     def scale_up_replica(self, src_node_idx, added_node_idx, num_active_partitions, txn_per_client, num_clients, interval, timeout):
         """
@@ -97,3 +105,59 @@ class ScalabilityTest(ProduceConsumeValidateTest):
         assert added_node_max_transaction_id == expected_max_transaction_id, \
             "New transactions failed to reach new replica, expected max transaction ID = {}, actual max transaction ID = {}" \
             .format(expected_max_transaction_id, added_node_max_transaction_id)
+
+    def get_random_server_node_instance(self, waltz_server):
+        server_node = waltz_server.nodes[randrange(len(waltz_server.nodes))]
+        server_node_hostname = server_node.account.ssh_hostname
+        return self.get_host(server_node_hostname, waltz_server.jetty_port)
+
+    def scale_up_server(self, num_active_partitions, txn_per_client, num_clients, interval, timeout):
+        """
+        A validate function to test scaling up number of servers.
+
+        :param num_active_partitions: Number of active partitions
+        :param txn_per_client: Number of transactions per client
+        :param num_clients: Number of total clients
+        :param interval: Average interval(millisecond) between transactions
+        :param timeout: Test timeout
+        :returns: Validation result
+        """
+
+        port = self.waltz_storage.port
+        admin_port = self.waltz_storage.admin_port
+        storage_node = self.waltz_storage.nodes[randrange(len(self.waltz_storage.nodes))]
+        storage = self.get_host(storage_node.account.ssh_hostname, admin_port)
+        partition = randrange(num_active_partitions)
+
+        server_cli = ServerCli(self.verifiable_client.nodes[0], self.client_config_path)
+        added_server_node = self.get_server_service(int(self.zk_cfg['ClusterNumPartitions']), 1)
+
+        original_server = self.get_random_server_node_instance(self.waltz_server)
+        added_server = self.get_random_server_node_instance(added_server_node)
+
+        # Step 1: Produce transactions with current cluster.
+        cmd = self.client_cli.validate_txn_cmd(self.log_file_path, num_active_partitions, txn_per_client, num_clients,
+                                               interval)
+        self.verifiable_client.start(cmd)
+        wait_until(lambda: self.is_max_transaction_id_updated(storage, port, partition, -1), timeout_sec=timeout)
+
+        # Step 2: Check partition assignment
+        original_server_num_assigned_partitions_before_scale_up = self.get_number_of_partitions_assigned_to_server(server_cli, original_server)
+
+        # Step 3: Start new server nodes
+        added_server_node.start()
+
+        # Step 4: Get partition assignments after adding new server nodes
+        original_server_num_assigned_partitions_after_scale_up = self.get_number_of_partitions_assigned_to_server(server_cli, original_server)
+        added_server_num_assigned_partitions_after_scale_up = self.get_number_of_partitions_assigned_to_server(server_cli, added_server)
+
+        assert added_server_num_assigned_partitions_after_scale_up > 0 and \
+               original_server_num_assigned_partitions_after_scale_up < original_server_num_assigned_partitions_before_scale_up, \
+            "Number of assigned partitions to server nodes haven't changed after adding new server node {} = {}, or " \
+            "no partition is assigned to newly added node {}" \
+            .format(original_server_num_assigned_partitions_before_scale_up, original_server_num_assigned_partitions_after_scale_up,
+                    added_server_num_assigned_partitions_after_scale_up)
+
+        # Step 5: Wait until verifiable client ends its task
+        wait_until(lambda: self.verifiable_client.task_complete() == True, timeout_sec=timeout,
+                   err_msg="verifiable_client failed to complete task in {} seconds.".format(timeout))
