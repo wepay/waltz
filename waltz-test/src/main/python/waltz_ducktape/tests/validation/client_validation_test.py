@@ -3,7 +3,7 @@ from ducktape.mark import parametrize
 from ducktape.cluster.cluster_spec import ClusterSpec
 from waltz_ducktape.tests.produce_consume_validate import ProduceConsumeValidateTest
 from ducktape.utils.util import wait_until
-from random import randrange
+from random import randrange, shuffle
 from time import sleep
 import re
 
@@ -29,8 +29,10 @@ class ClientValidationTest(ProduceConsumeValidateTest):
         self.run_produce_consume_validate(lambda: self.produce_consume_no_torture(validation_cmd, timeout))
 
     @cluster(cluster_spec=MIN_CLUSTER_SPEC)
-    @parametrize(num_active_partitions=1, txn_per_client=200, num_producers=3, num_consumers=2, interval=500, num_consumers_to_stop=1, delay_before_torture=40, timeout=360)
-    @parametrize(num_active_partitions=4, txn_per_client=100, num_producers=2, num_consumers=4, interval=500, num_consumers_to_stop=3, delay_before_torture=35,timeout=360)
+    @parametrize(num_active_partitions=1, txn_per_client=200, num_producers=3, num_consumers=2, interval=500,
+                 num_consumers_to_stop=1, delay_before_torture=40, timeout=360)
+    @parametrize(num_active_partitions=4, txn_per_client=100, num_producers=2, num_consumers=4, interval=500,
+                 num_consumers_to_stop=3, delay_before_torture=35, timeout=360)
     def test_produce_consume_abrupt_stop_of_consumers(self, num_active_partitions, txn_per_client, num_producers, num_consumers,
                                                       interval, num_consumers_to_stop, delay_before_torture, timeout):
         validation_cmd = self.get_produce_consume_parallel(num_active_partitions, txn_per_client, num_producers,
@@ -111,8 +113,7 @@ class ClientValidationTest(ProduceConsumeValidateTest):
         sleep(delay_before_torture)
 
         # Step 4: Start torture
-        for i in range(num_consumers_to_stop):
-            self.abrupt_stop_of_consumer_node(num_consumers - i)
+        self.abrupt_stop_consumer_nodes(num_consumers, num_consumers_to_stop)
 
         # Step 5: Wait until verifiable client ends its task
         wait_until(lambda: self.verifiable_client.task_complete() == True, timeout_sec=timeout,
@@ -129,8 +130,16 @@ class ClientValidationTest(ProduceConsumeValidateTest):
                 .format(expected_number_of_transactions,
                         self.get_storage_num_of_all_transactions(storage, port, num_active_partitions))
 
-    def abrupt_stop_of_consumer_node(self, number_of_consumers):
-        # parent process is on the first line and indexing of rows starts with 1, thus number_of_consumers + 2
-        get_pid = "ps -ef | grep \"create-consumer\" | awk \'{{print $2}}\' | head -n -1 | sort -n | sed -n {0}p".format(randrange(number_of_consumers) + 2)
-        cmd = "kill -SIGTERM `{}`".format(get_pid)
-        self.verifiable_client.nodes[0].account.ssh_capture(cmd)
+    def abrupt_stop_consumer_nodes(self, num_consumers, num_consumers_to_stop):
+        get_consumer_pids = "ps -ef | grep \"create-consumer\" | awk \'{{print $2}}\' | head -n -1 | sort -n"
+        consumer_pids = self.verifiable_client.nodes[0].account.ssh_output(get_consumer_pids).strip().splitlines()
+
+        # remove parent process and grep process pid's i.e. 1st and last
+        consumer_process_pids = consumer_pids[1: num_consumers + 1]
+
+        shuffle(consumer_process_pids)
+
+        # Select the consumer pids from the beginning of the shuffled list to kill the respective consumer process.
+        for i in range(num_consumers_to_stop):
+            cmd = "kill -SIGTERM {}".format(consumer_process_pids[i])
+            self.verifiable_client.nodes[0].account.ssh(cmd)
