@@ -227,7 +227,9 @@ public abstract class MessageHandler extends SimpleChannelInboundHandler<Message
         writable.set(isWritable);
 
         synchronized (writeLock) {
-            callbacks.onWritabilityChanged(isWritable);
+            if (callbacks != null) {
+                callbacks.onWritabilityChanged(isWritable);
+            }
 
             if (!isWritable) {
                 ctx.flush();
