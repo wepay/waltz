@@ -3,7 +3,6 @@ package com.wepay.waltz.tools.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.wepay.riff.network.ClientSSL;
 import com.wepay.waltz.client.Transaction;
 import com.wepay.waltz.client.WaltzClient;
 import com.wepay.waltz.client.WaltzClientCallbacks;
@@ -11,16 +10,16 @@ import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.client.internal.InternalRpcClient;
 import com.wepay.waltz.common.util.Cli;
 import com.wepay.waltz.common.util.SubcommandCli;
+import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.exception.SubCommandFailedException;
+import com.wepay.waltz.tools.CliConfig;
 import com.wepay.zktools.clustermgr.Endpoint;
+import io.netty.handler.ssl.SslContext;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.http.client.fluent.Request;
-import org.yaml.snakeyaml.Yaml;
 
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -204,10 +203,10 @@ public final class ServerCli extends SubcommandCli {
             Endpoint serverEndpoint = new Endpoint(host, serverPort);
             InternalRpcClient rpcClient = null;
             try {
-                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(cliConfigPath);
+                SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
                 DummyTxnCallbacks callbacks = new DummyTxnCallbacks();
-                rpcClient = new InternalRpcClient(ClientSSL.createContext(waltzClientConfig.getSSLConfig()),
-                    WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, callbacks);
+                rpcClient = new InternalRpcClient(sslContext, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS,
+                    callbacks);
 
                 if (!rpcClient.addPreferredPartition(serverEndpoint, partitionId).get()) {
                     System.out.println("Failed to add preferred partition " + partitionId + " to server Endpoint "
@@ -293,10 +292,10 @@ public final class ServerCli extends SubcommandCli {
             Endpoint serverEndpoint = new Endpoint(host, serverPort);
             InternalRpcClient rpcClient = null;
             try {
-                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(cliConfigPath);
+                SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
                 DummyTxnCallbacks callbacks = new DummyTxnCallbacks();
-                rpcClient = new InternalRpcClient(ClientSSL.createContext(waltzClientConfig.getSSLConfig()),
-                    WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, callbacks);
+                rpcClient = new InternalRpcClient(sslContext, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS,
+                    callbacks);
 
                 if (!rpcClient.removePreferredPartition(serverEndpoint, partitionId).get()) {
                     System.out.println("Failed to remove preferred partition " + partitionId + " from server Endpoint "
@@ -315,21 +314,6 @@ public final class ServerCli extends SubcommandCli {
         @Override
         protected String getUsage() {
             return buildUsage(NAME, DESCRIPTION, getOptions());
-        }
-    }
-
-    /**
-     * Return an object of {@code WaltzClientConfig} built from configuration file.
-     * @param configFilePath the path to configuration file
-     * @return WaltzClientConfig
-     * @throws IOException
-     */
-    private static WaltzClientConfig getWaltzClientConfig(String configFilePath) throws IOException {
-        Yaml yaml = new Yaml();
-        try (FileInputStream in = new FileInputStream(configFilePath)) {
-            Map<Object, Object> props = yaml.load(in);
-            props.put(WaltzClientConfig.AUTO_MOUNT, false);
-            return new WaltzClientConfig(props);
         }
     }
 

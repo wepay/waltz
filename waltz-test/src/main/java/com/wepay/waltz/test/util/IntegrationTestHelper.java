@@ -1,5 +1,6 @@
 package com.wepay.waltz.test.util;
 
+import com.wepay.riff.network.ServerSSL;
 import com.wepay.riff.util.PortFinder;
 import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.server.WaltzServerConfig;
@@ -300,7 +301,8 @@ public class IntegrationTestHelper {
                 if (jettyPort > 0) {
                     config.put(WaltzServerConfig.SERVER_JETTY_PORT, jettyPort);
                 }
-                waltzServerRunner = new WaltzServerRunner(port, null, new WaltzServerConfig(config), false);
+                SslContext serverSslCtx = ServerSSL.createContext(new WaltzServerConfig(config).getSSLConfig());
+                waltzServerRunner = new WaltzServerRunner(port, serverSslCtx, new WaltzServerConfig(config), false);
                 waltzServerRunners.put(port, waltzServerRunner);
             }
             return waltzServerRunner;

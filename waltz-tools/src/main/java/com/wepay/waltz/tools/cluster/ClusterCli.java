@@ -1,6 +1,5 @@
 package com.wepay.waltz.tools.cluster;
 
-import com.wepay.riff.network.ClientSSL;
 import com.wepay.waltz.client.Transaction;
 import com.wepay.waltz.client.WaltzClient;
 import com.wepay.waltz.client.WaltzClientCallbacks;
@@ -38,10 +37,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.zookeeper.KeeperException;
-import org.yaml.snakeyaml.Yaml;
 
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -109,6 +105,7 @@ public final class ClusterCli extends SubcommandCli {
                 String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
                 int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
                 int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
+                SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
 
                 zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
@@ -120,11 +117,9 @@ public final class ClusterCli extends SubcommandCli {
                         .map(serverDescriptor -> serverDescriptor.endpoint)
                         .collect(Collectors.toSet());
 
-                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(cliConfigPath);
-
                 DummyTxnCallbacks callbacks = new DummyTxnCallbacks();
-                rpcClient = new InternalRpcClient(ClientSSL.createContext(waltzClientConfig.getSSLConfig()),
-                    WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, callbacks);
+                rpcClient = new InternalRpcClient(sslContext, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS,
+                    callbacks);
 
                 Map<Endpoint, Map<String, Boolean>> connectivityStatusMap =
                     rpcClient.checkServerConnections(serverEndpoints).get();
@@ -205,7 +200,6 @@ public final class ClusterCli extends SubcommandCli {
 
             try {
                 String cliConfigPath = cmd.getOptionValue("cli-config-path");
-                WaltzClientConfig waltzClientConfig = getWaltzClientConfig(cliConfigPath);
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
                 String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
                 ZNode zkRoot = new ZNode((String) cliConfig.get(CliConfig.CLUSTER_ROOT));
@@ -235,8 +229,8 @@ public final class ClusterCli extends SubcommandCli {
                 buildZookeeperPartitionAssignmentsValidation(clusterManager, partitionsValidationResultList);
 
                 // Step2: Build zk and servers partition assignment consistency validations
-                rpcClient = new InternalRpcClient(ClientSSL.createContext(waltzClientConfig.getSSLConfig()),
-                        WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS, new DummyTxnCallbacks());
+                rpcClient = new InternalRpcClient(sslContext, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS,
+                    new DummyTxnCallbacks());
 
                 CompletableFuture<Void> consistencyValidationFuture =
                     buildServersZKPartitionAssignmentsConsistencyValidation(
@@ -951,21 +945,6 @@ public final class ClusterCli extends SubcommandCli {
             }
         }
 
-    }
-
-    /**
-     * Return an object of {@code WaltzClientConfig} built from configuration file.
-     * @param configFilePath the path to configuration file
-     * @return WaltzClientConfig
-     * @throws IOException
-     */
-    private static WaltzClientConfig getWaltzClientConfig(String configFilePath) throws IOException {
-        Yaml yaml = new Yaml();
-        try (FileInputStream in = new FileInputStream(configFilePath)) {
-            Map<Object, Object> props = yaml.load(in);
-            props.put(WaltzClientConfig.AUTO_MOUNT, false);
-            return new WaltzClientConfig(props);
-        }
     }
 
     /**

@@ -36,7 +36,7 @@ class PerformanceCli(Cli):
             "--txn-per-thread", txn_per_thread,
             "--num-thread", num_thread,
             "--interval", interval,
-            "--cli-config-path", self.cli_config_path,
+            "--cli-config-path", self.client_config_path,
             "--lock-pool-size {}".format(lock_pool_size) if lock_pool_size is not None else "",
             "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else "",
             "--mount_from_latest" if mount_from_latest is not None else ""
@@ -60,7 +60,7 @@ class PerformanceCli(Cli):
             "test-consumers",
             "--txn-size", txn_size,
             "--num-txn", num_txn,
-            "--cli-config-path", self.cli_config_path,
+            "--cli-config-path", self.client_config_path,
             "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else "",
             "--mount_from_latest" if mount_from_latest is not None else ""
         ]
