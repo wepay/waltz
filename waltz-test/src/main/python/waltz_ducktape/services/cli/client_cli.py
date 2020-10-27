@@ -32,7 +32,7 @@ class ClientCli(Cli):
             "--txn-per-client", txn_per_client,
             "--num-clients", num_clients,
             "--interval", interval,
-            "--cli-config-path", self.client_config_path,
+            "--cli-config-path", self.cli_config_path,
             "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else ""
         ]
         return self.build_cmd(cmd_arr)
@@ -54,7 +54,7 @@ class ClientCli(Cli):
             "--txn-per-client", txn_per_client,
             "--interval", interval,
             "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else "",
-            "--cli-config-path", self.client_config_path
+            "--cli-config-path", self.cli_config_path
         ]
         return self.build_cmd(cmd_arr)
 
@@ -75,7 +75,7 @@ class ClientCli(Cli):
             "create-consumer",
             "--txn-per-client", txn_per_client,
             "--num-active-partitions {}".format(num_active_partitions) if num_active_partitions is not None else "",
-            "--cli-config-path", self.client_config_path
+            "--cli-config-path", self.cli_config_path
         ]
         return self.build_cmd(cmd_arr)
 
