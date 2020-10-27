@@ -19,6 +19,7 @@ import com.wepay.riff.util.Logging;
 import com.wepay.waltz.common.metadata.StoreMetadata;
 import com.wepay.waltz.common.metadata.StoreParams;
 import com.wepay.waltz.common.util.Utils;
+import com.wepay.waltz.common.util.WaltzInfoParser;
 import com.wepay.waltz.storage.exception.StorageException;
 import com.wepay.waltz.storage.server.health.Healthcheck;
 import com.wepay.waltz.storage.server.internal.AdminServerHandler;
@@ -256,6 +257,8 @@ public class WaltzStorage {
                 return Collections.emptySet();
             }
         });
+
+        REGISTRY.gauge(metricsGroup, "waltz_version_id", (Gauge<String>) () -> WaltzInfoParser.getVersion());
     }
 
     private void unregisterMetrics() {
