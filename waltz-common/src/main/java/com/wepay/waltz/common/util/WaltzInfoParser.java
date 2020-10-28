@@ -9,7 +9,7 @@ import java.util.Properties;
 /**
  * WaltzInfoParser loads waltz properties from the waltz-version.properties file created a build time.
  */
-public class WaltzInfoParser {
+public final class WaltzInfoParser {
     private static final Logger logger = Logging.getLogger(WaltzInfoParser.class);
     private static final String VERSION;
 
@@ -25,7 +25,8 @@ public class WaltzInfoParser {
         VERSION = props.getProperty("version", DEFAULT_VALUE).trim();
     }
 
-    private WaltzInfoParser() {}
+    private WaltzInfoParser() {
+    }
 
     public static String getVersion() {
         return VERSION;

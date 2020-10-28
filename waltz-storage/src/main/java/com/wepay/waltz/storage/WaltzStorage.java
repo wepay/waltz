@@ -258,7 +258,7 @@ public class WaltzStorage {
             }
         });
 
-        REGISTRY.gauge(metricsGroup, "waltz_version_id", (Gauge<String>) () -> WaltzInfoParser.getVersion());
+        REGISTRY.gauge(metricsGroup, "waltz-version-id", (Gauge<String>) () -> WaltzInfoParser.getVersion());
     }
 
     private void unregisterMetrics() {

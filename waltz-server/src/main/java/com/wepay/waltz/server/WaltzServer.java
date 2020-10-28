@@ -472,7 +472,7 @@ public class WaltzServer {
         REGISTRY.gauge(metricsGroup, "endpoint", (Gauge<String>) () -> endpoint.toString());
         REGISTRY.gauge(metricsGroup, "waltz-server-num-partitions", (Gauge<Integer>) () -> getPartitionIds().size());
         REGISTRY.gauge(metricsGroup, "replica-info", (Gauge<Map<Integer, List<String>>>) () -> getReplicaInfoMap());
-        REGISTRY.gauge(metricsGroup, "waltz_version_id", (Gauge<String>) () -> WaltzInfoParser.getVersion());
+        REGISTRY.gauge(metricsGroup, "waltz-version-id", (Gauge<String>) () -> WaltzInfoParser.getVersion());
     }
 
     private void unregisterMetrics() {
