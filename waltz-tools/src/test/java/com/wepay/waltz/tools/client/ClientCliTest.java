@@ -39,11 +39,6 @@ public class ClientCliTest {
         System.setErr(originalErr);
     }
 
-    Properties createProperties(String connectString,  String znodePath, int sessionTimeout, SslSetup sslSetup) {
-        return createProperties(connectString, znodePath, sessionTimeout, sslSetup,
-            WaltzClientConfig.CLIENT_SSL_CONFIG_PREFIX);
-    }
-
     Properties createProperties(String connectString, String znodePath, int sessionTimeout, SslSetup sslSetup,
                                 String sslConfigPrefix) {
         Properties properties =  new Properties();
@@ -64,7 +59,7 @@ public class ClientCliTest {
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
         IntegrationTestHelper helper = new IntegrationTestHelper(properties);
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
-                                                    helper.getZkSessionTimeout(), helper.getSslSetup());
+            helper.getZkSessionTimeout(), helper.getSslSetup(), WaltzClientConfig.CLIENT_SSL_CONFIG_PREFIX);
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
 
         helper.startZooKeeperServer();
@@ -111,7 +106,7 @@ public class ClientCliTest {
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
         IntegrationTestHelper helper = new IntegrationTestHelper(properties);
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
-                helper.getZkSessionTimeout(), helper.getSslSetup());
+                helper.getZkSessionTimeout(), helper.getSslSetup(), WaltzClientConfig.CLIENT_SSL_CONFIG_PREFIX);
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
 
         helper.startZooKeeperServer();
@@ -147,7 +142,7 @@ public class ClientCliTest {
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
         IntegrationTestHelper helper = new IntegrationTestHelper(properties);
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
-                helper.getZkSessionTimeout(), helper.getSslSetup());
+                helper.getZkSessionTimeout(), helper.getSslSetup(), WaltzClientConfig.CLIENT_SSL_CONFIG_PREFIX);
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
 
         helper.startZooKeeperServer();
@@ -198,7 +193,7 @@ public class ClientCliTest {
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
         IntegrationTestHelper helper = new IntegrationTestHelper(properties);
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
-                                                    helper.getZkSessionTimeout(), helper.getSslSetup());
+            helper.getZkSessionTimeout(), helper.getSslSetup(), WaltzClientConfig.CLIENT_SSL_CONFIG_PREFIX);
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
 
         helper.startZooKeeperServer();
