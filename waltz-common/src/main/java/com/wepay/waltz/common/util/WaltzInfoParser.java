@@ -7,7 +7,7 @@ import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * WaltzInfoParser loads waltz properties from the waltz-version.properties file created a build time.
+ * WaltzInfoParser loads waltz properties from the waltz-version.properties file created at build time.
  */
 public final class WaltzInfoParser {
     private static final Logger logger = Logging.getLogger(WaltzInfoParser.class);
