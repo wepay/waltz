@@ -25,8 +25,8 @@ project.ext {
     riffVersion = '2.4.3'
     jacksonVersion = '2.9.6'
     jettyVersion = '9.4.12.v20180830'
-
     mainClass = 'Main'
+    buildVersionFileName = "waltz-version.properties"
 }
 
 buildscript {
@@ -228,6 +228,28 @@ project(':waltz-server') {
         )
     }
 
+    task createVersionFile {
+        Object receiptFile = file("$buildDir/waltz/$buildVersionFileName")
+        outputs.file receiptFile
+        outputs.upToDateWhen { false }
+        doLast {
+            def data = [
+                    version: version,
+            ]
+
+            receiptFile.parentFile.mkdirs()
+            def content = data.entrySet().collect { "$it.key=$it.value" }.sort().join("\n")
+            receiptFile.setText(content, "ISO-8859-1")
+        }
+    }
+
+    jar {
+        dependsOn createVersionFile
+        from("$buildDir") {
+            include "waltz/$buildVersionFileName"
+        }
+    }
+
     test {
         maxHeapSize = "2G"
         jvmArgs '-Xmx2G'
@@ -264,6 +286,28 @@ project(':waltz-storage') {
             "junit:junit:$junitVersion",
             "org.mockito:mockito-all:$mockitoVersion"
         )
+    }
+
+    task createVersionFile {
+        Object receiptFile = file("$buildDir/waltz/$buildVersionFileName")
+        outputs.file receiptFile
+        outputs.upToDateWhen { false }
+        doLast {
+            def data = [
+                    version: version,
+            ]
+
+            receiptFile.parentFile.mkdirs()
+            def content = data.entrySet().collect { "$it.key=$it.value" }.sort().join("\n")
+            receiptFile.setText(content, "ISO-8859-1")
+        }
+    }
+
+    jar {
+        dependsOn createVersionFile
+        from("$buildDir") {
+            include "waltz/$buildVersionFileName"
+        }
     }
 
     distDocker {
