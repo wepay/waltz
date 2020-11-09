@@ -18,7 +18,6 @@ class LoadRebalancingTest(ProduceConsumeValidateTest):
 
     def __init__(self, test_context):
         super(LoadRebalancingTest, self).__init__(test_context=test_context)
-        self.server_cli = ServerCli(self.verifiable_client.nodes[0], self.client_config_path)
 
     @cluster(cluster_spec=MIN_CLUSTER_SPEC)
     @parametrize(num_active_partitions=1, txn_per_client=150, num_clients=2, interval=600, timeout=360)
@@ -62,7 +61,8 @@ class LoadRebalancingTest(ProduceConsumeValidateTest):
         server_node = self.waltz_server.nodes[partition_future_server_index]
         server_node_hostname = server_node.account.ssh_hostname
         server = self.get_host(server_node_hostname, server_port)
-        self.server_cli.add_preferred_partition(server, random_active_partition)
+        server_cli = ServerCli(server_node, self.cli_config_path)
+        server_cli.add_preferred_partition(server, random_active_partition)
 
         assert self.get_server_node_idx(random_active_partition) == partition_future_server_index, \
             "partition assignment for server nodes remained untouched"

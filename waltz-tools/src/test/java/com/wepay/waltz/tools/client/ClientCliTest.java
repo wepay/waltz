@@ -1,5 +1,6 @@
 package com.wepay.waltz.tools.client;
 
+import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.test.util.IntegrationTestHelper;
 import com.wepay.waltz.test.util.SslSetup;
 import com.wepay.waltz.tools.CliConfig;
@@ -38,12 +39,13 @@ public class ClientCliTest {
         System.setErr(originalErr);
     }
 
-    Properties createProperties(String connectString, String znodePath, int sessionTimeout, SslSetup sslSetup) {
+    Properties createProperties(String connectString, String znodePath, int sessionTimeout, SslSetup sslSetup,
+                                String sslConfigPrefix) {
         Properties properties =  new Properties();
         properties.setProperty(CliConfig.ZOOKEEPER_CONNECT_STRING, connectString);
         properties.setProperty(CliConfig.ZOOKEEPER_SESSION_TIMEOUT, String.valueOf(sessionTimeout));
         properties.setProperty(CliConfig.CLUSTER_ROOT, znodePath);
-        sslSetup.setConfigParams(properties, CliConfig.SSL_CONFIG_PREFIX);
+        sslSetup.setConfigParams(properties, sslConfigPrefix);
 
         return properties;
     }
@@ -57,7 +59,7 @@ public class ClientCliTest {
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
         IntegrationTestHelper helper = new IntegrationTestHelper(properties);
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
-                                                    helper.getZkSessionTimeout(), helper.getSslSetup());
+            helper.getZkSessionTimeout(), helper.getSslSetup(), WaltzClientConfig.CLIENT_SSL_CONFIG_PREFIX);
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
 
         helper.startZooKeeperServer();
@@ -65,7 +67,7 @@ public class ClientCliTest {
 
         String storage = helper.getHost() + ":" + helper.getStorageAdminPort();
 
-        addPartitionsToStorage(CLUSTER_NUM_PARTITIONS, storage, configFilePath);
+        addPartitionsToStorage(CLUSTER_NUM_PARTITIONS, storage, helper);
 
         helper.startWaltzServer(true);
 
@@ -104,14 +106,14 @@ public class ClientCliTest {
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
         IntegrationTestHelper helper = new IntegrationTestHelper(properties);
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
-                helper.getZkSessionTimeout(), helper.getSslSetup());
+                helper.getZkSessionTimeout(), helper.getSslSetup(), WaltzClientConfig.CLIENT_SSL_CONFIG_PREFIX);
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
 
         helper.startZooKeeperServer();
         helper.startWaltzStorage(true);
 
         String storage = helper.getHost() + ":" + helper.getStorageAdminPort();
-        addPartitionsToStorage(CLUSTER_NUM_PARTITIONS, storage, configFilePath);
+        addPartitionsToStorage(CLUSTER_NUM_PARTITIONS, storage, helper);
 
         helper.startWaltzServer(true);
 
@@ -140,14 +142,14 @@ public class ClientCliTest {
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
         IntegrationTestHelper helper = new IntegrationTestHelper(properties);
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
-                helper.getZkSessionTimeout(), helper.getSslSetup());
+                helper.getZkSessionTimeout(), helper.getSslSetup(), WaltzClientConfig.CLIENT_SSL_CONFIG_PREFIX);
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
 
         helper.startZooKeeperServer();
         helper.startWaltzStorage(true);
 
         String storage = helper.getHost() + ":" + helper.getStorageAdminPort();
-        addPartitionsToStorage(CLUSTER_NUM_PARTITIONS, storage, configFilePath);
+        addPartitionsToStorage(CLUSTER_NUM_PARTITIONS, storage, helper);
 
         helper.startWaltzServer(true);
 
@@ -191,14 +193,14 @@ public class ClientCliTest {
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
         IntegrationTestHelper helper = new IntegrationTestHelper(properties);
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
-                                                    helper.getZkSessionTimeout(), helper.getSslSetup());
+            helper.getZkSessionTimeout(), helper.getSslSetup(), WaltzClientConfig.CLIENT_SSL_CONFIG_PREFIX);
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
 
         helper.startZooKeeperServer();
         helper.startWaltzStorage(true);
 
         String storage = helper.getHost() + ":" + helper.getStorageAdminPort();
-        addPartitionsToStorage(CLUSTER_NUM_PARTITIONS, storage, configFilePath);
+        addPartitionsToStorage(CLUSTER_NUM_PARTITIONS, storage, helper);
 
         helper.startWaltzServer(true);
 
@@ -229,13 +231,17 @@ public class ClientCliTest {
         }
     }
 
-    private void addPartitionsToStorage(int numPartitions, String storage, String configFilePath) {
+    private void addPartitionsToStorage(int numPartitions, String storage, IntegrationTestHelper helper) throws Exception {
+        Properties storageConfigProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(),
+            helper.getZkSessionTimeout(), helper.getSslSetup(), CliConfig.SSL_CONFIG_PREFIX);
+        String storageConfigFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME,
+            storageConfigProperties);
         for (int partitionId = 0; partitionId < numPartitions; partitionId++) {
             String[] args = {
                     "add-partition",
                     "--storage", storage,
                     "--partition", String.valueOf(partitionId),
-                    "--cli-config-path", configFilePath
+                    "--cli-config-path", storageConfigFilePath
             };
             StorageCli.testMain(args);
         }

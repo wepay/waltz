@@ -1,8 +1,8 @@
 package com.wepay.waltz.tools.performance;
 
+import com.wepay.waltz.client.WaltzClientConfig;
 import com.wepay.waltz.test.util.IntegrationTestHelper;
 import com.wepay.waltz.test.util.SslSetup;
-import com.wepay.waltz.tools.CliConfig;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,10 +38,10 @@ public class PerformanceCliTest {
 
     Properties createProperties(String connectString, String znodePath, int sessionTimeout, SslSetup sslSetup) {
         Properties properties =  new Properties();
-        properties.setProperty(CliConfig.ZOOKEEPER_CONNECT_STRING, connectString);
-        properties.setProperty(CliConfig.ZOOKEEPER_SESSION_TIMEOUT, String.valueOf(sessionTimeout));
-        properties.setProperty(CliConfig.CLUSTER_ROOT, znodePath);
-        sslSetup.setConfigParams(properties, CliConfig.SSL_CONFIG_PREFIX);
+        properties.setProperty(WaltzClientConfig.ZOOKEEPER_CONNECT_STRING, connectString);
+        properties.setProperty(WaltzClientConfig.ZOOKEEPER_SESSION_TIMEOUT, String.valueOf(sessionTimeout));
+        properties.setProperty(WaltzClientConfig.CLUSTER_ROOT, znodePath);
+        sslSetup.setConfigParams(properties, WaltzClientConfig.CLIENT_SSL_CONFIG_PREFIX);
 
         return properties;
     }
