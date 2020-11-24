@@ -96,6 +96,11 @@ public abstract class AbstractConfig implements Config {
 
     public void setObject(String key, Object obj) {
         parameterValues.put(configPrefix + key, obj);
+        Parser parser = parsers.get(key);
+
+        if (parser != null) {
+            parser.validate(key, obj);
+        }
     }
 
     protected static class Parser {
@@ -104,7 +109,7 @@ public abstract class AbstractConfig implements Config {
         final Object defaultValue;
         final Validator validator;
 
-        Parser(Function<String, Object> specParserFunction) {
+        public Parser(Function<String, Object> specParserFunction) {
             this(specParserFunction, null, null);
         }
 
@@ -171,3 +176,4 @@ public abstract class AbstractConfig implements Config {
     }
 
 }
+
