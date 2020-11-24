@@ -1,8 +1,11 @@
 package com.wepay.waltz.client;
 
+import com.wepay.riff.config.ConfigException;
+import com.wepay.riff.config.validator.Validator;
 import com.wepay.riff.network.SSLConfig;
 import com.wepay.riff.config.AbstractConfig;
 
+import java.security.InvalidKeyException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,8 +53,23 @@ public class WaltzClientConfig extends AbstractConfig {
 
     /** Mock driver for test only, <code>client.mockDriver</code>. */
     public static final String MOCK_DRIVER = "client.mockDriver";
+    /** Default value for {@link #MOCK_DRIVER} config. */
+    public static final Object DEFAULT_MOCK_DRIVER = null;
+
+    public static final Validator mockDriverValidator = (key, value) -> {
+        if (!key.equals(MOCK_DRIVER)) {
+            throw new ConfigException("Expecting MOCK_DRIVER key. Instead got " + key);
+        }
+
+        if (value != null && !isJUnitTest()) {
+            throw new ConfigException("Mock driver is for test only");
+        }
+    };
+
+    public static final Parser mockDriverParser = new Parser(null);
 
     private static final HashMap<String, Parser> parsers = new HashMap<>();
+
     static {
         // ZooKeeper
         parsers.put(ZOOKEEPER_CONNECT_STRING, stringParser);
@@ -66,6 +84,7 @@ public class WaltzClientConfig extends AbstractConfig {
         parsers.put(NUM_CONSUMER_THREADS, intParser.withDefault(DEFAULT_NUM_CONSUMER_THREADS));
         parsers.put(LONG_WAIT_THRESHOLD, longParser.withDefault(DEFAULT_LONG_WAIT_THRESHOLD));
         parsers.put(MAX_CONCURRENT_TRANSACTIONS, intParser.withDefault(DEFAULT_MAX_CONCURRENT_TRANSACTIONS));
+        parsers.put(MOCK_DRIVER, mockDriverParser.withDefault(DEFAULT_MOCK_DRIVER).withValidator(mockDriverValidator));
 
         // See SSLConfig for SSL config parameters
     }
@@ -95,4 +114,18 @@ public class WaltzClientConfig extends AbstractConfig {
     public SSLConfig getSSLConfig() {
         return new SSLConfig(configPrefix + CLIENT_SSL_CONFIG_PREFIX, configValues);
     }
+
+    /**
+     * Checks if code is running from a unit test
+     * @return true if yes, false otherwise
+     */
+    public static boolean isJUnitTest() {
+        for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
+            if (element.getClassName().startsWith("org.junit.")) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
+
