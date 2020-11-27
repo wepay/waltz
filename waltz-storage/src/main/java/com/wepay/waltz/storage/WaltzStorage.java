@@ -264,5 +264,6 @@ public class WaltzStorage {
     private void unregisterMetrics() {
         REGISTRY.remove(metricsGroup, "waltz-storage-num-partitions");
         REGISTRY.remove(metricsGroup, "waltz-storage-partition-ids");
+        REGISTRY.remove(metricsGroup, "waltz-version-id");
     }
 }
