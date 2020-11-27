@@ -483,6 +483,7 @@ public class WaltzServer {
         REGISTRY.remove(metricsGroup, "endpoint");
         REGISTRY.remove(metricsGroup, "waltz-server-num-partitions");
         REGISTRY.remove(metricsGroup, "replica-info");
+        REGISTRY.remove(metricsGroup, "waltz-version-id");
     }
 
     private Map<Integer, List<String>> getReplicaInfoMap() {
