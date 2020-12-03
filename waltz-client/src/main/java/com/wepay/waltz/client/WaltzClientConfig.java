@@ -5,7 +5,6 @@ import com.wepay.riff.config.validator.Validator;
 import com.wepay.riff.network.SSLConfig;
 import com.wepay.riff.config.AbstractConfig;
 
-import java.security.InvalidKeyException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -128,4 +127,3 @@ public class WaltzClientConfig extends AbstractConfig {
         return false;
     }
 }
-
