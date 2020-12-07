@@ -55,9 +55,9 @@ public class WaltzClientConfig extends AbstractConfig {
     /** Default value for {@link #MOCK_DRIVER} config. */
     public static final Object DEFAULT_MOCK_DRIVER = null;
 
-    public static final Validator mockDriverValidator = (key, value) -> {
+    private static final Validator mockDriverValidator = (key, value) -> {
         if (!key.equals(MOCK_DRIVER)) {
-            throw new ConfigException("Expecting MOCK_DRIVER key. Instead got " + key);
+            throw new ConfigException("Expecting " + MOCK_DRIVER + " key. Instead got " + key);
         }
 
         if (value != null && !isJUnitTest()) {
@@ -65,7 +65,7 @@ public class WaltzClientConfig extends AbstractConfig {
         }
     };
 
-    public static final Parser mockDriverParser = new Parser(null);
+    private static final Parser mockDriverParser = new Parser(null);
 
     private static final HashMap<String, Parser> parsers = new HashMap<>();
 
@@ -118,7 +118,7 @@ public class WaltzClientConfig extends AbstractConfig {
      * Checks if code is running from a unit test
      * @return true if yes, false otherwise
      */
-    public static boolean isJUnitTest() {
+    private static boolean isJUnitTest() {
         for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
             if (element.getClassName().startsWith("org.junit.")) {
                 return true;
