@@ -103,11 +103,21 @@ You must rebuild images using `distDocker` gradle task.
 
 This stops all three containers. You can resume the cluster using `start` command. All data in zookeeper and storages are preserved.
 
-### Destroying the cluster
+### Destroying the test cluster
 
     bin/test-cluster.sh clean
     
 This will remove all three containers, thus removes all data.
+
+### Setting up the test cluster with multiple partitions.
+
+The test cluster is set up with a single partition by default.
+If you want to create the test cluster with multiple partitions,
+the environment variable WALTZ_TEST_CLUSTER_NUM_PARTITIONS to the desired number of partitions before creating the test cluster.
+For example, to create the test cluster with five partitions, do the following.
+
+    export WALTZ_TEST_CLUSTER_NUM_PARTITIONS=5
+    bin/test-cluster.sh start
 
 ### Running DemoBankApp
 
