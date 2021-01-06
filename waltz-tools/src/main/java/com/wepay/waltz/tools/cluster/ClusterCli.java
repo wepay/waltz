@@ -161,9 +161,10 @@ public final class ClusterCli extends SubcommandCli {
     private static final class Verify extends Cli {
         private static final String NAME = "verify";
         private static final String DESCRIPTION = "Validates if partition(s) is handled by some server";
-        private static final long TIMEOUT_IN_SECONDS = 5;
 
         private final PartitionAssignmentPolicy partitionAssignmentPolicy = new DynamicPartitionAssignmentPolicy();
+
+        private long timeoutInSeconds = 10;
 
         private Verify(String[] args) {
             super(args);
@@ -173,22 +174,30 @@ public final class ClusterCli extends SubcommandCli {
         protected void configureOptions(Options options) {
 
             Option cliCfgOption = Option.builder("c")
-                    .longOpt("cli-config-path")
-                    .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config")
-                    .hasArg()
-                    .build();
+                .longOpt("cli-config-path")
+                .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config")
+                .hasArg()
+                .build();
 
             Option partitionOption = Option.builder("p")
-                    .longOpt("partition")
-                    .desc("Partition to validate. If not specified, all partitions in cluster are validated")
-                    .hasArg()
-                    .build();
+                .longOpt("partition")
+                .desc("Partition to validate. If not specified, all partitions in cluster are validated")
+                .hasArg()
+                .build();
+
+            Option timeoutOption = Option.builder("t")
+                .longOpt("timeout")
+                .desc("Specify the timeout in seconds. If not specified, default value is considered.")
+                .hasArg()
+                .build();
 
             cliCfgOption.setRequired(true);
             partitionOption.setRequired(false);
+            timeoutOption.setRequired(false);
 
             options.addOption(cliCfgOption);
             options.addOption(partitionOption);
+            options.addOption(timeoutOption);
         }
 
         @Override
@@ -219,6 +228,9 @@ public final class ClusterCli extends SubcommandCli {
                     if ((partitionId < 0) || (partitionId >= numPartitions)) {
                         throw new IllegalArgumentException("Partition " + partitionId + " is not valid.");
                     }
+                }
+                if (cmd.hasOption("timeout")) {
+                    timeoutInSeconds = Integer.parseInt(cmd.getOptionValue("timeout"));
                 }
 
                 for (int pId = 0; pId < clusterManager.numPartitions(); pId++) {
@@ -298,7 +310,7 @@ public final class ClusterCli extends SubcommandCli {
             String error = "No Server Endpoint found.";
 
             try {
-                future.get(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
+                future.get(timeoutInSeconds, TimeUnit.SECONDS);
             } catch (ExecutionException | TimeoutException exception) {
                 error = exception.getMessage();
             }
@@ -521,7 +533,7 @@ public final class ClusterCli extends SubcommandCli {
 
             try {
                 CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
-                    .get(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
+                    .get(timeoutInSeconds, TimeUnit.SECONDS);
             } catch (InterruptedException | TimeoutException | ExecutionException e) {
                 // Do Nothing.
             } finally {
