@@ -719,9 +719,7 @@ public class Partition {
     }
 
     private Boolean isMounted() {
-        synchronized (lock) {
-            return mounted;
-        }
+        return mounted;
     }
 
     private void registerMetrics() {
