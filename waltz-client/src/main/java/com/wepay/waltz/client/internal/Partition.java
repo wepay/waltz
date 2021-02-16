@@ -336,13 +336,7 @@ public class Partition {
                         // Notify the context that the transction was persisted successfully.
                         context.onCompletion(true);
 
-                        if (onCompletionLatencyTimerContext != null) {
-                            onCompletionLatencyTimerContext.stop();
-                        } else {
-                            logger.error("Failed to start the onCompletion latency timer context for "
-                                + " partitionId=" + partitionId);
-                        }
-
+                        onCompletionLatencyTimerContext.stop();
                         onApplicationLatencyTimerContext = onApplicationLatencyTimer.time();
                     } else {
                         // Recover the context in case that the transaction application previously failed
