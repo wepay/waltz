@@ -422,9 +422,9 @@ public class Partition {
 
                 // Send an append message only when the partition is active.
                 if (networkClient != null) {
+                    onCompletionLatencyTimerContext = onCompletionLatencyTimer.time();
                     networkClient.sendMessage(request);
                     sendThroughputMeter.mark();
-                    onCompletionLatencyTimerContext = onCompletionLatencyTimer.time();
 
                 } else {
                     // Failed to send the message. Abort the transaction.
@@ -718,7 +718,7 @@ public class Partition {
 
     }
 
-    private Boolean isMounted() {
+    private boolean isMounted() {
         return mounted;
     }
 
