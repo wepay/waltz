@@ -70,7 +70,6 @@ public class Partition {
     private Meter sendThroughputMeter;
     private Meter receivedThroughputMeter;
     private Timer onCompletionLatencyTimer;
-    private Timer.Context onCompletionLatencyTimerContext = null;
     private Timer onApplicationLatencyTimer;
 
     /**
@@ -336,7 +335,6 @@ public class Partition {
                         // Notify the context that the transction was persisted successfully.
                         context.onCompletion(true);
 
-                        onCompletionLatencyTimerContext.stop();
                         onApplicationLatencyTimerContext = onApplicationLatencyTimer.time();
                     } else {
                         // Recover the context in case that the transaction application previously failed
@@ -416,7 +414,10 @@ public class Partition {
 
                 // Send an append message only when the partition is active.
                 if (networkClient != null) {
-                    onCompletionLatencyTimerContext = onCompletionLatencyTimer.time();
+                    Timer.Context onCompletionLatencyTimerContext = onCompletionLatencyTimer.time();
+                    future.whenComplete((success, ex) -> {
+                        onCompletionLatencyTimerContext.stop();
+                    });
                     networkClient.sendMessage(request);
                     sendThroughputMeter.mark();
 
