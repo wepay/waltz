@@ -1,5 +1,10 @@
 package com.wepay.waltz.client.internal;
 
+import com.wepay.riff.metrics.core.Gauge;
+import com.wepay.riff.metrics.core.Meter;
+import com.wepay.riff.metrics.core.MetricGroup;
+import com.wepay.riff.metrics.core.MetricRegistry;
+import com.wepay.riff.metrics.core.Timer;
 import com.wepay.riff.util.Logging;
 import com.wepay.waltz.client.TransactionContext;
 import com.wepay.waltz.client.internal.network.WaltzNetworkClient;
@@ -30,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Partition {
 
     private static final Logger logger = Logging.getLogger(Partition.class);
+    private static final MetricRegistry REGISTRY = MetricRegistry.getInstance();
 
     private static final Long[] EMPTY_LONG_ARRAY = new Long[0];
     private static final int MAX_DATA_ATTEMPTS = 5;
@@ -52,11 +58,19 @@ public class Partition {
     private final AtomicInteger seqNumGenerator = new AtomicInteger(0);
 
     private final AtomicLong clientHighWaterMark;
+    private final String metricGroup;
     private volatile WaltzNetworkClient networkClient;
     private volatile int generation;
     private volatile PartitionState state = PartitionState.INACTIVE;
     private volatile boolean mounted = false;
     private final AtomicReference<CompletableFuture<Long>> highWaterMarkRef = new AtomicReference<>();
+
+    private Meter lockFailureMeter;
+    private Meter transactionMonitorTimeoutMeter;
+    private Meter sendThroughputMeter;
+    private Meter receivedThroughputMeter;
+    private Timer onCompletionLatencyTimer;
+    private Timer onApplicationLatencyTimer;
 
     /**
      * Class Constructor.
@@ -74,6 +88,9 @@ public class Partition {
         this.networkClient = null;
         this.clientHighWaterMark = new AtomicLong(-1);
         this.dataFutures = new HashMap<>();
+        this.metricGroup = String.format("%s.partition-%d", MetricGroup.WALTZ_CLIENT_METRIC_GROUP, partitionId);
+
+        registerMetrics();
     }
 
     /**
@@ -97,6 +114,8 @@ public class Partition {
             }
             lock.notifyAll();
         }
+
+        unregisterMetrics();
     }
 
     /**
@@ -310,11 +329,13 @@ public class Partition {
                 // Process the transaction only when it has the expected transaction id
                 if (expectedTransactionId == transactionId) {
                     TransactionContext context = transactionMonitor.committed(reqId);
+                    Timer.Context onApplicationLatencyTimerContext = null;
 
                     if (context != null) {
                         // Notify the context that the transction was persisted successfully.
                         context.onCompletion(true);
 
+                        onApplicationLatencyTimerContext = onApplicationLatencyTimer.time();
                     } else {
                         // Recover the context in case that the transaction application previously failed
                         context = transactionApplicationFailed.remove(reqId);
@@ -330,6 +351,7 @@ public class Partition {
                     }
 
                     try {
+                        receivedThroughputMeter.mark();
                         networkClientCallbacks.onTransactionReceived(transactionId, header, reqId);
 
                     } catch (Throwable ex) {
@@ -346,6 +368,7 @@ public class Partition {
 
                     if (context != null) {
                         context.onApplication();
+                        onApplicationLatencyTimerContext.stop();
                     }
 
                 } else {
@@ -381,6 +404,7 @@ public class Partition {
 
             if (future == null) {
                 // Transaction registration timed out
+                transactionMonitorTimeoutMeter.mark();
                 return null;
             }
 
@@ -390,7 +414,12 @@ public class Partition {
 
                 // Send an append message only when the partition is active.
                 if (networkClient != null) {
+                    Timer.Context onCompletionLatencyTimerContext = onCompletionLatencyTimer.time();
+                    future.whenComplete((success, ex) -> {
+                        onCompletionLatencyTimerContext.stop();
+                    });
                     networkClient.sendMessage(request);
+                    sendThroughputMeter.mark();
 
                 } else {
                     // Failed to send the message. Abort the transaction.
@@ -564,6 +593,7 @@ public class Partition {
     public void lockFailed(LockFailure lockFailure) {
         TransactionContext context = transactionMonitor.getTransactionContext(lockFailure.reqId);
         if (context != null) {
+            lockFailureMeter.mark();
             context.onLockFailure();
         }
 
@@ -683,4 +713,33 @@ public class Partition {
 
     }
 
+    private boolean isMounted() {
+        return mounted;
+    }
+
+    private void registerMetrics() {
+        REGISTRY.gauge(metricGroup, "is-mounted", (Gauge<Boolean>) () -> isMounted());
+        REGISTRY.gauge(metricGroup, "high-water-mark", (Gauge<Long>) () -> clientHighWaterMark());
+        REGISTRY.gauge(metricGroup, "num-registered-transactions",
+            (Gauge<Integer>) transactionMonitor::registeredCount);
+
+        lockFailureMeter = REGISTRY.meter(metricGroup, "lock-failure");
+        transactionMonitorTimeoutMeter = REGISTRY.meter(metricGroup, "transaction-monitor-timeout");
+        sendThroughputMeter = REGISTRY.meter(metricGroup, "send-throughput");
+        receivedThroughputMeter = REGISTRY.meter(metricGroup, "received-throughput");
+        onCompletionLatencyTimer = REGISTRY.timer(metricGroup, "on-completion-latency");
+        onApplicationLatencyTimer = REGISTRY.timer(metricGroup, "on-application-latency");
+    }
+
+    private void unregisterMetrics() {
+        REGISTRY.remove(metricGroup, "is-mounted");
+        REGISTRY.remove(metricGroup, "high-water-mark");
+        REGISTRY.remove(metricGroup, "num-registered-transactions");
+        REGISTRY.remove(metricGroup, "lock-failure");
+        REGISTRY.remove(metricGroup, "transaction-monitor-timeout");
+        REGISTRY.remove(metricGroup, "send-throughput");
+        REGISTRY.remove(metricGroup, "received-throughput");
+        REGISTRY.remove(metricGroup, "on-completion-latency");
+        REGISTRY.remove(metricGroup, "on-application-latency");
+    }
 }

@@ -1,5 +1,8 @@
 package com.wepay.waltz.client;
 
+import com.wepay.riff.metrics.core.Gauge;
+import com.wepay.riff.metrics.core.MetricGroup;
+import com.wepay.riff.metrics.core.MetricRegistry;
 import com.wepay.riff.util.Logging;
 import com.wepay.waltz.client.internal.RpcClient;
 import com.wepay.waltz.client.internal.StreamClient;
@@ -25,7 +28,9 @@ import java.util.concurrent.TimeUnit;
 public class WaltzClient {
 
     private static final Logger logger = Logging.getLogger(WaltzClient.class);
+    private static final MetricRegistry REGISTRY = MetricRegistry.getInstance();
 
+    private final String metricsGroup = MetricGroup.WALTZ_CLIENT_METRIC_GROUP;
     private final WaltzClientDriver driver;
     private final ManagedClient managedClient;
     private final ClusterManager clusterManager;
@@ -75,6 +80,8 @@ public class WaltzClient {
             longWaitThreshold,
             TimeUnit.MILLISECONDS
         );
+
+        registerMetrics();
     }
 
     /**
@@ -123,6 +130,8 @@ public class WaltzClient {
                 logger.error("failed to close client driver", ex);
             }
         }
+
+        unregisterMetrics();
     }
 
     /**
@@ -253,4 +262,17 @@ public class WaltzClient {
         return driver;
     }
 
+    private void registerMetrics() {
+        REGISTRY.gauge(metricsGroup, "cluster-name", (Gauge<String>) () -> clusterName());
+        REGISTRY.gauge(metricsGroup, "cluster-id", (Gauge<Integer>) () -> clientId());
+        REGISTRY.gauge(metricsGroup, "num-active-partitions", (Gauge<Integer>) () -> getPartitions().size());
+        REGISTRY.gauge(metricsGroup, "active-partition-ids", (Gauge<Set<Integer>>) () -> getPartitions());
+    }
+
+    private void unregisterMetrics() {
+        REGISTRY.remove(metricsGroup, "cluster-name");
+        REGISTRY.remove(metricsGroup, "cluster-id");
+        REGISTRY.remove(metricsGroup, "num-active-partitions");
+        REGISTRY.remove(metricsGroup, "active-partition-ids");
+    }
 }
