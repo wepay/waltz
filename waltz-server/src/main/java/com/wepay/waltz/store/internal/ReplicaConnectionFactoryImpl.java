@@ -52,7 +52,12 @@ public class ReplicaConnectionFactoryImpl implements ReplicaConnectionFactory {
      * @throws ReplicaConnectionFactoryClosedException thrown if the replica connection is closed.
      */
     public ReplicaConnection get(int partitionId, long sessionId) throws ReplicaConnectionFactoryClosedException, StorageRpcException {
-        return new ReplicaConnectionImpl(partitionId, sessionId, getStorageClient());
+        try {
+            StorageClient storageClient = getStorageClient();
+            return new ReplicaConnectionImpl(partitionId, sessionId, storageClient);
+        } catch (Exception e) {
+            throw e;
+        }
     }
 
     /**
@@ -80,7 +85,13 @@ public class ReplicaConnectionFactoryImpl implements ReplicaConnectionFactory {
 
                 if (client == null) {
                     client = new StorageClient(host, port, config.sslCtx, config.key, config.numPartitions);
-                    client.open();
+                    try {
+                        client.open();
+                    } catch (Exception e) {
+                        client.close();
+                        client = null;
+                        throw e;
+                    }
                 }
                 return client;
             } else {
