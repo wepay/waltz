@@ -16,7 +16,7 @@ public interface ReplicaConnectionFactory {
      * @throws StorageRpcException thrown if Storage connection fails.
      * @throws ReplicaConnectionFactoryClosedException thrown if the replica connection is closed.
      */
-    ReplicaConnection get(int partitionId, long sessionId) throws ReplicaConnectionFactoryClosedException, StorageRpcException;
+    ReplicaConnection get(int partitionId, long sessionId) throws StorageRpcException, ReplicaConnectionFactoryClosedException;
 
     /**
      * Closes the replica connection factory.
