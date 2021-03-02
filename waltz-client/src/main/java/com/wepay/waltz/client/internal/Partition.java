@@ -200,7 +200,7 @@ public class Partition {
      */
     public void mounting(WaltzNetworkClient networkClient) {
         synchronized (lock) {
-            logger.info("mounting partition: {}", this);
+            logger.debug("mounting partition: {}", this);
             this.mounted = false;
             this.networkClient = networkClient;
             lock.notifyAll();
@@ -216,7 +216,7 @@ public class Partition {
         synchronized (lock) {
             // Make sure the network client is the right one
             if (this.networkClient == networkClient) {
-                logger.info("partition mounted: {}", this);
+                logger.debug("partition mounted: {}", this);
                 this.mounted = true;
                 lock.notifyAll();
             }

@@ -2,7 +2,6 @@ package com.wepay.waltz.store.internal;
 
 import com.wepay.riff.util.Logging;
 import com.wepay.waltz.storage.client.StorageClient;
-import com.wepay.waltz.storage.exception.StorageRpcException;
 import com.wepay.waltz.store.exception.ReplicaConnectionFactoryClosedException;
 import org.slf4j.Logger;
 
@@ -48,16 +47,10 @@ public class ReplicaConnectionFactoryImpl implements ReplicaConnectionFactory {
      * @param partitionId The partition Id.
      * @param sessionId The session Id.
      * @return {@code ReplicaConnection}.
-     * @throws StorageRpcException thrown if Storage connection fails.
-     * @throws ReplicaConnectionFactoryClosedException thrown if the replica connection is closed.
+     * @throws Exception thrown if Storage connection fails.
      */
-    public ReplicaConnection get(int partitionId, long sessionId) throws ReplicaConnectionFactoryClosedException, StorageRpcException {
-        try {
-            StorageClient storageClient = getStorageClient();
-            return new ReplicaConnectionImpl(partitionId, sessionId, storageClient);
-        } catch (Exception e) {
-            throw e;
-        }
+    public ReplicaConnection get(int partitionId, long sessionId) throws Exception {
+        return new ReplicaConnectionImpl(partitionId, sessionId, getStorageClient());
     }
 
     /**
@@ -75,7 +68,7 @@ public class ReplicaConnectionFactoryImpl implements ReplicaConnectionFactory {
         }
     }
 
-    private StorageClient getStorageClient() throws ReplicaConnectionFactoryClosedException {
+    private StorageClient getStorageClient() throws Exception {
         synchronized (this) {
             if (running) {
                 if (client != null && !client.isValid()) {
