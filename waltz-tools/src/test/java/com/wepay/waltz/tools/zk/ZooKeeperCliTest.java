@@ -374,7 +374,7 @@ public final class ZooKeeperCliTest {
     }
 
     @Test
-    public void testAssignPartitions() throws Exception {
+    public void testAssignPartition() throws Exception {
         ZooKeeperServerRunner zooKeeperServerRunner = new ZooKeeperServerRunner(0);
         String connectString = zooKeeperServerRunner.start();
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, createProperties(connectString, CLUSTER_ROOT));

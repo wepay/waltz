@@ -360,6 +360,7 @@ public class StoreMetadata {
                 );
             }
 
+            // create newReplicas including partitions to add
             Map<String, int[]> newReplicas = assignPartitions(partitions, storage, replicas);
 
             // update Znode with new replicaAssignments.replicas
