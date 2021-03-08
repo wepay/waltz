@@ -13,6 +13,7 @@ import com.wepay.waltz.common.metadata.ReplicaState;
 import com.wepay.waltz.common.metadata.StoreMetadata;
 import com.wepay.waltz.common.metadata.StoreParams;
 import com.wepay.waltz.tools.CliConfig;
+import com.wepay.waltz.tools.CliUtils;
 import com.wepay.zktools.clustermgr.ClusterManager;
 import com.wepay.zktools.clustermgr.internal.ClusterManagerImpl;
 import com.wepay.zktools.clustermgr.internal.ClusterParams;
@@ -31,6 +32,7 @@ import org.apache.zookeeper.KeeperException;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -635,7 +637,7 @@ public final class ZooKeeperCli extends SubcommandCli {
      * The {@code Assign} command assign partition to storage node.
      */
     private static final class Assign extends Cli {
-        private static final String NAME = "assign-partition";
+        private static final String NAME = "assign-partitions";
         private static final String DESCRIPTION = "Assign a partition to a storage node.";
 
         private Assign(String[] args) {
@@ -646,7 +648,7 @@ public final class ZooKeeperCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option partitionOption = Option.builder("p")
                     .longOpt("partition")
-                    .desc("Specify the partition to assign")
+                    .desc("Specify the partition to assign, or multiple partitions as 1-6,7,12-16,...")
                     .hasArg()
                     .build();
             Option storageOption = Option.builder("s")
@@ -682,11 +684,11 @@ public final class ZooKeeperCli extends SubcommandCli {
 
                 zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
-                int partitionId = Integer.parseInt(cmd.getOptionValue("partition"));
-                String storage = cmd.getOptionValue("storage");
+                List<Integer> partitions = CliUtils.parseIntRanges(cmd.getOptionValue("partition"));
 
+                String storage = cmd.getOptionValue("storage");
                 StoreMetadata storeMetadata = new StoreMetadata(zkClient, new ZNode(root, StoreMetadata.STORE_ZNODE_NAME));
-                storeMetadata.addPartition(partitionId, storage);
+                storeMetadata.addPartitions(partitions, storage);
             } catch (Exception e) {
                 if (zkClient != null) {
                     zkClient.close();
@@ -709,7 +711,7 @@ public final class ZooKeeperCli extends SubcommandCli {
      * The {@code Unassign} command un-assign partition from storage node.
      */
     private static final class Unassign extends Cli {
-        private static final String NAME = "unassign-partition";
+        private static final String NAME = "unassign-partitions";
         private static final String DESCRIPTION = "Un-assign a partition from a storage node.";
 
         private Unassign(String[] args) {
@@ -720,7 +722,7 @@ public final class ZooKeeperCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option partitionOption = Option.builder("p")
                     .longOpt("partition")
-                    .desc("Specify the partition to un-assign")
+                    .desc("Specify the partition to un-assign, or multiple partitions as 1-6,7,12-16,...")
                     .hasArg()
                     .build();
             Option storageOption = Option.builder("s")
@@ -756,11 +758,11 @@ public final class ZooKeeperCli extends SubcommandCli {
 
                 zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
                 ZNode root = new ZNode(zkRoot);
-                int partition = Integer.parseInt(cmd.getOptionValue("partition"));
+                List<Integer> partitions = CliUtils.parseIntRanges(cmd.getOptionValue("partition"));
                 String storage = cmd.getOptionValue("storage");
 
                 StoreMetadata storeMetadata = new StoreMetadata(zkClient, new ZNode(root, StoreMetadata.STORE_ZNODE_NAME));
-                storeMetadata.removePartition(partition, storage);
+                storeMetadata.removePartitions(partitions, storage);
             } catch (Exception e) {
                 if (zkClient != null) {
                     zkClient.close();

@@ -11,6 +11,7 @@ import org.apache.zookeeper.KeeperException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -329,27 +330,37 @@ public class StoreMetadata {
     }
 
     /**
-     * Add a partition to a storage node in ReplicaAssignment. If the storage node
-     * does not exist, or the partition does not belong to the cluster, or the
-     * partition already exists in storage node, throw IllegalStateException.
-     * @param partitionId partition to assign
+     * Add given partitions to a storage node in ReplicaAssignment. If the storage node
+     * does not exist, or any of the partitions does not belong to the cluster or already
+     * exists in storage node, throw IllegalStateException.
+     * @param partitions partitions to assign
      * @param storage storage node connect string
      * @throws StoreMetadataException
      */
-    public void addPartition(int partitionId, String storage) throws KeeperException, ZooKeeperClientException, StoreMetadataException {
+    public void addPartitions(List<Integer> partitions, String storage) throws KeeperException, ZooKeeperClientException, StoreMetadataException {
+        if (partitions.isEmpty()) {
+            throw new IllegalArgumentException("Partitions list is empty");
+        }
+
         mutex(session -> {
             int numPartitions = session.getStoreParamsNodeData().value.numPartitions;
 
             final NodeData<ReplicaAssignments> assignmentNodeData = session.getReplicaAssignmentsNodeData();
             Map<String, int[]> replicas = assignmentNodeData.value.replicas;
 
-            // check if partition belongs to the cluster
-            if (partitionId < 0 || partitionId >= numPartitions) {
-                throw new IllegalArgumentException("Partition does not belongs to the cluster");
+            Collections.sort(partitions);
+            int minPartition = partitions.get(0);
+            int maxPartition = partitions.get(partitions.size() - 1);
+
+            // check if partitions belong to the cluster
+            if (minPartition < 0 || maxPartition >= numPartitions) {
+                throw new IllegalArgumentException(
+                    String.format("One or more partition(s) in [%s, %s] does not belong to the cluster",
+                        minPartition, maxPartition)
+                );
             }
 
-            // create a newReplicas including partition to add
-            Map<String, int[]> newReplicas = assignPartition(partitionId, storage, replicas);
+            Map<String, int[]> newReplicas = assignPartitions(partitions, storage, replicas);
 
             // update Znode with new replicaAssignments.replicas
             session.setReplicaAssignments(new ReplicaAssignments(newReplicas), assignmentNodeData.stat.getVersion());
@@ -357,16 +368,20 @@ public class StoreMetadata {
     }
 
     /**
-     * Removes a partition from a storage node in ReplicaAssignment. If the storage node
-     * does not exist, or the partition has not been assigned to the storage node, throw
+     * Removes given partitions from a storage node in ReplicaAssignment. If the storage node
+     * does not exist, or any of the partitions has not been assigned to the storage node, throw
      * IllegalStateException.
-     * @param partitionId partition to unassign
+     * @param partitions partitions to unassign
      * @param storage storage node connect string
      * @throws KeeperException
      * @throws ZooKeeperClientException
      * @throws StoreMetadataException
      */
-    public void removePartition(int partitionId, String storage) throws KeeperException, ZooKeeperClientException, StoreMetadataException {
+    public void removePartitions(List<Integer> partitions, String storage) throws KeeperException, ZooKeeperClientException, StoreMetadataException {
+        if (partitions.isEmpty()) {
+            throw new IllegalArgumentException("Partitions list is empty");
+        }
+
         mutex(session -> {
             final NodeData<ReplicaAssignments> assignmentNodeData = session.getReplicaAssignmentsNodeData();
             Map<String, int[]> replicas = assignmentNodeData.value.replicas;
@@ -382,12 +397,16 @@ public class StoreMetadata {
 
             int groupToValidate = groups.get(storage);
 
-            // create a newReplicas excluding partition to remove
-            Map<String, int[]> newReplicas = unassignPartition(partitionId, storage, replicas);
+            // create a newReplicas excluding partitions to remove
+            Map<String, int[]> newReplicas = unassignPartitions(partitions, storage, replicas);
 
-            // validate the storage group still contains full partitions
-            if (!groupContainsFullPartitions(partitionId, groupToValidate, newReplicas, groups)) {
-                throw new IllegalArgumentException("Storage group does not contain full partitions after unassign.");
+            for (Integer partitionId : partitions) {
+                // validate the storage group still contains full partitions
+                if (!groupContainsFullPartitions(partitionId, groupToValidate, newReplicas, groups)) {
+                    throw new IllegalArgumentException(
+                        String.format("Storage group does not contain full partitions after removing %s", partitionId)
+                    );
+                }
             }
 
             // update Znode with new replicaAssignments.replicas
@@ -542,14 +561,15 @@ public class StoreMetadata {
     }
 
     /**
-     * Return a new replicas by copying from original replicas and adding a partition to
-     * the storage node.
-     * @param partitionToAssign partition to assign
+     * Return a new replicas by copying from original replicas and adding the given partitions to the storage node.
+     * @param partitionsToAssign partitions to assign
      * @param storage storage node connect string
      * @param replicas a map of <storage, partition_array>
      * @return newReplicas
      */
-    private static Map<String, int[]> assignPartition(int partitionToAssign, String storage, Map<String, int[]> replicas) {
+    private static Map<String, int[]> assignPartitions(List<Integer> partitionsToAssign,
+                                                       String storage,
+                                                       Map<String, int[]> replicas) {
         // check if the storage node does not exist
         if (!replicas.containsKey(storage)) {
             throw new IllegalArgumentException("Storage node does not exist.");
@@ -557,13 +577,17 @@ public class StoreMetadata {
         int[] curPartitions = replicas.get(storage);
         Set<Integer> partitions = Arrays.stream(curPartitions).boxed().collect(Collectors.toCollection(HashSet::new));
 
-        // check if the storage contains the partition to assign
-        if (partitions.contains(partitionToAssign)) {
-            throw new IllegalArgumentException("Partition already exists in the storage node.");
+        for (Integer partitionToAssign : partitionsToAssign) {
+            // check if the storage contains the partition to assign
+            if (partitions.containsAll(partitionsToAssign)) {
+                throw new IllegalArgumentException(
+                    String.format("Partition %s already exists in the storage node.", partitionToAssign)
+                );
+            }
         }
 
         // build newPartitions
-        partitions.add(partitionToAssign);
+        partitions.addAll(partitionsToAssign);
         int[] newPartitions = partitions.stream().mapToInt(i -> i).toArray();
         Arrays.sort(newPartitions);
 
@@ -574,16 +598,17 @@ public class StoreMetadata {
     }
 
     /**
-     * Return a new replicas by copying from original replicas and removing a partition from
-     * the storage node. If the storage node node does not exist, or if the storage node does
-     * not contains the partition to un-assign, throw IllegalArgumentException. If the storage
-     * node contains one or more than one of that partition, remove the first one.
-     * @param partitionToUnassign partition to un-assign
-     * @param storage storage must contains partition to unassign
+     * Return a new replicas by copying from original replicas and removing the given partitions from
+     * the storage node. If the storage node does not exist, or if the storage node does
+     * not contain any of the partitions to un-assign, throw IllegalArgumentException.
+     * @param partitionsToUnassign partitions to un-assign
+     * @param storage storage must contain all partitions to unassign
      * @param replicas replicas must contains storage
      * @return newReplicas
      */
-    private static Map<String, int[]> unassignPartition(int partitionToUnassign, String storage, Map<String, int[]> replicas) {
+    private static Map<String, int[]> unassignPartitions(List<Integer> partitionsToUnassign,
+                                                         String storage,
+                                                         Map<String, int[]> replicas) {
         // check if the storage node does not exist
         if (!replicas.containsKey(storage)) {
             throw new IllegalArgumentException("Storage node does not exist.");
@@ -591,13 +616,17 @@ public class StoreMetadata {
         int[] curPartitions = replicas.get(storage);
         Set<Integer> partitions = Arrays.stream(curPartitions).boxed().collect(Collectors.toCollection(HashSet::new));
 
-        // check if the storage contains the partition to un-assign
-        if (!partitions.contains(partitionToUnassign)) {
-            throw new IllegalArgumentException("Partition does not exist in the storage node.");
+        for (Integer partitionToUnassign : partitionsToUnassign) {
+            // check if the storage contains the partition to un-assign
+            if (!partitions.contains(partitionToUnassign)) {
+                throw new IllegalArgumentException(
+                    String.format("Partition %s does not exist in the storage node.", partitionToUnassign)
+                );
+            }
         }
 
         // build newPartitions
-        partitions.remove(partitionToUnassign);
+        partitions.removeAll(partitionsToUnassign);
         int[] newPartitions = partitions.stream().mapToInt(i -> i).toArray();
         Arrays.sort(newPartitions);
 

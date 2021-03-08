@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class StoreImplTest {
     private static final int NUM_REPLICAS = 3;
@@ -81,9 +82,8 @@ public class StoreImplTest {
 
             // Remove all partitions from the first storage node.
             StoreMetadata storeMetadata = new StoreMetadata(zkClient, new ZNode(root, StoreMetadata.STORE_ZNODE_NAME));
-            for (int partitionId = 0; partitionId < CLUSTER_NUM_PARTITIONS; partitionId++) {
-                storeMetadata.removePartition(partitionId, helper.getStorageConnectString(0));
-            }
+            List<Integer> partitions = IntStream.range(0, CLUSTER_NUM_PARTITIONS).boxed().collect(Collectors.toList());
+            storeMetadata.removePartitions(partitions, helper.getStorageConnectString(0));
 
             // Wait for recovery and replica states updates to ZK.
             Thread.sleep(1000);

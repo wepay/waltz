@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -373,7 +374,7 @@ public final class ZooKeeperCliTest {
     }
 
     @Test
-    public void testAssignPartition() throws Exception {
+    public void testAssignPartitions() throws Exception {
         ZooKeeperServerRunner zooKeeperServerRunner = new ZooKeeperServerRunner(0);
         String connectString = zooKeeperServerRunner.start();
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, createProperties(connectString, CLUSTER_ROOT));
@@ -397,13 +398,53 @@ public final class ZooKeeperCliTest {
             int prevPartitionSize = prevPartitions.length;
 
             // add a new partition
-            addPartition(partitionToAssign, storageNodeAssignTo, configFilePath);
+            addPartition(String.valueOf(partitionToAssign), storageNodeAssignTo, configFilePath);
 
             int[] currPartitions = zkClient.getData(assignmentNode, ReplicaAssignmentsSerializer.INSTANCE).value.replicas.get(storageNodeAssignTo);
             int currPartitionSize = currPartitions.length;
 
             assertEquals(prevPartitionSize + 1, currPartitionSize);
             assertTrue(Arrays.stream(currPartitions).boxed().collect(Collectors.toSet()).contains(partitionToAssign));
+
+        } finally {
+            zooKeeperServerRunner.stop();
+            zooKeeperServerRunner.clear();
+        }
+    }
+
+    @Test
+    public void testAssignMultiplePartitions() throws Exception {
+        ZooKeeperServerRunner zooKeeperServerRunner = new ZooKeeperServerRunner(0);
+        String connectString = zooKeeperServerRunner.start();
+        String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, createProperties(connectString, CLUSTER_ROOT));
+
+        try {
+            ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
+            ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
+            ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
+            ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
+            ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
+
+            // add a new storage
+            String storageNodeToAdd = "fakehost2:6002";
+            int storageAdminPort = 6102;
+            addStorageNode(storageNodeToAdd, storageAdminPort, STORAGE_GROUP_1, configFilePath);
+
+            String storageNodeAssignTo = storageNodeToAdd;
+            String partitionsToAssign = "0-1,2,3,4-10";
+            int[] prevPartitions = zkClient.getData(assignmentNode, ReplicaAssignmentsSerializer.INSTANCE).value.replicas.get(storageNodeAssignTo);
+            int prevPartitionSize = prevPartitions.length;
+
+            // add new partitions
+            addPartition(partitionsToAssign, storageNodeAssignTo, configFilePath);
+
+            int[] currPartitions = zkClient.getData(assignmentNode, ReplicaAssignmentsSerializer.INSTANCE).value.replicas.get(storageNodeAssignTo);
+            int currPartitionSize = currPartitions.length;
+
+            assertEquals(prevPartitionSize + 10, currPartitionSize);
+            assertTrue(Arrays.stream(currPartitions).boxed().collect(Collectors.toSet())
+                .containsAll(IntStream.rangeClosed(0, 10).boxed().collect(Collectors.toList())));
 
         } finally {
             zooKeeperServerRunner.stop();
@@ -432,7 +473,7 @@ public final class ZooKeeperCliTest {
             int prevPartitionSize = prevPartitions.length;
 
             // add a duplicate partition
-            addPartition(partitionToAssign, storageNodeAssignTo, configFilePath);
+            addPartition(String.valueOf(partitionToAssign), storageNodeAssignTo, configFilePath);
 
             int[] currPartitions = zkClient.getData(assignmentNode, ReplicaAssignmentsSerializer.INSTANCE).value.replicas.get(storageNodeAssignTo);
             int currPartitionSize = currPartitions.length;
@@ -462,7 +503,7 @@ public final class ZooKeeperCliTest {
 
             int partitionToAssign = 0;
             String storageNodeAssignTo = "fakehost0:7000";
-            addPartition(partitionToAssign, storageNodeAssignTo, configFilePath);
+            addPartition(String.valueOf(partitionToAssign), storageNodeAssignTo, configFilePath);
 
             int[] currPartitions = zkClient.getData(assignmentNode, ReplicaAssignmentsSerializer.INSTANCE).value.replicas.get(storageNodeAssignTo);
 
@@ -495,13 +536,50 @@ public final class ZooKeeperCliTest {
             int[] prevPartitions = zkClient.getData(assignmentNode, ReplicaAssignmentsSerializer.INSTANCE).value.replicas.get(storageNodeRemoveFrom);
             int prevPartitionSize = prevPartitions.length;
 
-            removePartition(partitionToRemove, storageNodeRemoveFrom, configFilePath);
+            removePartition(String.valueOf(partitionToRemove), storageNodeRemoveFrom, configFilePath);
 
             int[] currPartitions = zkClient.getData(assignmentNode, ReplicaAssignmentsSerializer.INSTANCE).value.replicas.get(storageNodeRemoveFrom);
             int currPartitionSize = currPartitions.length;
 
             assertEquals(prevPartitionSize - 1, currPartitionSize);
             assertTrue(!Arrays.stream(currPartitions).boxed().collect(Collectors.toSet()).contains(partitionToRemove));
+
+        } finally {
+            zooKeeperServerRunner.stop();
+            zooKeeperServerRunner.clear();
+        }
+    }
+
+    @Test
+    public void testUnassignMultiplePartition() throws Exception {
+        ZooKeeperServerRunner zooKeeperServerRunner = new ZooKeeperServerRunner(0);
+        String connectString = zooKeeperServerRunner.start();
+        String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, createProperties(connectString, CLUSTER_ROOT));
+
+        try {
+            ZNode clusterRootZNode = new ZNode(CLUSTER_ROOT);
+            ZNode storeRoot = new ZNode(clusterRootZNode, StoreMetadata.STORE_ZNODE_NAME);
+            ZNode assignmentNode = new ZNode(storeRoot, StoreMetadata.ASSIGNMENT_ZNODE_NAME);
+            ZooKeeperClient zkClient = new ZooKeeperClientImpl(connectString, ZK_SESSION_TIMEOUT, ZK_CONNECT_TIMEOUT);
+            ZooKeeperCli.Create.createCluster(zkClient, clusterRootZNode, CLUSTER_NAME, NUM_PARTITIONS);
+            ZooKeeperCli.Create.createStores(zkClient, clusterRootZNode, NUM_PARTITIONS, STORAGE_GROUP_MAP, STORAGE_CONNECTION_MAP);
+
+            String partitionsToRemove = "0-5,6,7,8-10";
+            String storageNodeRemoveFrom = "fakehost0:6000";
+
+            int[] prevPartitions = zkClient.getData(assignmentNode, ReplicaAssignmentsSerializer.INSTANCE).value.replicas.get(storageNodeRemoveFrom);
+            int prevPartitionSize = prevPartitions.length;
+
+            removePartition(partitionsToRemove, storageNodeRemoveFrom, configFilePath);
+
+            int[] currPartitions = zkClient.getData(assignmentNode, ReplicaAssignmentsSerializer.INSTANCE).value.replicas.get(storageNodeRemoveFrom);
+            int currPartitionSize = currPartitions.length;
+
+            assertEquals(prevPartitionSize - 10, currPartitionSize);
+            IntStream.rangeClosed(0, 10).forEach(
+                partitionToRemove -> assertTrue(!Arrays.stream(currPartitions).boxed().collect(Collectors.toSet())
+                    .contains(partitionToRemove))
+            );
 
         } finally {
             zooKeeperServerRunner.stop();
@@ -534,7 +612,7 @@ public final class ZooKeeperCliTest {
             // replicas does not contain such storage node
             assertNull(prevPartitions);
 
-            removePartition(partitionToRemove, storageNodeRemoveFrom, configFilePath);
+            removePartition(String.valueOf(partitionToRemove), storageNodeRemoveFrom, configFilePath);
 
             String expectedCmdOutput =
                 "Error: java.lang.IllegalArgumentException: "
@@ -573,7 +651,7 @@ public final class ZooKeeperCliTest {
             int prevPartitionSize = prevPartitions.length;
 
             // remove non-existing partition
-            removePartition(partitionToRemove, storageNodeRemoveFrom, configFilePath);
+            removePartition(String.valueOf(partitionToRemove), storageNodeRemoveFrom, configFilePath);
 
             int[] currPartitions = zkClient.getData(assignmentNode, ReplicaAssignmentsSerializer.INSTANCE).value.replicas.get(storageNodeRemoveFrom);
             int currPartitionSize = currPartitions.length;
@@ -614,7 +692,7 @@ public final class ZooKeeperCliTest {
             int prevPartitionSize = prevPartitions.length;
 
             // remove the last copy of that partition in group
-            removePartition(partitionToRemove, storageNodeRemoveFrom, configFilePath);
+            removePartition(String.valueOf(partitionToRemove), storageNodeRemoveFrom, configFilePath);
 
             int[] currPartitions = zkClient.getData(assignmentNode, ReplicaAssignmentsSerializer.INSTANCE).value.replicas.get(storageNodeRemoveFrom);
             int currPartitionSize = currPartitions.length;
@@ -743,7 +821,7 @@ public final class ZooKeeperCliTest {
             // assign a partition to one of the storage node in group
             int partitionToAssign = 0;
             String storageNodeToAssignTo = storageNodeList.get(0);
-            addPartition(partitionToAssign, storageNodeToAssignTo, configFilePath);
+            addPartition(String.valueOf(partitionToAssign), storageNodeToAssignTo, configFilePath);
 
             autoAssignPartitions(STORAGE_GROUP_1, configFilePath);
 
@@ -778,22 +856,22 @@ public final class ZooKeeperCliTest {
         ZooKeeperCli.testMain(removeCommandArgs);
     }
 
-    private void addPartition(int partitionToAssign, String storageNodeAssignTo, String configFilePath) {
+    private void addPartition(String partitionsToAssign, String storageNodeAssignTo, String configFilePath) {
         String[] assignCommandArgs = {
                 "assign-partition",
                 "-c", configFilePath,
-                "-p", String.valueOf(partitionToAssign),
+                "-p", partitionsToAssign,
                 "-s", storageNodeAssignTo
         };
 
         ZooKeeperCli.testMain(assignCommandArgs);
     }
 
-    private void removePartition(int partitionToRemove, String storageNodeRemoveFrom, String configFilePath) {
+    private void removePartition(String partitionsToRemove, String storageNodeRemoveFrom, String configFilePath) {
         String[] unassignCommandArgs = {
                 "unassign-partition",
                 "-c", configFilePath,
-                "-p", String.valueOf(partitionToRemove),
+                "-p", partitionsToRemove,
                 "-s", storageNodeRemoveFrom
         };
 
