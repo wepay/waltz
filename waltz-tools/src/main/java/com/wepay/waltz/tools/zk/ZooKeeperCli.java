@@ -637,8 +637,8 @@ public final class ZooKeeperCli extends SubcommandCli {
      * The {@code Assign} command assign partition to storage node.
      */
     private static final class Assign extends Cli {
-        private static final String NAME = "assign-partitions";
-        private static final String DESCRIPTION = "Assign a partition to a storage node.";
+        private static final String NAME = "assign-partition";
+        private static final String DESCRIPTION = "Assign a partition or multiple partitions to a storage node.";
 
         private Assign(String[] args) {
             super(args);
@@ -648,7 +648,7 @@ public final class ZooKeeperCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option partitionOption = Option.builder("p")
                     .longOpt("partition")
-                    .desc("Specify the partition to assign, or multiple partitions as 1-6,7,12-16,...")
+                    .desc("Specify the partition to assign or multiple partitions as comma-separated int ranges such as 0-6,7,10-16")
                     .hasArg()
                     .build();
             Option storageOption = Option.builder("s")
@@ -711,8 +711,8 @@ public final class ZooKeeperCli extends SubcommandCli {
      * The {@code Unassign} command un-assign partition from storage node.
      */
     private static final class Unassign extends Cli {
-        private static final String NAME = "unassign-partitions";
-        private static final String DESCRIPTION = "Un-assign a partition from a storage node.";
+        private static final String NAME = "unassign-partition";
+        private static final String DESCRIPTION = "Un-assign a partition or multiple partitions from a storage node";
 
         private Unassign(String[] args) {
             super(args);
@@ -722,7 +722,7 @@ public final class ZooKeeperCli extends SubcommandCli {
         protected void configureOptions(Options options) {
             Option partitionOption = Option.builder("p")
                     .longOpt("partition")
-                    .desc("Specify the partition to un-assign, or multiple partitions as 1-6,7,12-16,...")
+                    .desc("Specify the partition to un-assign or multiple partitions as comma-separated int ranges such as 0-6,7,10-16")
                     .hasArg()
                     .build();
             Option storageOption = Option.builder("s")
