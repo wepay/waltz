@@ -578,11 +578,11 @@ public class StoreMetadata {
         int[] curPartitions = replicas.get(storage);
         Set<Integer> partitions = Arrays.stream(curPartitions).boxed().collect(Collectors.toCollection(HashSet::new));
 
-        for (Integer partitionToAssign : partitionsToAssign) {
+        for (Integer partition : partitionsToAssign) {
             // check if the storage contains the partition to assign
-            if (partitions.containsAll(partitionsToAssign)) {
+            if (partitions.contains(partition)) {
                 throw new IllegalArgumentException(
-                    String.format("Partition %s already exists in the storage node.", partitionToAssign)
+                    String.format("Partition %s already exists in the storage node.", partition)
                 );
             }
         }
@@ -617,11 +617,11 @@ public class StoreMetadata {
         int[] curPartitions = replicas.get(storage);
         Set<Integer> partitions = Arrays.stream(curPartitions).boxed().collect(Collectors.toCollection(HashSet::new));
 
-        for (Integer partitionToUnassign : partitionsToUnassign) {
+        for (Integer partition : partitionsToUnassign) {
             // check if the storage contains the partition to un-assign
-            if (!partitions.contains(partitionToUnassign)) {
+            if (!partitions.contains(partition)) {
                 throw new IllegalArgumentException(
-                    String.format("Partition %s does not exist in the storage node.", partitionToUnassign)
+                    String.format("Partition %s does not exist in the storage node.", partition)
                 );
             }
         }
