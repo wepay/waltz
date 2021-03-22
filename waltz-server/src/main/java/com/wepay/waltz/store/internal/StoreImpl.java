@@ -140,9 +140,8 @@ public class StoreImpl implements Store {
                 return;
             }
 
-            replicaSessionManager.updateReplicaSessionManager(nodeData);
-
             asyncTaskExecutor.execute(() -> {
+                replicaSessionManager.updateReplicaSessionManager(nodeData);
                 for (StoreSessionManager sessionManager : storeSessionManagers.values()) {
                     if (!sessionManager.isClosed()) {
                         StoreSession currentSession = getStoreSession(sessionManager);

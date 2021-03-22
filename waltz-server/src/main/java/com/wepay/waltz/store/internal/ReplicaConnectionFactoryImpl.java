@@ -80,7 +80,13 @@ public class ReplicaConnectionFactoryImpl implements ReplicaConnectionFactory {
 
                 if (client == null) {
                     client = new StorageClient(host, port, config.sslCtx, config.key, config.numPartitions);
-                    client.open();
+                    try {
+                        client.open();
+                    } catch (Exception e) {
+                        client.close();
+                        client = null;
+                        throw e;
+                    }
                 }
                 return client;
             } else {
