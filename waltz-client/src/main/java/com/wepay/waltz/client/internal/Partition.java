@@ -216,7 +216,7 @@ public class Partition {
         synchronized (lock) {
             // Make sure the network client is the right one
             if (this.networkClient == networkClient) {
-                logger.debug("partition mounted: {}", this);
+                logger.info("partition mounted: {}", this);
                 this.mounted = true;
                 lock.notifyAll();
             }
