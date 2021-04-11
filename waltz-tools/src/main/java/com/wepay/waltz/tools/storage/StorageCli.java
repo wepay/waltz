@@ -111,8 +111,8 @@ public final class StorageCli extends SubcommandCli {
                     }
                     hostsAndPorts = Collections.singletonList(hostAndPortArray);
                 } catch (IllegalArgumentException e) {
-                    throw new SubCommandFailedException(String.format("Cannot fetch partition ownership for %s:%n%s",
-                            providedHostAndPort, e.getMessage()));
+                    throw new SubCommandFailedException(String.format("Failed to obtain hostname and admin port for "
+                            + "%s:%n%s", providedHostAndPort, e.getMessage()));
                 }
             }
 
@@ -400,7 +400,8 @@ public final class StorageCli extends SubcommandCli {
 
                 setAvailability(storageHost, Integer.parseInt(storagePort), Integer.parseInt(partitionId), Boolean.parseBoolean(isOnline), cliConfigPath);
             } catch (Exception e) {
-                throw new SubCommandFailedException(String.format("Partition %s availability not set. %n%s", partitionId, e.getMessage()));
+                throw new SubCommandFailedException(String.format("Failed to set availability of partition %s to %s "
+                        + "for %s. %n%s", partitionId, isOnline, hostAndPort, e.getMessage()));
             }
         }
 
@@ -505,7 +506,8 @@ public final class StorageCli extends SubcommandCli {
 
                 removePartition(storageHost, Integer.parseInt(storagePort), Integer.parseInt(partitionId), cliConfigPath, deleteStorageFiles);
             } catch (Exception e) {
-                throw new SubCommandFailedException(String.format("Partition %s not remove. %n%s", partitionId, e.getMessage()));
+                throw new SubCommandFailedException(String.format("Failed to remove partition %s from %s. %n%s",
+                    partitionId, hostAndPort, e.getMessage()));
             }
         }
 
@@ -586,7 +588,7 @@ public final class StorageCli extends SubcommandCli {
                     .build();
             Option partitionOption = Option.builder("p")
                     .longOpt("partition")
-                    .desc("Specify the partition id to be removed from the storage node")
+                    .desc("Specify the partition id to be recovered")
                     .hasArg()
                     .build();
             Option batchSizeOption = Option.builder("b")
@@ -833,11 +835,11 @@ public final class StorageCli extends SubcommandCli {
     }
 
     /**
-     * The {@code Validate} command validate Waltz server and Waltz storage node connectivity.
+     * The {@code Validate} command validate Waltz storage node connectivity.
      */
     private static final class Validate extends Cli {
         private static final String NAME = "validate";
-        private static final String DESCRIPTION = "Validate Waltz storage and Waltz server node connectivity";
+        private static final String DESCRIPTION = "Validate Waltz storage node connectivity";
 
         private Validate(String[] args) {
             super(args);
