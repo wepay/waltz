@@ -54,15 +54,15 @@ public class SubcommandCli {
             printUsageAndExit("Unknown subcommand: " + args[0]);
         } else {
             Subcommand subcommand = subcommands.get(args[0]);
-            logger.info(String.format("Executing %s:%s command!!!", getClass().getName(), subcommand.name));
+            logger.info(String.format("Executing %s:%s command!", getClass().getName(), subcommand.name));
             String[] subcommandArgs = Arrays.copyOfRange(args, 1, args.length);
             Cli cli = subcommand.cliFunction.apply(subcommandArgs);
             try {
                 cli.processCmd();
-                logger.info(String.format("Successfully executed %s:%s command!!!", getClass().getName(),
+                logger.info(String.format("Successfully executed %s:%s command!", getClass().getName(),
                     subcommand.name));
             } catch (SubCommandFailedException e) {
-                logger.info(String.format("Failed to execute %s:%s command. Error: %n%s", getClass().getName(),
+                logger.info(String.format("Failed to execute %s:%s command, error: %n%s", getClass().getName(),
                     subcommand.name, e.getMessage()));
                 cli.printError(e.getMessage());
                 if (!useByTest) {
