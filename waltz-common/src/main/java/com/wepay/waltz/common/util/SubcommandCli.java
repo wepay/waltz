@@ -62,7 +62,7 @@ public class SubcommandCli {
                 logger.info(String.format("Successfully executed %s:%s command!", getClass().getName(),
                     subcommand.name));
             } catch (SubCommandFailedException e) {
-                logger.info(String.format("Failed to execute %s:%s command, error: %n%s", getClass().getName(),
+                logger.info(String.format("Failed to execute %s:%s command, error: \n%s", getClass().getName(),
                     subcommand.name, e.getMessage()));
                 cli.printError(e.getMessage());
                 if (!useByTest) {
