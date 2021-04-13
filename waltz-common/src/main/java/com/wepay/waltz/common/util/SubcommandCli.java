@@ -1,7 +1,9 @@
 package com.wepay.waltz.common.util;
 
+import com.wepay.riff.util.Logging;
 import com.wepay.waltz.exception.SubCommandFailedException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.slf4j.Logger;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -15,6 +17,8 @@ import java.util.stream.Collectors;
  * SubcommandCli is a helper for creating Cli tools with subcommands.
  */
 public class SubcommandCli {
+    private static final Logger logger = Logging.getLogger(SubcommandCli.class);
+
     private final boolean useByTest;
     private final Map<String, Subcommand> subcommands;
     private final String[] args;
@@ -50,11 +54,16 @@ public class SubcommandCli {
             printUsageAndExit("Unknown subcommand: " + args[0]);
         } else {
             Subcommand subcommand = subcommands.get(args[0]);
+            logger.info(String.format("Executing %s:%s command!", getClass().getName(), subcommand.name));
             String[] subcommandArgs = Arrays.copyOfRange(args, 1, args.length);
             Cli cli = subcommand.cliFunction.apply(subcommandArgs);
             try {
                 cli.processCmd();
+                logger.info(String.format("Successfully executed %s:%s command!", getClass().getName(),
+                    subcommand.name));
             } catch (SubCommandFailedException e) {
+                logger.info(String.format("Failed to execute %s:%s command, error: %s", getClass().getName(),
+                    subcommand.name, e.getMessage()));
                 cli.printError(e.getMessage());
                 if (!useByTest) {
                     System.exit(1);
