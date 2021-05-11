@@ -244,15 +244,16 @@ public class WaltzNetworkClient extends NetworkClient {
      * The current thread waits for channel readiness before sending the request to the server. If this client
      * is shutdown before that, an exceptionally completed CompletableFuture is returned.
      *
-     * @param partitionId The partition Id to be added.
+     * @param partitionIds The partition Ids to be added.
      * @return a CompletableFuture which will complete with a {@code true} if the preferred partition is added
      * successfully, a {@code false} otherwise, or an exception if any.
      * @throws InterruptedException If thread interrupted while waiting for the channel to be ready.
      */
-    public CompletableFuture<Boolean> addPreferredPartition(int partitionId) throws InterruptedException {
-        ReqId dummyReqId = new ReqId(clientId, 0, partitionId, 0);
+    public CompletableFuture<Boolean> addPreferredPartition(List<Integer> partitionIds) throws InterruptedException {
+        ReqId dummyReqId = new ReqId(clientId, 0, partitionIds.get(0), 0);
+        System.out.println("First: " + partitionIds.get(0) + ", len: " + partitionIds.size());
         CompletableFuture<Object> responseFuture =
-            sendRequestOnChannelActive(new AddPreferredPartitionRequest(dummyReqId, partitionId));
+            sendRequestOnChannelActive(new AddPreferredPartitionRequest(dummyReqId, partitionIds));
 
         return responseFuture.thenApply(response -> (Boolean) response);
     }

@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.stream.Collectors;
 
 
@@ -146,9 +147,9 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
                 break;
 
             case MessageType.ADD_PREFERRED_PARTITION_REQUEST:
-                partitionId = ((AddPreferredPartitionRequest) msg).partitionId;
-                if (partitionId < clusterManager.numPartitions()) {
-                    addPreferredPartition(partitionId);
+                List<Integer> partitionIds = ((AddPreferredPartitionRequest) msg).partitionId;
+                if (Collections.max(partitionIds) < clusterManager.numPartitions()) {
+                    partitionIds.forEach(pId -> { addPreferredPartition(pId); });
                     clusterManager.manage(managedServer);
                     sendMessage(new AddPreferredPartitionResponse(((AddPreferredPartitionRequest) msg).reqId, true),
                         true);

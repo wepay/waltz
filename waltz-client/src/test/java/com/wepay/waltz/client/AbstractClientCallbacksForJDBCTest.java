@@ -495,7 +495,7 @@ public class AbstractClientCallbacksForJDBCTest {
             }
 
             @Override
-            public CompletableFuture<Boolean> addPreferredPartition(Endpoint serverEndpoint, int partitionId) throws InterruptedException {
+            public CompletableFuture<Boolean> addPreferredPartition(Endpoint serverEndpoint, List<Integer> partitionIds) throws InterruptedException {
                 return CompletableFuture.completedFuture(true);
             }
 

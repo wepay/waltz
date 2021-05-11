@@ -114,15 +114,15 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
     /**
      * Adds the given partition Id as a preferred partition to the given Server Endpoint.
      * @param serverEndpoint Server Endpoint to add the partition to.
-     * @param partitionId The partition Id.
+     * @param partitionIds The list of partition Ids.
      * @return a Future which will complete with a {@code true} if the preferred partition is added
      * successfully, a {@code false} otherwise, or an exception if any.
      * @throws InterruptedException If thread is interrupted while waiting for Network client channel to be ready.
      */
     @Override
-    public Future<Boolean> addPreferredPartition(Endpoint serverEndpoint, int partitionId) throws InterruptedException {
+    public Future<Boolean> addPreferredPartition(Endpoint serverEndpoint, List<Integer> partitionIds) throws InterruptedException {
         WaltzNetworkClient networkClient = getNetworkClient(serverEndpoint);
-        return networkClient.addPreferredPartition(partitionId);
+        return networkClient.addPreferredPartition(partitionIds);
     }
 
     /**

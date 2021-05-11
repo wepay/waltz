@@ -22,7 +22,7 @@ public interface RpcClient {
 
     Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException;
 
-    Future<Boolean> addPreferredPartition(Endpoint serverEndpoint, int partitionId) throws InterruptedException;
+    Future<Boolean> addPreferredPartition(Endpoint serverEndpoint, List<Integer> partitionIds) throws InterruptedException;
 
     Future<Boolean> removePreferredPartition(Endpoint serverEndpoint, int partitionId) throws InterruptedException;
 }
