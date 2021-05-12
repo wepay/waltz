@@ -259,19 +259,19 @@ public class WaltzNetworkClient extends NetworkClient {
     }
 
     /**
-     * Removes the given partition Id as a preferred partition on the server.
+     * Removes given partition Ids as preferred partitions on the server.
      * The current thread waits for channel readiness before sending the request to the server. If this client
      * is shutdown before that, an exceptionally completed CompletableFuture is returned.
      *
-     * @param partitionId The partition Id to be removed.
+     * @param partitionIds The partition Ids to be removed.
      * @return a CompletableFuture which will complete with a {@code true} if the preferred partition is removed
      * successfully, a {@code false} otherwise, or an exception if any.
      * @throws InterruptedException If thread interrupted while waiting for the channel to be ready.
      */
-    public CompletableFuture<Boolean> removePreferredPartition(int partitionId) throws InterruptedException {
-        ReqId dummyReqId = new ReqId(clientId, 0, partitionId, 0);
+    public CompletableFuture<Boolean> removePreferredPartition(List<Integer> partitionIds) throws InterruptedException {
+        ReqId dummyReqId = new ReqId(clientId, 0, partitionIds.get(0), 0);
         CompletableFuture<Object> responseFuture =
-            sendRequestOnChannelActive(new RemovePreferredPartitionRequest(dummyReqId, partitionId));
+            sendRequestOnChannelActive(new RemovePreferredPartitionRequest(dummyReqId, partitionIds));
 
         return responseFuture.thenApply(response -> (Boolean) response);
     }

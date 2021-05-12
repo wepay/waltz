@@ -143,8 +143,7 @@ public class MessageCodecV2 implements MessageCodec {
                 return new AddPreferredPartitionResponse(reqId, result);
 
             case MessageType.REMOVE_PREFERRED_PARTITION_REQUEST:
-                partitionId = reader.readInt();
-                return new RemovePreferredPartitionRequest(reqId, partitionId);
+                return new RemovePreferredPartitionRequest(reqId, buildListReader(reader));
 
             case MessageType.REMOVE_PREFERRED_PARTITION_RESPONSE:
                 result = reader.readBoolean();
@@ -276,7 +275,7 @@ public class MessageCodecV2 implements MessageCodec {
 
             case MessageType.REMOVE_PREFERRED_PARTITION_REQUEST:
                 RemovePreferredPartitionRequest removePreferredPartitionRequest = (RemovePreferredPartitionRequest) msg;
-                writer.writeInt(removePreferredPartitionRequest.partitionId);
+                writeListWriter(writer, removePreferredPartitionRequest.partitionId);
                 break;
 
             case MessageType.REMOVE_PREFERRED_PARTITION_RESPONSE:

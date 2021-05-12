@@ -112,10 +112,10 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
     }
 
     /**
-     * Adds the given partition Id as a preferred partition to the given Server Endpoint.
+     * Adds given partition Ids as preferred partitions to the given Server Endpoint.
      * @param serverEndpoint Server Endpoint to add the partition to.
      * @param partitionIds The list of partition Ids.
-     * @return a Future which will complete with a {@code true} if the preferred partition is added
+     * @return a Future which will complete with a {@code true} if the preferred partitions are added
      * successfully, a {@code false} otherwise, or an exception if any.
      * @throws InterruptedException If thread is interrupted while waiting for Network client channel to be ready.
      */
@@ -126,17 +126,17 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
     }
 
     /**
-     * Removes the given partition Id as a preferred partition from the given Server Endpoint.
+     * Removes given partition Ids as preferred partitions from the given Server Endpoint.
      * @param serverEndpoint Server Endpoint from which the partition is to be removed.
-     * @param partitionId The partition Id.
-     * @return a Future which will complete with a {@code true} if the preferred partition is added
+     * @param partitionIds The list of partition Ids.
+     * @return a Future which will complete with a {@code true} if the preferred partitions are removed
      * successfully, a {@code false} otherwise, or an exception if any.
      * @throws InterruptedException If thread is interrupted while waiting for Network client channel to be ready.
      */
     @Override
     public Future<Boolean> removePreferredPartition(Endpoint serverEndpoint,
-                                                    int partitionId) throws InterruptedException {
+                                                    List<Integer> partitionIds) throws InterruptedException {
         WaltzNetworkClient networkClient = getNetworkClient(serverEndpoint);
-        return networkClient.removePreferredPartition(partitionId);
+        return networkClient.removePreferredPartition(partitionIds);
     }
 }

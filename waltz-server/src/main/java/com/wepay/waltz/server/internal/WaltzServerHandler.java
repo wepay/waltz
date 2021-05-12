@@ -106,6 +106,7 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
         }
 
         int partitionId = 0;
+        List<Integer> partitionIds = null;
         switch (msg.type()) {
             case MessageType.CHECK_STORAGE_CONNECTIVITY_REQUEST:
                 Set<ReplicaId> replicaIds = store.getReplicaIds();
@@ -147,7 +148,7 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
                 break;
 
             case MessageType.ADD_PREFERRED_PARTITION_REQUEST:
-                List<Integer> partitionIds = ((AddPreferredPartitionRequest) msg).partitionId;
+                partitionIds = ((AddPreferredPartitionRequest) msg).partitionId;
                 if (Collections.max(partitionIds) < clusterManager.numPartitions()) {
                     partitionIds.forEach(pId -> { addPreferredPartition(pId); });
                     clusterManager.manage(managedServer);
@@ -160,9 +161,9 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
                 break;
 
             case MessageType.REMOVE_PREFERRED_PARTITION_REQUEST:
-                partitionId = ((RemovePreferredPartitionRequest) msg).partitionId;
-                if (partitionId < clusterManager.numPartitions()) {
-                    removePreferredPartition(partitionId);
+                partitionIds = ((RemovePreferredPartitionRequest) msg).partitionId;
+                if (Collections.max(partitionIds) < clusterManager.numPartitions()) {
+                    partitionIds.forEach(pId -> { removePreferredPartition(pId); });
                     clusterManager.manage(managedServer);
                     sendMessage(new RemovePreferredPartitionResponse(((RemovePreferredPartitionRequest) msg).reqId,
                         true), true);
