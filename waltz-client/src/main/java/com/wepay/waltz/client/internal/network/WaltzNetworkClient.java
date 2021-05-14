@@ -251,7 +251,6 @@ public class WaltzNetworkClient extends NetworkClient {
      */
     public CompletableFuture<Boolean> addPreferredPartition(List<Integer> partitionIds) throws InterruptedException {
         ReqId dummyReqId = new ReqId(clientId, 0, partitionIds.get(0), 0);
-        System.out.println("First: " + partitionIds.get(0) + ", len: " + partitionIds.size());
         CompletableFuture<Object> responseFuture =
             sendRequestOnChannelActive(new AddPreferredPartitionRequest(dummyReqId, partitionIds));
 

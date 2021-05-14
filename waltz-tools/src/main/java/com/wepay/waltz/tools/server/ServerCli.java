@@ -190,8 +190,6 @@ public final class ServerCli extends SubcommandCli {
                 }
                 String host = hostAndPortArray[0];
                 int serverPort = Integer.parseInt(hostAndPortArray[1]);
-
-                //int[] partitions = CliUtils.parseIntRanges(partitionId).stream().mapToInt(i -> i).toArray();
                 List<Integer> partitionIds = CliUtils.parseIntRanges(partitionId);
                 addPreferredPartition(host, serverPort, partitionIds, cliConfigPath);
             } catch (Exception e) {

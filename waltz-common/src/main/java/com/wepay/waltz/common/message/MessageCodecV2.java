@@ -37,9 +37,7 @@ public class MessageCodecV2 implements MessageCodec {
         long transactionId;
         int header;
         byte[] data;
-        int[] partitionIds;
         int checksum;
-        int partitionId;
         boolean result;
 
         switch (messageType) {
