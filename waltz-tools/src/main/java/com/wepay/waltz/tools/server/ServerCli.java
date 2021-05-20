@@ -199,10 +199,8 @@ public final class ServerCli extends SubcommandCli {
         }
 
         private void addPreferredPartition(String host, int serverPort, List<Integer> partitionIds, String cliConfigPath) {
-            int partitionCount = CliUtils.getNumberOfPartitions(cliConfigPath);
-            if (partitionIds.size() == 0 || Collections.min(partitionIds) < 0 || Collections.max(partitionIds) >= partitionCount) {
-                throw new IllegalArgumentException("Partition array is empty / one or more partitions are lower than 0 /"
-                    + " greater or equal to partition count: " + partitionCount);
+            if (partitionIds.size() == 0 || Collections.min(partitionIds) < 0) {
+                throw new IllegalArgumentException("Partition array is empty / one or more partitions are lower than 0");
             }
 
             Endpoint serverEndpoint = new Endpoint(host, serverPort);
@@ -293,10 +291,8 @@ public final class ServerCli extends SubcommandCli {
         }
 
         private void removePreferredPartition(String host, int serverPort, List<Integer> partitionIds, String cliConfigPath) {
-            int partitionCount = CliUtils.getNumberOfPartitions(cliConfigPath);
-            if (partitionIds.size() == 0 || Collections.min(partitionIds) < 0 || Collections.max(partitionIds) >= partitionCount) {
-                throw new IllegalArgumentException("Partition array is empty / one or more partitions are lower than 0 /"
-                    + " greater or equal to partition count: " + partitionCount);
+            if (partitionIds.size() == 0 || Collections.min(partitionIds) < 0) {
+                throw new IllegalArgumentException("Partition array is empty / one or more partitions are lower than 0");
             }
 
             Endpoint serverEndpoint = new Endpoint(host, serverPort);
