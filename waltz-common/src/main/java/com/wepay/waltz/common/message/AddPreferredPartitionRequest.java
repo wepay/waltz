@@ -5,10 +5,10 @@ import java.util.List;
 
 public class AddPreferredPartitionRequest extends AbstractMessage {
 
-    public final List<Integer> partitionId;
+    public final List<Integer> partitionIds;
     public AddPreferredPartitionRequest(ReqId reqId, List<Integer> partitionIds) {
         super(reqId);
-        this.partitionId = Collections.unmodifiableList(partitionIds);
+        this.partitionIds = Collections.unmodifiableList(partitionIds);
     }
 
     @Override

@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 
 /**
  * ServerCli is a tool for interacting with Waltz Server.
@@ -198,8 +199,10 @@ public final class ServerCli extends SubcommandCli {
         }
 
         private void addPreferredPartition(String host, int serverPort, List<Integer> partitionIds, String cliConfigPath) {
-            if (partitionIds.size() == 0) {
-                throw new IllegalArgumentException("Partition array is empty");
+            int partitionCount = CliUtils.getNumberOfPartitions(cliConfigPath);
+            if (partitionIds.size() == 0 || Collections.min(partitionIds) < 0 || Collections.max(partitionIds) >= partitionCount) {
+                throw new IllegalArgumentException("Partition array is empty / one or more partitions are lower than 0 /"
+                    + " greater or equal to partition count: " + partitionCount);
             }
 
             Endpoint serverEndpoint = new Endpoint(host, serverPort);
@@ -290,8 +293,10 @@ public final class ServerCli extends SubcommandCli {
         }
 
         private void removePreferredPartition(String host, int serverPort, List<Integer> partitionIds, String cliConfigPath) {
-            if (partitionIds.size() == 0) {
-                throw new IllegalArgumentException("Partitions array is empty");
+            int partitionCount = CliUtils.getNumberOfPartitions(cliConfigPath);
+            if (partitionIds.size() == 0 || Collections.min(partitionIds) < 0 || Collections.max(partitionIds) >= partitionCount) {
+                throw new IllegalArgumentException("Partition array is empty / one or more partitions are lower than 0 /"
+                    + " greater or equal to partition count: " + partitionCount);
             }
 
             Endpoint serverEndpoint = new Endpoint(host, serverPort);

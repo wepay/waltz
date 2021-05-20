@@ -3,6 +3,13 @@ package com.wepay.waltz.tools;
 import com.wepay.waltz.client.Transaction;
 import com.wepay.waltz.client.WaltzClient;
 import com.wepay.waltz.client.WaltzClientCallbacks;
+import com.wepay.waltz.exception.SubCommandFailedException;
+import com.wepay.zktools.clustermgr.ClusterManager;
+import com.wepay.zktools.clustermgr.internal.ClusterManagerImpl;
+import com.wepay.zktools.clustermgr.internal.DynamicPartitionAssignmentPolicy;
+import com.wepay.zktools.zookeeper.ZNode;
+import com.wepay.zktools.zookeeper.ZooKeeperClient;
+import com.wepay.zktools.zookeeper.internal.ZooKeeperClientImpl;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -61,5 +68,36 @@ public final class CliUtils {
         }
 
         return new ArrayList<>(partitions);
+    }
+
+    /**
+     * Connect to zookeeper and get total number of partitions in waltz cluster
+     * @param cliConfigPath the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config file path
+     * @return number of partitions in waltz cluster
+     */
+    public static int getNumberOfPartitions(String cliConfigPath) {
+        ZooKeeperClient zkClient = null;
+        try {
+            CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
+            String zookeeperHostPorts = (String) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_STRING);
+            String zkRoot = (String) cliConfig.get(CliConfig.CLUSTER_ROOT);
+            int zkSessionTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_SESSION_TIMEOUT);
+            int zkConnectTimeout = (int) cliConfig.get(CliConfig.ZOOKEEPER_CONNECT_TIMEOUT);
+
+            zkClient = new ZooKeeperClientImpl(zookeeperHostPorts, zkSessionTimeout, zkConnectTimeout);
+            ZNode root = new ZNode(zkRoot);
+
+            ClusterManager clusterManager = new ClusterManagerImpl(zkClient, root, new DynamicPartitionAssignmentPolicy());
+            return clusterManager.numPartitions();
+        } catch (Exception e) {
+            if (zkClient != null) {
+                zkClient.close();
+            }
+            throw new SubCommandFailedException(e);
+        } finally {
+            if (zkClient != null) {
+                zkClient.close();
+            }
+        }
     }
 }

@@ -102,7 +102,7 @@ public final class ServerCliTest {
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(), helper.getSslSetup());
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
 
-        String partitionIdInterval = "3,6-7";
+        String partitionIdBatch = "3,6-7";
         Set<Integer> partitionIds = Stream.of(3, 6, 7).collect(Collectors.toCollection(HashSet::new));
         Set<ServerDescriptor> serverDescriptors = null;
         PartitionAssignment partitionAssignment = null;
@@ -120,7 +120,7 @@ public final class ServerCliTest {
             String[] args1 = {
                 "add-preferred-partition",
                 "--server", serverEndpoint1,
-                "--partition", partitionIdInterval,
+                "--partition", partitionIdBatch,
                 "--cli-config-path", configFilePath
             };
             ServerCli.testMain(args1);
@@ -129,19 +129,19 @@ public final class ServerCliTest {
             serverDescriptors = helper.getWaltzServerRunner().getServerDescriptors();
             for (ServerDescriptor serverDescriptor : serverDescriptors) {
                 if (serverDescriptor.endpoint.toString().equals(serverEndpoint1)) {
-                    partitionIds.forEach(partitionId -> assertTrue(serverDescriptor.partitions.contains(partitionId)));
+                    assertTrue(serverDescriptor.partitions.containsAll(partitionIds));
 
                     // Verify partitions P3,P6,P7 are assigned to server 1
-                    int partitionMatchIterator = 0;
+                    int partitionMatchCounter = 0;
                     partitionAssignment = helper.getWaltzServerRunner().getPartitionAssignment();
                     List<PartitionInfo> partitionInfoList =
                         partitionAssignment.partitionsFor(serverDescriptor.serverId);
                     for (PartitionInfo partitionInfo : partitionInfoList) {
                         if (partitionIds.contains(partitionInfo.partitionId)) {
-                            partitionMatchIterator += 1;
+                            partitionMatchCounter += 1;
                         }
                     }
-                    assertTrue(partitionMatchIterator == partitionIds.size());
+                    assertTrue(partitionMatchCounter == partitionIds.size());
                 }
             }
 
@@ -156,7 +156,7 @@ public final class ServerCliTest {
             String[] args2 = {
                 "add-preferred-partition",
                 "--server", serverEndpoint2,
-                "--partition", partitionIdInterval,
+                "--partition", partitionIdBatch,
                 "--cli-config-path", configFilePath
             };
             ServerCli.testMain(args2);
@@ -165,7 +165,7 @@ public final class ServerCliTest {
             serverDescriptors = helper.getWaltzServerRunner(1).getServerDescriptors();
             for (ServerDescriptor serverDescriptor : serverDescriptors) {
                 if (serverDescriptor.endpoint.toString().equals(serverEndpoint2)) {
-                    partitionIds.forEach(partitionId -> assertTrue(serverDescriptor.partitions.contains(partitionId)));
+                    assertTrue(serverDescriptor.partitions.containsAll(partitionIds));
 
                     // Verify partition P3,P6,P7 is not assigned to server 2
                     /**
@@ -190,7 +190,7 @@ public final class ServerCliTest {
             String[] args3 = {
                 "remove-preferred-partition",
                 "--server", serverEndpoint1,
-                "--partition", String.valueOf(partitionIdInterval),
+                "--partition", partitionIdBatch,
                 "--cli-config-path", configFilePath
             };
             ServerCli.testMain(args3);
@@ -203,19 +203,19 @@ public final class ServerCliTest {
                 }
 
                 if (serverDescriptor.endpoint.toString().equals(serverEndpoint2)) {
-                    partitionIds.forEach(partitionId -> assertTrue(serverDescriptor.partitions.contains(partitionId)));
+                    assertTrue(serverDescriptor.partitions.containsAll(partitionIds));
 
                     // Verify partitions P3,P6,P7 are assigned to server 2
-                    int partitionMatchIterator = 0;
+                    int partitionMatchCounter = 0;
                     partitionAssignment = helper.getWaltzServerRunner().getPartitionAssignment();
                     List<PartitionInfo> partitionInfoList =
                         partitionAssignment.partitionsFor(serverDescriptor.serverId);
                     for (PartitionInfo partitionInfo : partitionInfoList) {
                         if (partitionIds.contains(partitionInfo.partitionId)) {
-                            partitionMatchIterator += 1;
+                            partitionMatchCounter += 1;
                         }
                     }
-                    assertTrue(partitionMatchIterator == partitionIds.size());
+                    assertTrue(partitionMatchCounter == partitionIds.size());
                 }
             }
         } finally {

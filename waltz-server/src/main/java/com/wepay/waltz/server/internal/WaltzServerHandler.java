@@ -105,7 +105,6 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
             clientId = ((AbstractMessage) msg).reqId.clientId();
         }
 
-        int partitionId = 0;
         List<Integer> partitionIds = null;
         switch (msg.type()) {
             case MessageType.CHECK_STORAGE_CONNECTIVITY_REQUEST:
@@ -148,9 +147,9 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
                 break;
 
             case MessageType.ADD_PREFERRED_PARTITION_REQUEST:
-                partitionIds = ((AddPreferredPartitionRequest) msg).partitionId;
+                partitionIds = ((AddPreferredPartitionRequest) msg).partitionIds;
                 if (Collections.max(partitionIds) < clusterManager.numPartitions()) {
-                    partitionIds.forEach(pId -> { addPreferredPartition(pId); });
+                    addPreferredPartition(partitionIds);
                     clusterManager.manage(managedServer);
                     sendMessage(new AddPreferredPartitionResponse(((AddPreferredPartitionRequest) msg).reqId, true),
                         true);
@@ -161,9 +160,9 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
                 break;
 
             case MessageType.REMOVE_PREFERRED_PARTITION_REQUEST:
-                partitionIds = ((RemovePreferredPartitionRequest) msg).partitionId;
+                partitionIds = ((RemovePreferredPartitionRequest) msg).partitionIds;
                 if (Collections.max(partitionIds) < clusterManager.numPartitions()) {
-                    partitionIds.forEach(pId -> { removePreferredPartition(pId); });
+                    removePreferredPartition(partitionIds);
                     clusterManager.manage(managedServer);
                     sendMessage(new RemovePreferredPartitionResponse(((RemovePreferredPartitionRequest) msg).reqId,
                         true), true);
@@ -201,16 +200,16 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
         }
     }
 
-    private void addPreferredPartition(Integer partitionId) {
+    private void addPreferredPartition(List<Integer> partitionIds) {
         synchronized (preferredPartitions) {
-            preferredPartitions.add(partitionId);
+            preferredPartitions.addAll(partitionIds);
         }
 
     }
 
-    private void removePreferredPartition(Integer partitionId) {
+    private void removePreferredPartition(List<Integer> partitionIds) {
         synchronized (preferredPartitions) {
-            preferredPartitions.remove(partitionId);
+            preferredPartitions.removeAll(partitionIds);
         }
     }
 

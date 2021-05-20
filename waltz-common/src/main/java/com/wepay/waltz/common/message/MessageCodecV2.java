@@ -263,7 +263,7 @@ public class MessageCodecV2 implements MessageCodec {
 
             case MessageType.ADD_PREFERRED_PARTITION_REQUEST:
                 AddPreferredPartitionRequest addPreferredPartitionRequest = (AddPreferredPartitionRequest) msg;
-                writeListWriter(writer, addPreferredPartitionRequest.partitionId);
+                writeListWriter(writer, addPreferredPartitionRequest.partitionIds);
                 break;
 
             case MessageType.ADD_PREFERRED_PARTITION_RESPONSE:
@@ -273,7 +273,7 @@ public class MessageCodecV2 implements MessageCodec {
 
             case MessageType.REMOVE_PREFERRED_PARTITION_REQUEST:
                 RemovePreferredPartitionRequest removePreferredPartitionRequest = (RemovePreferredPartitionRequest) msg;
-                writeListWriter(writer, removePreferredPartitionRequest.partitionId);
+                writeListWriter(writer, removePreferredPartitionRequest.partitionIds);
                 break;
 
             case MessageType.REMOVE_PREFERRED_PARTITION_RESPONSE:
