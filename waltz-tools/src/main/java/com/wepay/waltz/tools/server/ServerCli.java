@@ -13,6 +13,7 @@ import com.wepay.waltz.common.util.SubcommandCli;
 import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.exception.SubCommandFailedException;
 import com.wepay.waltz.tools.CliConfig;
+import com.wepay.waltz.tools.CliUtils;
 import com.wepay.zktools.clustermgr.Endpoint;
 import io.netty.handler.ssl.SslContext;
 import org.apache.commons.cli.CommandLine;
@@ -24,6 +25,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 
 /**
  * ServerCli is a tool for interacting with Waltz Server.
@@ -140,11 +142,11 @@ public final class ServerCli extends SubcommandCli {
     }
 
     /**
-     * The {@code AddPreferredPartition} command adds the given preferred partition to the given server.
+     * The {@code AddPreferredPartition} command adds the given preferred partition or multiple partitions to the given server.
      */
     private static final class AddPreferredPartition extends Cli {
         protected static final String NAME = "add-preferred-partition";
-        protected static final String DESCRIPTION = "add a preferred partition to the server.";
+        protected static final String DESCRIPTION = "add a preferred partition or multiple partitions to the server.";
 
         protected AddPreferredPartition(String[] args) {
             super(args);
@@ -159,7 +161,7 @@ public final class ServerCli extends SubcommandCli {
                 .build();
             Option partitionOption = Option.builder("p")
                 .longOpt("partition")
-                .desc("Specify the preferred partition to be added to the given server")
+                .desc("Specify the preferred partition (or multiple partitions as comma-separated int ranges such as 0-6,7,10-16) to be added to the given server")
                 .hasArg()
                 .build();
             Option cliCfgOption = Option.builder("c")
@@ -189,17 +191,18 @@ public final class ServerCli extends SubcommandCli {
                 }
                 String host = hostAndPortArray[0];
                 int serverPort = Integer.parseInt(hostAndPortArray[1]);
-
-                if (!partitionId.matches("^[0-9]+$")) {
-                    throw new IllegalArgumentException(String.format("Partition id '%s' is invalid. Expected a non-negative integer", partitionId));
-                }
-                addPreferredPartition(host, serverPort, Integer.parseInt(partitionId), cliConfigPath);
+                List<Integer> partitionIds = CliUtils.parseIntRanges(partitionId);
+                addPreferredPartition(host, serverPort, partitionIds, cliConfigPath);
             } catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Failed to add preferred partition .%n%s", e));
             }
         }
 
-        private void addPreferredPartition(String host, int serverPort, int partitionId, String cliConfigPath) {
+        private void addPreferredPartition(String host, int serverPort, List<Integer> partitionIds, String cliConfigPath) {
+            if (partitionIds.size() == 0 || Collections.min(partitionIds) < 0) {
+                throw new IllegalArgumentException("Partition array is empty / one or more partitions are lower than 0");
+            }
+
             Endpoint serverEndpoint = new Endpoint(host, serverPort);
             InternalRpcClient rpcClient = null;
             try {
@@ -208,13 +211,14 @@ public final class ServerCli extends SubcommandCli {
                 rpcClient = new InternalRpcClient(sslContext, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS,
                     callbacks);
 
-                if (!rpcClient.addPreferredPartition(serverEndpoint, partitionId).get()) {
-                    System.out.println("Failed to add preferred partition " + partitionId + " to server Endpoint "
+                if (!rpcClient.addPreferredPartition(serverEndpoint, partitionIds).get()) {
+                    System.out.println("Failed to add preferred partition(s) " + partitionIds.toString() + " to server Endpoint "
                             + serverEndpoint + ".");
                 }
             } catch (Exception e) {
+                e.printStackTrace();
                 throw new SubCommandFailedException(String.format("Failed to add preferred partition %s to the "
-                    + "server Endpoint %s. %n%s ", partitionId, serverEndpoint.toString(), e));
+                    + "server Endpoint %s. %n%s ", partitionIds.toString(), serverEndpoint.toString(), e));
             } finally {
                 if (rpcClient != null) {
                     rpcClient.close();
@@ -229,11 +233,11 @@ public final class ServerCli extends SubcommandCli {
     }
 
     /**
-     * The {@code RemovePreferredPartition} command removes the given preferred partition from the given server.
+     * The {@code RemovePreferredPartition} command removes the given preferred partition or multiple partitions from the given server.
      */
     private static final class RemovePreferredPartition extends Cli {
         protected static final String NAME = "remove-preferred-partition";
-        protected static final String DESCRIPTION = "Remove a preferred partition from the server.";
+        protected static final String DESCRIPTION = "Remove a preferred partition or multiple partitions from the server.";
 
         protected RemovePreferredPartition(String[] args) {
             super(args);
@@ -248,7 +252,7 @@ public final class ServerCli extends SubcommandCli {
                 .build();
             Option partitionOption = Option.builder("p")
                 .longOpt("partition")
-                .desc("Specify the preferred partition to be removed from the given server")
+                .desc("Specify the preferred partition (or multiple partitions as comma-separated int ranges such as 0-6,7,10-16) to be removed from the given server")
                 .hasArg()
                 .build();
             Option cliCfgOption = Option.builder("c")
@@ -279,16 +283,18 @@ public final class ServerCli extends SubcommandCli {
                 String host = hostAndPortArray[0];
                 int serverPort = Integer.parseInt(hostAndPortArray[1]);
 
-                if (!partitionId.matches("^[0-9]+$")) {
-                    throw new IllegalArgumentException(String.format("Partition id '%s' is invalid. Expected a non-negative integer", partitionId));
-                }
-                removePreferredPartition(host, serverPort, Integer.parseInt(partitionId), cliConfigPath);
+                List<Integer> partitionIds = CliUtils.parseIntRanges(partitionId);
+                removePreferredPartition(host, serverPort, partitionIds, cliConfigPath);
             } catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Failed to remove preferred partition .%n%s", e));
             }
         }
 
-        private void removePreferredPartition(String host, int serverPort, int partitionId, String cliConfigPath) {
+        private void removePreferredPartition(String host, int serverPort, List<Integer> partitionIds, String cliConfigPath) {
+            if (partitionIds.size() == 0 || Collections.min(partitionIds) < 0) {
+                throw new IllegalArgumentException("Partition array is empty / one or more partitions are lower than 0");
+            }
+
             Endpoint serverEndpoint = new Endpoint(host, serverPort);
             InternalRpcClient rpcClient = null;
             try {
@@ -297,13 +303,13 @@ public final class ServerCli extends SubcommandCli {
                 rpcClient = new InternalRpcClient(sslContext, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS,
                     callbacks);
 
-                if (!rpcClient.removePreferredPartition(serverEndpoint, partitionId).get()) {
-                    System.out.println("Failed to remove preferred partition " + partitionId + " from server Endpoint "
+                if (!rpcClient.removePreferredPartition(serverEndpoint, partitionIds).get()) {
+                    System.out.println("Failed to remove preferred partition " + partitionIds.toString() + " from server Endpoint "
                         + serverEndpoint + ".");
                 }
             } catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Failed to remove preferred partition %s to the "
-                    + "server Endpoint %s. %n%s ", partitionId, serverEndpoint.toString(), e));
+                    + "server Endpoint %s. %n%s ", partitionIds.toString(), serverEndpoint.toString(), e));
             } finally {
                 if (rpcClient != null) {
                     rpcClient.close();

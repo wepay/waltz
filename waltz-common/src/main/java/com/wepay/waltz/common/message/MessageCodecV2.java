@@ -38,7 +38,6 @@ public class MessageCodecV2 implements MessageCodec {
         int header;
         byte[] data;
         int checksum;
-        int partitionId;
         boolean result;
 
         switch (messageType) {
@@ -132,24 +131,17 @@ public class MessageCodecV2 implements MessageCodec {
                 return new ServerPartitionsAssignmentRequest(reqId);
 
             case MessageType.SERVER_PARTITIONS_ASSIGNMENT_RESPONSE:
-                int listSize = reader.readInt();
-                List<Integer> partitionsAssigned = new ArrayList<>(listSize);
-                for (int i = 0; i < listSize; i++) {
-                    partitionsAssigned.add(reader.readInt());
-                }
-                return new ServerPartitionsAssignmentResponse(reqId, partitionsAssigned);
+                return new ServerPartitionsAssignmentResponse(reqId, buildListReader(reader));
 
             case MessageType.ADD_PREFERRED_PARTITION_REQUEST:
-                partitionId = reader.readInt();
-                return new AddPreferredPartitionRequest(reqId, partitionId);
+                return new AddPreferredPartitionRequest(reqId, buildListReader(reader));
 
             case MessageType.ADD_PREFERRED_PARTITION_RESPONSE:
                 result = reader.readBoolean();
                 return new AddPreferredPartitionResponse(reqId, result);
 
             case MessageType.REMOVE_PREFERRED_PARTITION_REQUEST:
-                partitionId = reader.readInt();
-                return new RemovePreferredPartitionRequest(reqId, partitionId);
+                return new RemovePreferredPartitionRequest(reqId, buildListReader(reader));
 
             case MessageType.REMOVE_PREFERRED_PARTITION_RESPONSE:
                 result = reader.readBoolean();
@@ -266,15 +258,12 @@ public class MessageCodecV2 implements MessageCodec {
                 ServerPartitionsAssignmentResponse serverPartitionsAssignmentResponse =
                         (ServerPartitionsAssignmentResponse) msg;
                 List<Integer> partitionsAssigned = serverPartitionsAssignmentResponse.serverPartitionAssignments;
-                writer.writeInt(partitionsAssigned.size());
-                for (Integer partition : partitionsAssigned) {
-                    writer.writeInt(partition);
-                }
+                writeListWriter(writer, partitionsAssigned);
                 break;
 
             case MessageType.ADD_PREFERRED_PARTITION_REQUEST:
                 AddPreferredPartitionRequest addPreferredPartitionRequest = (AddPreferredPartitionRequest) msg;
-                writer.writeInt(addPreferredPartitionRequest.partitionId);
+                writeListWriter(writer, addPreferredPartitionRequest.partitionIds);
                 break;
 
             case MessageType.ADD_PREFERRED_PARTITION_RESPONSE:
@@ -284,7 +273,7 @@ public class MessageCodecV2 implements MessageCodec {
 
             case MessageType.REMOVE_PREFERRED_PARTITION_REQUEST:
                 RemovePreferredPartitionRequest removePreferredPartitionRequest = (RemovePreferredPartitionRequest) msg;
-                writer.writeInt(removePreferredPartitionRequest.partitionId);
+                writeListWriter(writer, removePreferredPartitionRequest.partitionIds);
                 break;
 
             case MessageType.REMOVE_PREFERRED_PARTITION_RESPONSE:
@@ -298,4 +287,19 @@ public class MessageCodecV2 implements MessageCodec {
         }
     }
 
+    private List<Integer> buildListReader(MessageAttributeReader reader) {
+        int listSize = reader.readInt();
+        List<Integer> list = new ArrayList<>(listSize);
+        for (int i = 0; i < listSize; i++) {
+            list.add(reader.readInt());
+        }
+        return list;
+    }
+
+    private void writeListWriter(MessageAttributeWriter writer, List<Integer> list) {
+        writer.writeInt(list.size());
+        for (Integer partition : list) {
+            writer.writeInt(partition);
+        }
+    }
 }
