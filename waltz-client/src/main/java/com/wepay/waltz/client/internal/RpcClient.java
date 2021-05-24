@@ -24,5 +24,5 @@ public interface RpcClient {
 
     Future<Boolean> addPreferredPartition(Endpoint serverEndpoint, List<Integer> partitionIds) throws InterruptedException;
 
-    Future<Boolean> removePreferredPartition(Endpoint serverEndpoint, List<Integer> partitionId) throws InterruptedException;
+    Future<Boolean> removePreferredPartition(Endpoint serverEndpoint, List<Integer> partitionIds) throws InterruptedException;
 }
