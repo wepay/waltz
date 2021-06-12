@@ -2,6 +2,7 @@ package com.wepay.waltz.tools.storage;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wepay.riff.util.Logging;
 import com.wepay.waltz.common.util.Cli;
 import com.wepay.waltz.common.util.SubcommandCli;
 import com.wepay.waltz.common.util.Utils;
@@ -29,6 +30,7 @@ import io.netty.handler.ssl.SslContext;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -86,10 +88,16 @@ public final class StorageCli extends SubcommandCli {
                     .desc("Specify the cli config file path required for ZooKeeper connection string, ZooKeeper root path and SSL config")
                     .hasArg()
                     .build();
+            Option loggerOutputOption = Option.builder("l")
+                .longOpt("logger-as-output")
+                .desc("If command option is present the cli output will be sent to logger instead of standard output")
+                .build();
             storageOption.setRequired(false);
             cliCfgOption.setRequired(true);
+            loggerOutputOption.setRequired(false);
             options.addOption(storageOption);
             options.addOption(cliCfgOption);
+            options.addOption(loggerOutputOption);
         }
 
         @Override
@@ -116,6 +124,7 @@ public final class StorageCli extends SubcommandCli {
                 }
             }
 
+            boolean loggerAsOutput = cmd.hasOption("logger-as-output");
             StringBuilder partitionInfoStringBuilder = new StringBuilder();
             for (String[] hostAndPortArray : hostsAndPorts) {
                 try {
@@ -125,13 +134,18 @@ public final class StorageCli extends SubcommandCli {
                     String metricsJson = getMetricsJson(storageHost, Integer.parseInt(storagePort), cliConfigPath);
                     Map<Integer, PartitionInfoSnapshot> partitionInfo = getPartitionInfo(metricsJson);
                     partitionInfoStringBuilder.append(formatPartitionInfo(partitionInfo, storageHost, storagePort));
-                    partitionInfoStringBuilder.append("\n");
+                    partitionInfoStringBuilder.append(System.lineSeparator());
                 } catch (Exception e) {
                     throw new SubCommandFailedException(String.format("Cannot fetch partition ownership for %s:%s:%n%s",
                             hostAndPortArray[0], hostAndPortArray[1], e.getMessage()));
                 }
             }
-            System.out.println(partitionInfoStringBuilder.toString());
+            if (loggerAsOutput) {
+                Logger logger = Logging.getLogger(ListPartition.class);
+                logger.info(partitionInfoStringBuilder.toString());
+            } else {
+                System.out.println(partitionInfoStringBuilder.toString());
+            }
         }
 
         private List<String[]> getAllHostsAndPorts(String cliConfigPath) throws Exception {

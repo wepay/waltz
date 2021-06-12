@@ -1,5 +1,6 @@
 package com.wepay.waltz.tools.cluster;
 
+import com.wepay.riff.util.Logging;
 import com.wepay.waltz.client.Transaction;
 import com.wepay.waltz.client.WaltzClient;
 import com.wepay.waltz.client.WaltzClientCallbacks;
@@ -37,6 +38,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -161,6 +163,7 @@ public final class ClusterCli extends SubcommandCli {
     private static final class Verify extends Cli {
         private static final String NAME = "verify";
         private static final String DESCRIPTION = "Validates if partition(s) is handled by some server";
+        private static final StringBuilder OUTPUT_BUILDER = new StringBuilder();
 
         private final PartitionAssignmentPolicy partitionAssignmentPolicy = new DynamicPartitionAssignmentPolicy();
 
@@ -191,13 +194,20 @@ public final class ClusterCli extends SubcommandCli {
                 .hasArg()
                 .build();
 
+            Option loggerOutputOption = Option.builder("l")
+                .longOpt("logger-as-output")
+                .desc("If command option is present the cli output will be sent to logger instead of standard output")
+                .build();
+
             cliCfgOption.setRequired(true);
             partitionOption.setRequired(false);
             timeoutOption.setRequired(false);
+            loggerOutputOption.setRequired(false);
 
             options.addOption(cliCfgOption);
             options.addOption(partitionOption);
             options.addOption(timeoutOption);
+            options.addOption(loggerOutputOption);
         }
 
         @Override
@@ -206,6 +216,7 @@ public final class ClusterCli extends SubcommandCli {
             InternalRpcClient rpcClient = null;
             List<PartitionValidationResults> partitionsValidationResultList = new ArrayList<>();
             int partitionId = -1;
+            boolean loggerAsOutput = cmd.hasOption("logger-as-output");
 
             try {
                 String cliConfigPath = cmd.getOptionValue("cli-config-path");
@@ -301,6 +312,14 @@ public final class ClusterCli extends SubcommandCli {
                 if (rpcClient != null) {
                     rpcClient.close();
                 }
+
+                if (loggerAsOutput) {
+                    Logger logger = Logging.getLogger(Verify.class);
+                    logger.info(OUTPUT_BUILDER.toString());
+                } else {
+                    System.out.println(OUTPUT_BUILDER.toString());
+                }
+                OUTPUT_BUILDER.setLength(0);
             }
         }
 
@@ -613,11 +632,16 @@ public final class ClusterCli extends SubcommandCli {
 
             ValidationResult validationResult = partitionResult.validationResultsMap.get(type);
             if (validationResult.status.equals(ValidationResult.Status.FAILURE)) {
-                System.out.println("Validation " + type.name() + " failed for partition " + partitionId);
-                System.out.println("Validation error is: " + validationResult.error);
+                appendLineSB("Validation " + type.name() + " failed for partition " + partitionId);
+                appendLineSB("Validation error is: " + validationResult.error);
                 return false;
             }
             return true;
+        }
+
+        private void appendLineSB(String toOutput) {
+            OUTPUT_BUILDER.append(toOutput);
+            OUTPUT_BUILDER.append(System.lineSeparator());
         }
 
         /**

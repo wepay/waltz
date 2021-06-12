@@ -1,5 +1,6 @@
 package com.wepay.waltz.tools.zk;
 
+import com.wepay.riff.util.Logging;
 import com.wepay.waltz.common.util.Cli;
 import com.wepay.waltz.common.util.SubcommandCli;
 import com.wepay.waltz.exception.SubCommandFailedException;
@@ -15,12 +16,14 @@ import com.wepay.waltz.common.metadata.StoreParams;
 import com.wepay.waltz.tools.CliConfig;
 import com.wepay.waltz.tools.CliUtils;
 import com.wepay.zktools.clustermgr.ClusterManager;
+import com.wepay.zktools.clustermgr.PartitionInfo;
 import com.wepay.zktools.clustermgr.internal.ClusterManagerImpl;
 import com.wepay.zktools.clustermgr.internal.ClusterParams;
 import com.wepay.zktools.clustermgr.internal.ClusterParamsSerializer;
 import com.wepay.zktools.clustermgr.internal.DynamicPartitionAssignmentPolicy;
+import com.wepay.zktools.clustermgr.internal.ServerDescriptor;
+import com.wepay.zktools.clustermgr.internal.PartitionAssignment;
 import com.wepay.zktools.clustermgr.tools.CreateCluster;
-import com.wepay.zktools.clustermgr.tools.ListCluster;
 import com.wepay.zktools.zookeeper.NodeData;
 import com.wepay.zktools.zookeeper.ZNode;
 import com.wepay.zktools.zookeeper.ZooKeeperClient;
@@ -29,12 +32,15 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.StringJoiner;
+import java.util.Set;
 
 /**
  * ZooKeeperCli is a tool for interacting with Waltz ZooKeeper data.
@@ -81,6 +87,7 @@ public final class ZooKeeperCli extends SubcommandCli {
     private static final class ListZk extends Cli {
         private static final String NAME = "list";
         private static final String DESCRIPTION = "Displays server metadata.";
+        private static final StringBuilder OUTPUT_BUILDER = new StringBuilder();
 
         protected ListZk(String[] args) {
             super(args);
@@ -93,15 +100,22 @@ public final class ZooKeeperCli extends SubcommandCli {
                 .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path")
                 .hasArg()
                 .build();
+            Option loggerOutputOption = Option.builder("l")
+                .longOpt("logger-as-output")
+                .desc("If command option is present the cli output will be sent to logger instead of standard output")
+                .build();
 
             cliCfgOption.setRequired(true);
+            loggerOutputOption.setRequired(false);
 
             options.addOption(cliCfgOption);
+            options.addOption(loggerOutputOption);
         }
 
         @Override
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             ZooKeeperClient zkClient = null;
+            boolean loggerAsOutput = cmd.hasOption("logger-as-output");
             try {
                 String cliConfigPath = cmd.getOptionValue("cli-config-path");
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
@@ -143,62 +157,107 @@ public final class ZooKeeperCli extends SubcommandCli {
                 if (zkClient != null) {
                     zkClient.close();
                 }
+                if (loggerAsOutput) {
+                    Logger logger = Logging.getLogger(ListZk.class);
+                    logger.info(OUTPUT_BUILDER.toString());
+                } else {
+                    System.out.println(OUTPUT_BUILDER.toString());
+                }
             }
         }
 
-        private void listStoreParams(ZNode storeRoot, StoreParams storeParams) throws Exception {
-            System.out.println("store [" + storeRoot + "] parameters:");
+        private void listStoreParams(ZNode storeRoot, StoreParams storeParams) {
+            appendLineSB("store [" + storeRoot + "] parameters:");
+            appendLineSB("store [" + storeRoot + "] parameters:");
 
             if (storeParams != null) {
-                System.out.println("  key=" + storeParams.key.toString());
-                System.out.println("  numPartitions=" + storeParams.numPartitions);
+                appendLineSB("  key=" + storeParams.key.toString());
+                appendLineSB("  numPartitions=" + storeParams.numPartitions);
             } else {
-                System.out.println("Store parameters not found");
+                appendLineSB("Store parameters not found");
             }
         }
 
         private void listReplicaAndGroupAssignments(ZNode storeRoot, ReplicaAssignments replicaAssignments, GroupDescriptor groupDescriptor) throws Exception {
-            System.out.println("store [" + storeRoot + "] replica and group assignments:");
+            appendLineSB("store [" + storeRoot + "] replica and group assignments:");
+            appendLineSB("store [" + storeRoot + "] replica and group assignments:");
 
             if ((replicaAssignments != null) && (groupDescriptor != null)) {
                 Map<String, int[]> replicas = new TreeMap<>(replicaAssignments.replicas);
                 Map<String, Integer> groups = groupDescriptor.groups;
                 for (Map.Entry<String, int[]> entry : replicas.entrySet()) {
-                    System.out.println("  " + entry.getKey() + " = " + Arrays.toString(entry.getValue()) + ", GroupId: " + groups.get(entry.getKey()));
+                    appendLineSB("  " + entry.getKey() + " = " + Arrays.toString(entry.getValue()) + ", GroupId: " + groups.get(entry.getKey()));
                 }
             } else {
-                System.out.println("Replicas not found");
+                appendLineSB("Replicas not found");
             }
         }
 
         private void listConnections(ZNode storeRoot, ConnectionMetadata connectionMetadata) {
-            System.out.println("store [" + storeRoot + "] connections:");
+            appendLineSB("store [" + storeRoot + "] connections:");
 
             if ((connectionMetadata != null)) {
                 Map<String, Integer> connections = connectionMetadata.connections;
                 for (Map.Entry<String, Integer> entry : connections.entrySet()) {
-                    System.out.println("  " + entry.getKey() + " has admin port: " + entry.getValue());
+                    appendLineSB("  " + entry.getKey() + " has admin port: " + entry.getValue());
                 }
             } else {
-                System.out.println("Connections not found");
+                appendLineSB("Connections not found");
             }
         }
 
         private void listClusterInfoAndServerPartitionAssignments(ZooKeeperClient zkClient, ZNode root) throws Exception {
-            ListCluster.list(root, zkClient);
+            //ListCluster.list(root, zkClient);
+            ClusterManager clusterManager = new ClusterManagerImpl(zkClient, root, new DynamicPartitionAssignmentPolicy());
+            Set<ServerDescriptor> serverDescriptors = clusterManager.serverDescriptors();
+            PartitionAssignment partitionAssignment = clusterManager.partitionAssignment();
+            String clusterName = clusterManager.clusterName();
+            int numPartitions = clusterManager.numPartitions();
+
+            appendLineSB("cluster root [" + root + "]:");
+
+            appendLineSB("  name=" + clusterName);
+            appendLineSB("  numPartitions=" + numPartitions);
+
+            appendLineSB(String.format("cluster root [%s] has server descriptors:", root));
+
+            for (ServerDescriptor sd : serverDescriptors) {
+                StringJoiner partitionJoiner = new StringJoiner(",");
+                sd.partitions.forEach(p -> partitionJoiner.add(p.toString()));
+                String partitionString = (sd.partitions.size() == 0) ? "*" : partitionJoiner.toString();
+                appendLineSB(String.format("  server=%d, endpoint=%s, preferred partitions=[%s]", sd.serverId, sd.endpoint, partitionString));
+            }
+
+            appendLineSB(String.format("cluster root [%s] has partition assignment metadata:", root));
+            appendLineSB(String.format("  cversion=%d, endpoints=%d, partitions=%d",
+                partitionAssignment.cversion, partitionAssignment.numEndpoints, partitionAssignment.numPartitions));
+
+            appendLineSB(String.format("cluster root [%s] has partition assignments:", root));
+            for (int serverId : partitionAssignment.serverIds()) {
+                List<PartitionInfo> partitionInfoList = partitionAssignment.partitionsFor(serverId);
+                for (PartitionInfo partitionInfo : partitionInfoList) {
+                    appendLineSB(String.format("  server=%d, partition=%d, generation=%d",
+                        serverId, partitionInfo.partitionId, partitionInfo.generation));
+                }
+            }
         }
 
         private void listReplicaState(ZNode znode, Map<ReplicaId, ReplicaState> replicaState) {
-            System.out.println("store [" + znode + "] replica states:");
+            appendLineSB("store [" + znode + "] replica states:");
 
             if (replicaState.size() > 0) {
                 Map<ReplicaId, ReplicaState> sortedReplicaState = new TreeMap<>(replicaState);
                 for (Map.Entry<ReplicaId, ReplicaState> entry : sortedReplicaState.entrySet()) {
-                    System.out.println("  " + entry.getKey() + ", SessionId: " + entry.getValue().sessionId + ", closingHighWaterMark: " + ((entry.getValue().closingHighWaterMark) == ReplicaState.UNRESOLVED ? "UNRESOLVED" : entry.getValue().closingHighWaterMark));
+                    appendLineSB("  " + entry.getKey() + ", SessionId: " + entry.getValue().sessionId + ", closingHighWaterMark: " + ((entry.getValue().closingHighWaterMark) == ReplicaState.UNRESOLVED ? "UNRESOLVED" : entry.getValue().closingHighWaterMark));
                 }
             } else {
-                System.out.println("No node found");
+                appendLineSB("No node found");
             }
+        }
+
+        private void appendLineSB(String toOutput) {
+            OUTPUT_BUILDER.append(toOutput);
+            OUTPUT_BUILDER.append(System.lineSeparator());
         }
 
         @Override
