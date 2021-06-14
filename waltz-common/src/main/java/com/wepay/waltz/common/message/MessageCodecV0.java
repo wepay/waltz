@@ -43,7 +43,8 @@ public class MessageCodecV0 implements MessageCodec {
 
             case MessageType.MOUNT_RESPONSE:
                 boolean partitionReady = reader.readBoolean();
-                return new MountResponse(reqId, partitionReady);
+                boolean partitionException = reader.readBoolean();
+                return new MountResponse(reqId, partitionReady, partitionException);
 
             case MessageType.APPEND_REQUEST:
                 transactionId = reader.readLong(); // client High-water mark

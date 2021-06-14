@@ -41,7 +41,7 @@ public class Partition {
     private static final int MAX_DATA_ATTEMPTS = 5;
 
     private enum PartitionState {
-        ACTIVE, INACTIVE, CLOSED
+        ACTIVE, INACTIVE, CLOSED, AHEAD
     }
 
     public final int partitionId;
@@ -242,11 +242,17 @@ public class Partition {
         }
     }
 
+    public void partitionAhead() {
+        this.state = PartitionState.AHEAD;
+        notifyAll();
+    }
+
     /**
      * Ensures that this partition is mounted.
      * Waits until interrupted, or a PartitionInactiveException to occur, for the partition to be mounted.
      *
      * @throws PartitionInactiveException if this partition is not active.
+     * @throws IllegalStateException if client's highwatermark is ahead of server's highwatermark.
      */
     public void ensureMounted() {
         if (!mounted) {
@@ -254,6 +260,8 @@ public class Partition {
                 while (state != PartitionState.CLOSED && !mounted) {
                     if (transactionMonitor.isStopped()) {
                         throw new PartitionInactiveException(partitionId);
+                    } else if (state == PartitionState.AHEAD) {
+                        throw new IllegalStateException(String.format("client is ahead of store for partition: %d", partitionId));
                     }
 
                     try {

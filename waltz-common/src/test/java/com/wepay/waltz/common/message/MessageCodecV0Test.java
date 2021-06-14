@@ -46,7 +46,7 @@ public class MessageCodecV0Test {
         assertEquals(mountRequest1.clientHighWaterMark, mountRequest2.clientHighWaterMark);
         assertEquals(mountRequest1.seqNum, mountRequest2.seqNum);
 
-        MountResponse mountResponse1 = new MountResponse(reqId(), rand.nextBoolean());
+        MountResponse mountResponse1 = new MountResponse(reqId(), rand.nextBoolean(), rand.nextBoolean());
         MountResponse mountResponse2 = encodeThenDecode(mountResponse1);
         assertEquals(MessageType.MOUNT_RESPONSE, mountResponse1.type());
         assertEquals(mountResponse1.type(), mountResponse2.type());
