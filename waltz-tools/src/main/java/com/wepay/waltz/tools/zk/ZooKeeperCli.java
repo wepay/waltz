@@ -24,6 +24,7 @@ import com.wepay.zktools.clustermgr.internal.DynamicPartitionAssignmentPolicy;
 import com.wepay.zktools.clustermgr.internal.ServerDescriptor;
 import com.wepay.zktools.clustermgr.internal.PartitionAssignment;
 import com.wepay.zktools.clustermgr.tools.CreateCluster;
+import com.wepay.zktools.clustermgr.tools.ListCluster;
 import com.wepay.zktools.zookeeper.NodeData;
 import com.wepay.zktools.zookeeper.ZNode;
 import com.wepay.zktools.zookeeper.ZooKeeperClient;
@@ -207,39 +208,7 @@ public final class ZooKeeperCli extends SubcommandCli {
         }
 
         private void listClusterInfoAndServerPartitionAssignments(ZooKeeperClient zkClient, ZNode root) throws Exception {
-            //ListCluster.list(root, zkClient);
-            ClusterManager clusterManager = new ClusterManagerImpl(zkClient, root, new DynamicPartitionAssignmentPolicy());
-            Set<ServerDescriptor> serverDescriptors = clusterManager.serverDescriptors();
-            PartitionAssignment partitionAssignment = clusterManager.partitionAssignment();
-            String clusterName = clusterManager.clusterName();
-            int numPartitions = clusterManager.numPartitions();
-
-            appendLineSB("cluster root [" + root + "]:");
-
-            appendLineSB("  name=" + clusterName);
-            appendLineSB("  numPartitions=" + numPartitions);
-
-            appendLineSB(String.format("cluster root [%s] has server descriptors:", root));
-
-            for (ServerDescriptor sd : serverDescriptors) {
-                StringJoiner partitionJoiner = new StringJoiner(",");
-                sd.partitions.forEach(p -> partitionJoiner.add(p.toString()));
-                String partitionString = (sd.partitions.size() == 0) ? "*" : partitionJoiner.toString();
-                appendLineSB(String.format("  server=%d, endpoint=%s, preferred partitions=[%s]", sd.serverId, sd.endpoint, partitionString));
-            }
-
-            appendLineSB(String.format("cluster root [%s] has partition assignment metadata:", root));
-            appendLineSB(String.format("  cversion=%d, endpoints=%d, partitions=%d",
-                partitionAssignment.cversion, partitionAssignment.numEndpoints, partitionAssignment.numPartitions));
-
-            appendLineSB(String.format("cluster root [%s] has partition assignments:", root));
-            for (int serverId : partitionAssignment.serverIds()) {
-                List<PartitionInfo> partitionInfoList = partitionAssignment.partitionsFor(serverId);
-                for (PartitionInfo partitionInfo : partitionInfoList) {
-                    appendLineSB(String.format("  server=%d, partition=%d, generation=%d",
-                        serverId, partitionInfo.partitionId, partitionInfo.generation));
-                }
-            }
+            OUTPUT_BUILDER.append(ListCluster.list(root, zkClient));
         }
 
         private void listReplicaState(ZNode znode, Map<ReplicaId, ReplicaState> replicaState) {
