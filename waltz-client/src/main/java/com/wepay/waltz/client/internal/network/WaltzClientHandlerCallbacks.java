@@ -20,11 +20,11 @@ public interface WaltzClientHandlerCallbacks extends MessageHandlerCallbacks {
     void onPartitionNotReady(int partitionId);
 
     /**
-     * Invoked if mount request on a server side ended with an exception.
+     * Invoked when local partition's HWM is ahead of server's HWM.
      *
      * @param partitionId the id of the partition.
      */
-    void onPartitionException(int partitionId);
+    void onPartitionAhead(int partitionId);
 
     /**
      * Invoked when a partition is mounted.

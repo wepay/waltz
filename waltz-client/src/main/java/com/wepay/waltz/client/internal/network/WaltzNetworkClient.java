@@ -356,15 +356,15 @@ public class WaltzNetworkClient extends NetworkClient {
         }
 
         @Override
-        public void onPartitionException(int partitionId) {
+        public void onPartitionAhead(int partitionId) {
             Partition partition = getPartition(partitionId);
             if (partition != null) {
-                // Retry since this partition is still assigned to this server
-                logger.info("Partition not mounted, ended by an exception from server side. PartitionId=" + partitionId + " server=" + endpoint);
+                logger.info(String.format("Partition not mounted, partition's HWM is ahead of server's HWM. PartitionId=%d server=%s client's HWM=%d",
+                    partitionId, endpoint,partition.clientHighWaterMark()));
                 partition.partitionAhead();
             } else {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("partition not found: event=onPartitionException partitionId=" + partitionId);
+                    logger.debug("partition not found: event=onPartitionAhead partitionId=" + partitionId);
                 }
             }
         }

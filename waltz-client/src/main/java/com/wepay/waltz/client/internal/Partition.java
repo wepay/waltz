@@ -63,6 +63,7 @@ public class Partition {
     private volatile int generation;
     private volatile PartitionState state = PartitionState.INACTIVE;
     private volatile boolean mounted = false;
+    private volatile boolean clientHWMAhead = false;
     private final AtomicReference<CompletableFuture<Long>> highWaterMarkRef = new AtomicReference<>();
 
     private Meter lockFailureMeter;
@@ -101,6 +102,7 @@ public class Partition {
             this.networkClient = null;
             this.state = PartitionState.CLOSED;
             this.mounted = false;
+            this.clientHWMAhead = false;
             this.transactionMonitor.close();
 
             synchronized (dataFutures) {
@@ -202,6 +204,7 @@ public class Partition {
         synchronized (lock) {
             logger.debug("mounting partition: {}", this);
             this.mounted = false;
+            this.clientHWMAhead = false;
             this.networkClient = networkClient;
             lock.notifyAll();
         }
@@ -236,15 +239,22 @@ public class Partition {
             if (this.networkClient == networkClient) {
                 logger.debug("partition unmounted: {}", this);
                 this.mounted = false;
+                this.clientHWMAhead = false;
                 this.networkClient = null;
                 lock.notifyAll();
             }
         }
     }
 
+    /**
+     * Invoked after receiving MOUNT_RESPONSE informing that local partition' HWM is ahead of server's HWM.
+     * If thread is stuck in ensureMounted, this thread is woken up and throws IllegalStateException
+     */
     public void partitionAhead() {
-        this.state = PartitionState.AHEAD;
-        notifyAll();
+        synchronized (lock) {
+            this.clientHWMAhead = true;
+            notifyAll();
+        }
     }
 
     /**
@@ -260,7 +270,7 @@ public class Partition {
                 while (state != PartitionState.CLOSED && !mounted) {
                     if (transactionMonitor.isStopped()) {
                         throw new PartitionInactiveException(partitionId);
-                    } else if (state == PartitionState.AHEAD) {
+                    } else if (clientHWMAhead) {
                         throw new IllegalStateException(String.format("client is ahead of store for partition: %d", partitionId));
                     }
 

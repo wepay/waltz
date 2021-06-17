@@ -80,7 +80,7 @@ public class WaltzClientHandler extends MessageHandler {
                     if (r.partitionReady) {
                         handlerCallbacks.onPartitionMounted(partitionId, reqId);
                     } else if (r.partitionException) {
-                        handlerCallbacks.onPartitionException(partitionId);
+                        handlerCallbacks.onPartitionAhead(partitionId);
                     } else {
                         // We may retry if the partition is still considered to be assigned to this server
                         handlerCallbacks.onPartitionNotReady(partitionId);
