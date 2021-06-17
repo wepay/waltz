@@ -16,13 +16,10 @@ import com.wepay.waltz.common.metadata.StoreParams;
 import com.wepay.waltz.tools.CliConfig;
 import com.wepay.waltz.tools.CliUtils;
 import com.wepay.zktools.clustermgr.ClusterManager;
-import com.wepay.zktools.clustermgr.PartitionInfo;
 import com.wepay.zktools.clustermgr.internal.ClusterManagerImpl;
 import com.wepay.zktools.clustermgr.internal.ClusterParams;
 import com.wepay.zktools.clustermgr.internal.ClusterParamsSerializer;
 import com.wepay.zktools.clustermgr.internal.DynamicPartitionAssignmentPolicy;
-import com.wepay.zktools.clustermgr.internal.ServerDescriptor;
-import com.wepay.zktools.clustermgr.internal.PartitionAssignment;
 import com.wepay.zktools.clustermgr.tools.CreateCluster;
 import com.wepay.zktools.clustermgr.tools.ListCluster;
 import com.wepay.zktools.zookeeper.NodeData;
@@ -40,8 +37,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.StringJoiner;
-import java.util.Set;
 
 /**
  * ZooKeeperCli is a tool for interacting with Waltz ZooKeeper data.
