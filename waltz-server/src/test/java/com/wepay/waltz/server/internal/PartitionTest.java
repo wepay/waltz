@@ -103,7 +103,7 @@ public class PartitionTest {
             msg = partitionClient1.nextMessage(TIMEOUT);
             assertNotNull(msg);
             assertEquals(MessageType.MOUNT_RESPONSE, msg.type());
-            assertTrue(((MountResponse) msg).partitionReady);
+            assertEquals(MountResponse.PartitionState.READY, ((MountResponse) msg).partitionState);
 
             // Append
             append(partition, partitionClient1, NUM_TXN);
@@ -123,7 +123,7 @@ public class PartitionTest {
             msg = partitionClient2.nextMessage(TIMEOUT);
             assertNotNull(msg);
             assertEquals(MessageType.MOUNT_RESPONSE, msg.type());
-            assertTrue(((MountResponse) msg).partitionReady);
+            assertEquals(MountResponse.PartitionState.READY, ((MountResponse) msg).partitionState);
 
             // The first client should not see any feed yet because the feed request if not sent yet
             msg = partitionClient1.nextMessage(1);
@@ -153,7 +153,7 @@ public class PartitionTest {
             msg = partitionClient3.nextMessage(TIMEOUT);
             assertNotNull(msg);
             assertEquals(MessageType.MOUNT_RESPONSE, msg.type());
-            assertTrue(((MountResponse) msg).partitionReady);
+            assertEquals(MountResponse.PartitionState.READY, ((MountResponse) msg).partitionState);
 
         } finally {
             partition.close();

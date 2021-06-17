@@ -77,13 +77,19 @@ public class WaltzClientHandler extends MessageHandler {
             case MessageType.MOUNT_RESPONSE:
                 if (reqId.eq(feedSessions.get(partitionId))) {
                     MountResponse r = (MountResponse) msg;
-                    if (r.partitionReady) {
-                        handlerCallbacks.onPartitionMounted(partitionId, reqId);
-                    } else if (r.partitionException) {
-                        handlerCallbacks.onPartitionAhead(partitionId);
-                    } else {
-                        // We may retry if the partition is still considered to be assigned to this server
-                        handlerCallbacks.onPartitionNotReady(partitionId);
+                    switch (r.partitionState) {
+                        case MountResponse.PartitionState.READY:
+                            handlerCallbacks.onPartitionMounted(partitionId, reqId);
+                            break;
+                        case MountResponse.PartitionState.NOT_READY:
+                            // We may retry if the partition is still considered to be assigned to this server
+                            handlerCallbacks.onPartitionNotReady(partitionId);
+                            break;
+                        case MountResponse.PartitionState.CLIENT_AHEAD:
+                            handlerCallbacks.onPartitionAhead(partitionId);
+                            break;
+                        default:
+                            throw new IllegalArgumentException("partitionState of MOUNT_RESPONSE not handled: partitionState=" + r.partitionState);
                     }
                 } else {
                     logger.info("obsolete session");

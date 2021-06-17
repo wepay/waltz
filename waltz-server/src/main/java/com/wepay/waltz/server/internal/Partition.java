@@ -301,7 +301,7 @@ public class Partition {
         switch (msg.type()) {
             case MessageType.MOUNT_REQUEST:
                 // Tell the client that partition is not ready.
-                client.sendMessage(new MountResponse(reqId, false, false), true);
+                client.sendMessage(new MountResponse(reqId, MountResponse.PartitionState.NOT_READY), true);
                 break;
 
             case MessageType.APPEND_REQUEST:
@@ -416,7 +416,7 @@ public class Partition {
             long fetchSize = storePartition.highWaterMark() - request.clientHighWaterMark;
 
             if (fetchSize < 0L) {
-                client.sendMessage(new MountResponse(request.reqId, false, true), true);
+                client.sendMessage(new MountResponse(request.reqId, MountResponse.PartitionState.CLIENT_AHEAD), true);
                 throw new IllegalStateException("client is ahead of store");
             }
 
@@ -424,7 +424,7 @@ public class Partition {
                 logger.debug("initial feed size: " + fetchSize);
             }
 
-            MountResponse response = new MountResponse(request.reqId, true, false);
+            MountResponse response = new MountResponse(request.reqId, MountResponse.PartitionState.READY);
 
             if (fetchSize == 0) {
                 // The client is up to date. Send the response immediately. No need to enqueue a feed context.

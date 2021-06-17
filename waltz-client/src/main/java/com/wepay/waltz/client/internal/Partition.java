@@ -41,7 +41,7 @@ public class Partition {
     private static final int MAX_DATA_ATTEMPTS = 5;
 
     private enum PartitionState {
-        ACTIVE, INACTIVE, CLOSED, AHEAD
+        ACTIVE, INACTIVE, CLOSED
     }
 
     public final int partitionId;
@@ -253,7 +253,7 @@ public class Partition {
     public void partitionAhead() {
         synchronized (lock) {
             this.clientHWMAhead = true;
-            notifyAll();
+            lock.notifyAll();
         }
     }
 
