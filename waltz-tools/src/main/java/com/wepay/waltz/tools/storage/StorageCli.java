@@ -90,7 +90,7 @@ public final class StorageCli extends SubcommandCli {
                     .build();
             Option loggerOutputOption = Option.builder("l")
                 .longOpt("logger-as-output")
-                .desc("If command option is present the cli output will be sent to logger instead of standard output")
+                .desc("Cli output will be sent to logger instead of standard output")
                 .build();
             storageOption.setRequired(false);
             cliCfgOption.setRequired(true);

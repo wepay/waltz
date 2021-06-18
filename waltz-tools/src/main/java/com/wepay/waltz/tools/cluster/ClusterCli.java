@@ -196,7 +196,7 @@ public final class ClusterCli extends SubcommandCli {
 
             Option loggerOutputOption = Option.builder("l")
                 .longOpt("logger-as-output")
-                .desc("If command option is present the cli output will be sent to logger instead of standard output")
+                .desc("Cli output will be sent to logger instead of standard output")
                 .build();
 
             cliCfgOption.setRequired(true);
@@ -317,7 +317,7 @@ public final class ClusterCli extends SubcommandCli {
                     Logger logger = Logging.getLogger(Verify.class);
                     logger.info(OUTPUT_BUILDER.toString());
                 } else {
-                    System.out.println(OUTPUT_BUILDER.toString());
+                    System.out.println(OUTPUT_BUILDER);
                 }
                 OUTPUT_BUILDER.setLength(0);
             }
@@ -632,16 +632,11 @@ public final class ClusterCli extends SubcommandCli {
 
             ValidationResult validationResult = partitionResult.validationResultsMap.get(type);
             if (validationResult.status.equals(ValidationResult.Status.FAILURE)) {
-                appendLineSB("Validation " + type.name() + " failed for partition " + partitionId);
-                appendLineSB("Validation error is: " + validationResult.error);
+                OUTPUT_BUILDER.append(String.format("Validation %s failed for partition %s%n", type.name(), partitionId));
+                OUTPUT_BUILDER.append(String.format("Validation error is: %s%n", validationResult.error));
                 return false;
             }
             return true;
-        }
-
-        private void appendLineSB(String toOutput) {
-            OUTPUT_BUILDER.append(toOutput);
-            OUTPUT_BUILDER.append(System.lineSeparator());
         }
 
         /**

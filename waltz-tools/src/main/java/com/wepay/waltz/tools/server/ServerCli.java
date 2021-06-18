@@ -58,7 +58,6 @@ public final class ServerCli extends SubcommandCli {
         protected static final String NAME = "list";
         protected static final String DESCRIPTION = "List Waltz server partition information";
 
-
         protected ListPartition(String[] args) {
             super(args);
         }
@@ -72,7 +71,7 @@ public final class ServerCli extends SubcommandCli {
                     .build();
             Option loggerOutputOption = Option.builder("l")
                 .longOpt("logger-as-output")
-                .desc("If command option is present the cli output will be sent to logger instead of standard output")
+                .desc("Cli output will be sent to logger instead of standard output")
                 .build();
 
             serverOption.setRequired(true);
