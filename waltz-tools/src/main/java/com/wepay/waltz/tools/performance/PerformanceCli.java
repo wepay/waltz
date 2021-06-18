@@ -229,7 +229,7 @@ public final class PerformanceCli extends SubcommandCli {
             sb.append(String.format("MB/sec: %.4f%n", totalBytesSent / duration / BYTES_IN_MEGABYTE));
             sb.append(String.format("Retry/Transaction: %.4f%n", (1.0 * totalRetry / totalTxnSent)));
             sb.append(String.format("MilliSec/Transaction(client side congestion excluded): %.4f", (1.0 * totalElapseMilliSecs / totalTxnSent)));
-            System.out.println(sb.toString());
+            System.out.println(sb);
         }
 
         /**
@@ -493,7 +493,7 @@ public final class PerformanceCli extends SubcommandCli {
             sb.append(String.format("Read %d transactions, with total %.4f MB, in %.2f secs%n", numTxn, (1.0 * totalBytesRead / BYTES_IN_MEGABYTE), duration));
             sb.append(String.format("Transaction/sec: %.4f%n", (1.0 * numTxn / duration)));
             sb.append(String.format("MB/sec: %.4f", totalBytesRead / duration / BYTES_IN_MEGABYTE));
-            System.out.println(sb.toString());
+            System.out.println(sb);
         }
 
         /**

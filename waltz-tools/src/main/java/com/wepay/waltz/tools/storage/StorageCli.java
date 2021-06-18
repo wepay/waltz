@@ -144,7 +144,7 @@ public final class StorageCli extends SubcommandCli {
                 Logger logger = Logging.getLogger(ListPartition.class);
                 logger.info(partitionInfoStringBuilder.toString());
             } else {
-                System.out.println(partitionInfoStringBuilder.toString());
+                System.out.println(partitionInfoStringBuilder);
             }
         }
 

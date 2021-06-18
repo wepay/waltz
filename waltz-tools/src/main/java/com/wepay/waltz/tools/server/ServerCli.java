@@ -152,7 +152,7 @@ public final class ServerCli extends SubcommandCli {
                 Logger logger = Logging.getLogger(ListPartition.class);
                 logger.info(sb.toString());
             } else {
-                System.out.println(sb.toString());
+                System.out.println(sb);
             }
         }
     }
