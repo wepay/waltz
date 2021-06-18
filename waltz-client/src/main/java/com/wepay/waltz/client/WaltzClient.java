@@ -3,6 +3,7 @@ package com.wepay.waltz.client;
 import com.wepay.riff.metrics.core.Gauge;
 import com.wepay.riff.metrics.core.MetricGroup;
 import com.wepay.riff.metrics.core.MetricRegistry;
+import com.wepay.riff.metrics.jmx.JmxReporter;
 import com.wepay.riff.util.Logging;
 import com.wepay.waltz.client.internal.RpcClient;
 import com.wepay.waltz.client.internal.StreamClient;
@@ -80,6 +81,8 @@ public class WaltzClient {
             longWaitThreshold,
             TimeUnit.MILLISECONDS
         );
+
+        JmxReporter.forRegistry(MetricRegistry.getInstance()).build().start();
 
         registerMetrics();
     }
