@@ -1,5 +1,6 @@
 package com.wepay.waltz.tools.zk;
 
+import com.wepay.riff.util.Logging;
 import com.wepay.waltz.common.util.Cli;
 import com.wepay.waltz.common.util.SubcommandCli;
 import com.wepay.waltz.exception.SubCommandFailedException;
@@ -29,6 +30,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -81,6 +83,7 @@ public final class ZooKeeperCli extends SubcommandCli {
     private static final class ListZk extends Cli {
         private static final String NAME = "list";
         private static final String DESCRIPTION = "Displays server metadata.";
+        private static final StringBuilder OUTPUT_BUILDER = new StringBuilder();
 
         protected ListZk(String[] args) {
             super(args);
@@ -93,15 +96,22 @@ public final class ZooKeeperCli extends SubcommandCli {
                 .desc("Specify the cli config file path required for zooKeeper connection string, zooKeeper root path")
                 .hasArg()
                 .build();
+            Option loggerOutputOption = Option.builder("l")
+                .longOpt("logger-as-output")
+                .desc("Cli output will be sent to logger instead of standard output")
+                .build();
 
             cliCfgOption.setRequired(true);
+            loggerOutputOption.setRequired(false);
 
             options.addOption(cliCfgOption);
+            options.addOption(loggerOutputOption);
         }
 
         @Override
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             ZooKeeperClient zkClient = null;
+            boolean loggerAsOutput = cmd.hasOption("logger-as-output");
             try {
                 String cliConfigPath = cmd.getOptionValue("cli-config-path");
                 CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
@@ -143,61 +153,68 @@ public final class ZooKeeperCli extends SubcommandCli {
                 if (zkClient != null) {
                     zkClient.close();
                 }
+                if (loggerAsOutput) {
+                    Logger logger = Logging.getLogger(ListZk.class);
+                    logger.info(OUTPUT_BUILDER.toString());
+                } else {
+                    System.out.println(OUTPUT_BUILDER);
+                }
             }
         }
 
-        private void listStoreParams(ZNode storeRoot, StoreParams storeParams) throws Exception {
-            System.out.println("store [" + storeRoot + "] parameters:");
+        private void listStoreParams(ZNode storeRoot, StoreParams storeParams) {
+            OUTPUT_BUILDER.append(String.format("store [%s] parameters:%n", storeRoot));
 
             if (storeParams != null) {
-                System.out.println("  key=" + storeParams.key.toString());
-                System.out.println("  numPartitions=" + storeParams.numPartitions);
+                OUTPUT_BUILDER.append(String.format("  key=%s%n", storeParams.key.toString()));
+                OUTPUT_BUILDER.append(String.format("  numPartitions=%s%n", storeParams.numPartitions));
             } else {
-                System.out.println("Store parameters not found");
+                OUTPUT_BUILDER.append(String.format("Store parameters not found%n"));
             }
         }
 
         private void listReplicaAndGroupAssignments(ZNode storeRoot, ReplicaAssignments replicaAssignments, GroupDescriptor groupDescriptor) throws Exception {
-            System.out.println("store [" + storeRoot + "] replica and group assignments:");
+            OUTPUT_BUILDER.append(String.format("store [%s] replica and group assignments:%n", storeRoot));
 
             if ((replicaAssignments != null) && (groupDescriptor != null)) {
                 Map<String, int[]> replicas = new TreeMap<>(replicaAssignments.replicas);
                 Map<String, Integer> groups = groupDescriptor.groups;
                 for (Map.Entry<String, int[]> entry : replicas.entrySet()) {
-                    System.out.println("  " + entry.getKey() + " = " + Arrays.toString(entry.getValue()) + ", GroupId: " + groups.get(entry.getKey()));
+                    OUTPUT_BUILDER.append(String.format("  %s = %s, GroupId: %s%n", entry.getKey(), Arrays.toString(entry.getValue()), groups.get(entry.getKey())));
                 }
             } else {
-                System.out.println("Replicas not found");
+                OUTPUT_BUILDER.append(String.format("Replicas not found%n"));
             }
         }
 
         private void listConnections(ZNode storeRoot, ConnectionMetadata connectionMetadata) {
-            System.out.println("store [" + storeRoot + "] connections:");
+            OUTPUT_BUILDER.append(String.format("store [%s] connections:%n", storeRoot));
 
             if ((connectionMetadata != null)) {
                 Map<String, Integer> connections = connectionMetadata.connections;
                 for (Map.Entry<String, Integer> entry : connections.entrySet()) {
-                    System.out.println("  " + entry.getKey() + " has admin port: " + entry.getValue());
+                    OUTPUT_BUILDER.append(String.format("  %s has admin port: %s%n", entry.getKey(), entry.getValue()));
                 }
             } else {
-                System.out.println("Connections not found");
+                OUTPUT_BUILDER.append(String.format("Connections not found%n"));
             }
         }
 
         private void listClusterInfoAndServerPartitionAssignments(ZooKeeperClient zkClient, ZNode root) throws Exception {
-            ListCluster.list(root, zkClient);
+            OUTPUT_BUILDER.append(ListCluster.list(root, zkClient));
         }
 
         private void listReplicaState(ZNode znode, Map<ReplicaId, ReplicaState> replicaState) {
-            System.out.println("store [" + znode + "] replica states:");
+            OUTPUT_BUILDER.append(String.format("store [%s] replica states:%n", znode));
 
             if (replicaState.size() > 0) {
                 Map<ReplicaId, ReplicaState> sortedReplicaState = new TreeMap<>(replicaState);
                 for (Map.Entry<ReplicaId, ReplicaState> entry : sortedReplicaState.entrySet()) {
-                    System.out.println("  " + entry.getKey() + ", SessionId: " + entry.getValue().sessionId + ", closingHighWaterMark: " + ((entry.getValue().closingHighWaterMark) == ReplicaState.UNRESOLVED ? "UNRESOLVED" : entry.getValue().closingHighWaterMark));
+                    OUTPUT_BUILDER.append(String.format("  %s, SessionId: %s, closingHighWaterMark: %s%n",
+                        entry.getKey(), entry.getValue().sessionId, ((entry.getValue().closingHighWaterMark) == ReplicaState.UNRESOLVED ? "UNRESOLVED" : entry.getValue().closingHighWaterMark)));
                 }
             } else {
-                System.out.println("No node found");
+                OUTPUT_BUILDER.append(String.format("No node found%n"));
             }
         }
 

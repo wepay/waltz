@@ -3,6 +3,7 @@ package com.wepay.waltz.tools.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wepay.riff.util.Logging;
 import com.wepay.waltz.client.Transaction;
 import com.wepay.waltz.client.WaltzClient;
 import com.wepay.waltz.client.WaltzClientCallbacks;
@@ -20,6 +21,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.http.client.fluent.Request;
+import org.slf4j.Logger;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -67,13 +69,22 @@ public final class ServerCli extends SubcommandCli {
                     .desc("Specify server in format of host:port, where port is the jetty port")
                     .hasArg()
                     .build();
+            Option loggerOutputOption = Option.builder("l")
+                .longOpt("logger-as-output")
+                .desc("Cli output will be sent to logger instead of standard output")
+                .build();
+
             serverOption.setRequired(true);
+            loggerOutputOption.setRequired(false);
+
             options.addOption(serverOption);
+            options.addOption(loggerOutputOption);
         }
 
         @Override
         protected void processCmd(CommandLine cmd) throws SubCommandFailedException {
             String hostAndPort = cmd.getOptionValue("server");
+            boolean loggerAsOutput = cmd.hasOption("logger-as-output");
 
             try {
                 String[] hostAndPortArray = hostAndPort.split(":");
@@ -100,7 +111,7 @@ public final class ServerCli extends SubcommandCli {
                     });
                 }
 
-                printResult(numPartitions, replicaInfo);
+                printResult(numPartitions, replicaInfo, loggerAsOutput);
             } catch (Exception e) {
                 throw new SubCommandFailedException(e.getMessage());
             }
@@ -126,7 +137,7 @@ public final class ServerCli extends SubcommandCli {
          * @param numPartitions number of partitions
          * @param replicaInfo   a dict of <partition_id, list<storage_node>>
          */
-        private void printResult(Integer numPartitions, Map<Integer, List<String>> replicaInfo) {
+        private void printResult(Integer numPartitions, Map<Integer, List<String>> replicaInfo, boolean loggerAsOutput) {
             // display partition info
             StringBuilder sb = new StringBuilder();
             sb.append(String.format("%nThere are %d partitions for current server%n", numPartitions));
@@ -137,7 +148,12 @@ public final class ServerCli extends SubcommandCli {
                 List<String> storageNode = entry.getValue();
                 sb.append(String.format("Storage node for partition %d: %s%n", partitionId, storageNode));
             }
-            System.out.println(sb.toString());
+            if (loggerAsOutput) {
+                Logger logger = Logging.getLogger(ListPartition.class);
+                logger.info(sb.toString());
+            } else {
+                System.out.println(sb);
+            }
         }
     }
 

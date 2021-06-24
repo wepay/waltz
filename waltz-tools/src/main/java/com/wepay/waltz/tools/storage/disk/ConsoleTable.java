@@ -93,7 +93,7 @@ public class ConsoleTable {
             sb.append(rowSeparator);
             sb.append("\n");
         }
-        System.out.println(sb.toString());
+        System.out.println(sb);
     }
 
     private void calcMaxLengthAll() {
