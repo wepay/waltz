@@ -82,9 +82,9 @@ We implemented shell scripts to run a Waltz cluster in local Docker containers f
 
 This builds the Docker images.
 
-### Starting the test cluster
+### Starting 1 test cluster
 
-    bin/test-cluster.sh start
+    bin/test-cluster.sh start 1
 
 This creates a user defined docker network `waltz-network` and 
 starts three container, a zookeeper server, a waltz storage node, and a waltz server node in `waltz-network`.
@@ -117,7 +117,7 @@ the environment variable WALTZ_TEST_CLUSTER_NUM_PARTITIONS to the desired number
 For example, to create the test cluster with five partitions, do the following.
 
     export WALTZ_TEST_CLUSTER_NUM_PARTITIONS=5
-    bin/test-cluster.sh start
+    bin/test-cluster.sh start 1
 
 ### Running DemoBankApp
 
