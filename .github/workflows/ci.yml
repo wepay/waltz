@@ -21,15 +21,7 @@ jobs:
       with:
         java-version: '8'
         distribution: 'adopt'
-    - name: Clean cached module lock
-      run: rm -f  ~/.gradle/caches/modules-2/modules-2.lock
-    - name: Clean cached plugin-resolution
-      run: rm -fr ~/.gradle/caches/*/plugin-resolution/
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-    - name: Build with Gradle
-      run: ./gradlew build
-    - name: Cache Gradle
+    - name: Restore Gradle caches
       uses: actions/cache@v2
       with:
         path: |
@@ -38,3 +30,7 @@ jobs:
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         restore-keys: |
           ${{ runner.os }}-gradle-
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    - name: Build with Gradle
+      run: ./gradlew build
