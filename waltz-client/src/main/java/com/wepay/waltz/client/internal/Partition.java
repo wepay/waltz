@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -267,6 +268,13 @@ public class Partition {
     public void ensureMounted() {
         if (!mounted) {
             synchronized (lock) {
+                try {
+                    if (clientHWMAhead && this.clientHighWaterMark() <= Long.max(-1L, this.getHighWaterMark().get())) {
+                        networkClient.mountPartition(this);
+                    }
+                } catch (ExecutionException | InterruptedException e) {
+                    logger.error("failed to get high watermark", e.getCause());
+                }
                 while (state != PartitionState.CLOSED && !mounted) {
                     if (transactionMonitor.isStopped()) {
                         throw new PartitionInactiveException(partitionId);
