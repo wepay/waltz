@@ -8,7 +8,7 @@ on: [push, pull_request]
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
     - uses: actions/checkout@v2
@@ -21,8 +21,8 @@ jobs:
       uses: actions/cache@v2
       with:
         path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
+          $HOME/.gradle/caches
+          $HOME/.gradle/wrapper
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         restore-keys: |
           ${{ runner.os }}-gradle-
