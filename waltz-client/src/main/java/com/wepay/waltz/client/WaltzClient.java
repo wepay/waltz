@@ -182,7 +182,6 @@ public class WaltzClient {
             context.onException(ex);
             throw ex;
         } catch (Throwable ex) {
-            logger.info("Standard exception");
             // The transaction failed due to an exception. There will be no retry.
             context.onException(ex);
             throw ex;
