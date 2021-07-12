@@ -26,6 +26,8 @@ public interface StreamClient {
 
     boolean hasPendingTransactions();
 
+    boolean inSyncHighWaterMark(int partitionId);
+
     void setActivePartitions(Set<Integer> partitionIds);
 
     Set<Integer> getActivePartitions();

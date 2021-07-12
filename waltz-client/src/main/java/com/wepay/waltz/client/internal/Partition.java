@@ -7,6 +7,7 @@ import com.wepay.riff.metrics.core.MetricRegistry;
 import com.wepay.riff.metrics.core.Timer;
 import com.wepay.riff.util.Logging;
 import com.wepay.waltz.client.TransactionContext;
+import com.wepay.waltz.client.WaltzClientCallbacks;
 import com.wepay.waltz.client.internal.network.WaltzNetworkClient;
 import com.wepay.waltz.client.internal.network.WaltzNetworkClientCallbacks;
 import com.wepay.waltz.common.message.AppendRequest;
@@ -64,7 +65,7 @@ public class Partition {
     private volatile int generation;
     private volatile PartitionState state = PartitionState.INACTIVE;
     private volatile boolean mounted = false;
-    private volatile boolean clientHWMAhead = false;
+    private volatile boolean clientHighWaterMarkAhead = false;
     private final AtomicReference<CompletableFuture<Long>> highWaterMarkRef = new AtomicReference<>();
 
     private Meter lockFailureMeter;
@@ -103,7 +104,7 @@ public class Partition {
             this.networkClient = null;
             this.state = PartitionState.CLOSED;
             this.mounted = false;
-            this.clientHWMAhead = false;
+            this.clientHighWaterMarkAhead = false;
             this.transactionMonitor.close();
 
             synchronized (dataFutures) {
@@ -205,7 +206,7 @@ public class Partition {
         synchronized (lock) {
             logger.debug("mounting partition: {}", this);
             this.mounted = false;
-            this.clientHWMAhead = false;
+            this.clientHighWaterMarkAhead = false;
             this.networkClient = networkClient;
             lock.notifyAll();
         }
@@ -240,7 +241,7 @@ public class Partition {
             if (this.networkClient == networkClient) {
                 logger.debug("partition unmounted: {}", this);
                 this.mounted = false;
-                this.clientHWMAhead = false;
+                this.clientHighWaterMarkAhead = false;
                 this.networkClient = null;
                 lock.notifyAll();
             }
@@ -253,7 +254,7 @@ public class Partition {
      */
     public void partitionAhead() {
         synchronized (lock) {
-            this.clientHWMAhead = true;
+            this.clientHighWaterMarkAhead = true;
             lock.notifyAll();
         }
     }
@@ -269,7 +270,7 @@ public class Partition {
         if (!mounted) {
             synchronized (lock) {
                 try {
-                    if (clientHWMAhead && this.clientHighWaterMark() <= Long.max(-1L, this.getHighWaterMark().get())) {
+                    if (clientHighWaterMarkAhead && clientHighWaterMark() <= Long.max(-1L, this.getHighWaterMark().get())) {
                         networkClient.mountPartition(this);
                     }
                 } catch (ExecutionException | InterruptedException e) {
@@ -278,7 +279,7 @@ public class Partition {
                 while (state != PartitionState.CLOSED && !mounted) {
                     if (transactionMonitor.isStopped()) {
                         throw new PartitionInactiveException(partitionId);
-                    } else if (clientHWMAhead) {
+                    } else if (clientHighWaterMarkAhead) {
                         throw new IllegalStateException(String.format("client is ahead of store for partition: %d", partitionId));
                     }
 
@@ -308,6 +309,21 @@ public class Partition {
      */
     public long clientHighWaterMark() {
         return clientHighWaterMark.get();
+    }
+
+    /**
+     * Override client high-water mark of this partition with high-water mark value stored in client's database.
+     * @param callbacks the WaltzClientCallbacks is used to get current high-water mark stored in database.
+     *
+     * @return true if the client high-water mark was already in sync.
+     */
+    public boolean inSyncClientHighWaterMark(WaltzClientCallbacks callbacks) {
+        long clientHighWaterMark = callbacks.getClientHighWaterMark(partitionId);
+        if (clientHighWaterMark() == clientHighWaterMark) {
+            return true;
+        }
+        this.clientHighWaterMark.set(clientHighWaterMark);
+        return false;
     }
 
     private void processAuxilliaryQueues() {
