@@ -13,6 +13,7 @@ import com.wepay.waltz.common.message.CheckStorageConnectivityResponse;
 import com.wepay.waltz.common.message.MessageCodecV0;
 import com.wepay.waltz.common.message.MessageCodecV1;
 import com.wepay.waltz.common.message.MessageCodecV2;
+import com.wepay.waltz.common.message.MessageCodecV3;
 import com.wepay.waltz.common.message.MessageType;
 import com.wepay.waltz.common.message.MountRequest;
 import com.wepay.waltz.common.message.RemovePreferredPartitionRequest;
@@ -53,6 +54,7 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
         CODECS.put(MessageCodecV0.VERSION, MessageCodecV0.INSTANCE);
         CODECS.put(MessageCodecV1.VERSION, MessageCodecV1.INSTANCE);
         CODECS.put(MessageCodecV2.VERSION, MessageCodecV2.INSTANCE);
+        CODECS.put(MessageCodecV3.VERSION, MessageCodecV3.INSTANCE);
     }
 
     private static final String HELLO_MESSAGE = "Waltz Server";

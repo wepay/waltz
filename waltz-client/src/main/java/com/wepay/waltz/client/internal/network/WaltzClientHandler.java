@@ -15,6 +15,7 @@ import com.wepay.waltz.common.message.LockFailure;
 import com.wepay.waltz.common.message.MessageCodecV0;
 import com.wepay.waltz.common.message.MessageCodecV1;
 import com.wepay.waltz.common.message.MessageCodecV2;
+import com.wepay.waltz.common.message.MessageCodecV3;
 import com.wepay.waltz.common.message.MessageType;
 import com.wepay.waltz.common.message.MountRequest;
 import com.wepay.waltz.common.message.MountResponse;
@@ -40,6 +41,7 @@ public class WaltzClientHandler extends MessageHandler {
         CODECS.put(MessageCodecV0.VERSION, MessageCodecV0.INSTANCE);
         CODECS.put(MessageCodecV1.VERSION, MessageCodecV1.INSTANCE);
         CODECS.put(MessageCodecV2.VERSION, MessageCodecV2.INSTANCE);
+        CODECS.put(MessageCodecV3.VERSION, MessageCodecV3.INSTANCE);
     }
 
     private static final String HELLO_MESSAGE = "Waltz Client";
@@ -77,11 +79,19 @@ public class WaltzClientHandler extends MessageHandler {
             case MessageType.MOUNT_RESPONSE:
                 if (reqId.eq(feedSessions.get(partitionId))) {
                     MountResponse r = (MountResponse) msg;
-                    if (r.partitionReady) {
-                        handlerCallbacks.onPartitionMounted(partitionId, reqId);
-                    } else {
-                        // We may retry if the partition is still considered to be assigned to this server
-                        handlerCallbacks.onPartitionNotReady(partitionId);
+                    switch (r.partitionState) {
+                        case MountResponse.PartitionState.READY:
+                            handlerCallbacks.onPartitionMounted(partitionId, reqId);
+                            break;
+                        case MountResponse.PartitionState.NOT_READY:
+                            // We may retry if the partition is still considered to be assigned to this server
+                            handlerCallbacks.onPartitionNotReady(partitionId);
+                            break;
+                        case MountResponse.PartitionState.CLIENT_AHEAD:
+                            handlerCallbacks.onPartitionAhead(partitionId);
+                            break;
+                        default:
+                            throw new IllegalArgumentException("partitionState of MOUNT_RESPONSE not handled: partitionState=" + r.partitionState);
                     }
                 } else {
                     logger.info("obsolete session");

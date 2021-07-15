@@ -47,12 +47,12 @@ public class MessageCodecV1Test {
         assertEquals(mountRequest1.clientHighWaterMark, mountRequest2.clientHighWaterMark);
         assertEquals(mountRequest1.seqNum, mountRequest2.seqNum);
 
-        MountResponse mountResponse1 = new MountResponse(reqId(), rand.nextBoolean());
+        MountResponse mountResponse1 = new MountResponse(reqId(), rand.nextInt(2));
         MountResponse mountResponse2 = encodeThenDecode(mountResponse1);
         assertEquals(MessageType.MOUNT_RESPONSE, mountResponse1.type());
         assertEquals(mountResponse1.type(), mountResponse2.type());
         assertEquals(mountResponse1.reqId, mountResponse2.reqId);
-        assertEquals(mountResponse1.partitionReady, mountResponse2.partitionReady);
+        assertEquals(mountResponse1.partitionState, mountResponse2.partitionState);
 
         FeedData feedData1 = new FeedData(reqId(), rand.nextLong(), header);
         FeedData feedData2 = encodeThenDecode(feedData1);
