@@ -252,7 +252,7 @@ public class Partition {
      */
     public void partitionAhead() {
         synchronized (lock) {
-            logger.error(String.format("Mounting for partition %d failed, client's high watermark is ahead of server"), partitionId);
+            logger.error(String.format("Mounting for partition %d failed, client's high watermark is ahead of server", partitionId));
             this.clientHighWaterMarkAhead = true;
             lock.notifyAll();
         }
