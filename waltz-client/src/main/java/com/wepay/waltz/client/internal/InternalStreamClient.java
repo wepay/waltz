@@ -122,10 +122,4 @@ public class InternalStreamClient extends InternalBaseClient implements StreamCl
         }
     }
 
-    @Override
-    public boolean inSyncHighWaterMark(int partitionId) {
-        Partition partition = getPartition(partitionId);
-        return partition.inSyncClientHighWaterMark(callbacks);
-    }
-
 }

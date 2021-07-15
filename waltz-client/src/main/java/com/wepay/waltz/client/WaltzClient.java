@@ -171,16 +171,6 @@ public class WaltzClient {
                 // Completed with no append. There will be no retry.
                 context.onCompletion(false);
             }
-        } catch (IllegalStateException ex) {
-            // The transaction failed due to IllegalStateException exception. There will be no retry.
-            // Try to sync partition high water mark with high water mark stored in database
-            if (!streamClient.inSyncHighWaterMark(context.partitionId(getNumPartitions()))) {
-                logger.info("Client high-water mark synced with database value");
-            } else {
-                logger.info("Client high-water mark already synced with database value");
-            }
-            context.onException(ex);
-            throw ex;
         } catch (Throwable ex) {
             // The transaction failed due to an exception. There will be no retry.
             context.onException(ex);

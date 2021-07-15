@@ -143,11 +143,6 @@ class MockStreamClient implements StreamClient {
         }
     }
 
-    @Override
-    public boolean inSyncHighWaterMark(int partitionId) {
-        return true;
-    }
-
     public void setActivePartitions(Set<Integer> partitionIds) {
         synchronized (lock) {
             if (autoMount) {

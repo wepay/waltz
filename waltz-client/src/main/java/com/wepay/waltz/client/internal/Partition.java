@@ -7,7 +7,6 @@ import com.wepay.riff.metrics.core.MetricRegistry;
 import com.wepay.riff.metrics.core.Timer;
 import com.wepay.riff.util.Logging;
 import com.wepay.waltz.client.TransactionContext;
-import com.wepay.waltz.client.WaltzClientCallbacks;
 import com.wepay.waltz.client.internal.network.WaltzNetworkClient;
 import com.wepay.waltz.client.internal.network.WaltzNetworkClientCallbacks;
 import com.wepay.waltz.common.message.AppendRequest;
@@ -25,7 +24,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -249,11 +247,12 @@ public class Partition {
     }
 
     /**
-     * Invoked after receiving MOUNT_RESPONSE informing that local partition' HWM is ahead of server's HWM.
+     * Invoked after receiving MOUNT_RESPONSE informing that client's HWM is ahead of server's HWM.
      * If thread is stuck in ensureMounted, this thread is woken up and throws IllegalStateException
      */
     public void partitionAhead() {
         synchronized (lock) {
+            logger.error(String.format("Mounting for partition %d failed, client's high watermark is ahead of server"), partitionId);
             this.clientHighWaterMarkAhead = true;
             lock.notifyAll();
         }
@@ -264,18 +263,11 @@ public class Partition {
      * Waits until interrupted, or a PartitionInactiveException to occur, for the partition to be mounted.
      *
      * @throws PartitionInactiveException if this partition is not active.
-     * @throws IllegalStateException if client's highwatermark is ahead of server's highwatermark.
+     * @throws IllegalStateException if client's high watermark is ahead of server's high watermark.
      */
     public void ensureMounted() {
         if (!mounted) {
             synchronized (lock) {
-                try {
-                    if (clientHighWaterMarkAhead && clientHighWaterMark() <= Long.max(-1L, this.getHighWaterMark().get())) {
-                        networkClient.mountPartition(this);
-                    }
-                } catch (ExecutionException | InterruptedException e) {
-                    logger.error("failed to get high watermark", e.getCause());
-                }
                 while (state != PartitionState.CLOSED && !mounted) {
                     if (transactionMonitor.isStopped()) {
                         throw new PartitionInactiveException(partitionId);
@@ -309,21 +301,6 @@ public class Partition {
      */
     public long clientHighWaterMark() {
         return clientHighWaterMark.get();
-    }
-
-    /**
-     * Override client high-water mark of this partition with high-water mark value stored in client's database.
-     * @param callbacks the WaltzClientCallbacks is used to get current high-water mark stored in database.
-     *
-     * @return true if the client high-water mark was already in sync.
-     */
-    public boolean inSyncClientHighWaterMark(WaltzClientCallbacks callbacks) {
-        long clientHighWaterMark = callbacks.getClientHighWaterMark(partitionId);
-        if (clientHighWaterMark() == clientHighWaterMark) {
-            return true;
-        }
-        this.clientHighWaterMark.set(clientHighWaterMark);
-        return false;
     }
 
     private void processAuxilliaryQueues() {

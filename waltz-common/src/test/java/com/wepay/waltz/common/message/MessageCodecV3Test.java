@@ -16,21 +16,23 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-public class MessageCodecV0Test {
+public class MessageCodecV3Test {
 
-    private final MessageCodecV0 codec = new MessageCodecV0();
+    private final MessageCodecV3 codec = new MessageCodecV3();
     private final Random rand = new Random();
 
     @Test
     public void test() {
-        assertEquals(0, codec.version());
+        assertEquals(3, codec.version());
 
-        int[] lockRequest = lock();
+        int[] writeLockRequest = lock();
+        int[] readLockRequest = lock();
+        int[] appendLockRequest = lock();
         int header = rand.nextInt();
         byte[] data;
 
         data = data();
-        AppendRequest appendRequest1 = new AppendRequest(reqId(), rand.nextLong(), lockRequest, new int[0], new int[0], header, data, Utils.checksum(data));
+        AppendRequest appendRequest1 = new AppendRequest(reqId(), rand.nextLong(), writeLockRequest, readLockRequest, appendLockRequest, header, data, Utils.checksum(data));
         AppendRequest appendRequest2 = encodeThenDecode(appendRequest1);
         assertEquals(MessageType.APPEND_REQUEST, appendRequest1.type());
         assertEquals(appendRequest1.type(), appendRequest2.type());
@@ -46,7 +48,7 @@ public class MessageCodecV0Test {
         assertEquals(mountRequest1.clientHighWaterMark, mountRequest2.clientHighWaterMark);
         assertEquals(mountRequest1.seqNum, mountRequest2.seqNum);
 
-        MountResponse mountResponse1 = new MountResponse(reqId(), rand.nextInt(2));
+        MountResponse mountResponse1 = new MountResponse(reqId(), rand.nextInt(3));
         MountResponse mountResponse2 = encodeThenDecode(mountResponse1);
         assertEquals(MessageType.MOUNT_RESPONSE, mountResponse1.type());
         assertEquals(mountResponse1.type(), mountResponse2.type());
@@ -135,34 +137,6 @@ public class MessageCodecV0Test {
         assertEquals(highWaterMarkResponse1.type(), highWaterMarkResponse2.type());
         assertEquals(highWaterMarkResponse1.reqId, highWaterMarkResponse2.reqId);
         assertEquals(highWaterMarkResponse1.transactionId, highWaterMarkResponse2.transactionId);
-    }
-
-    @Test(expected = UnsupportedOperationException.class)
-    public void testUnsupported1() {
-        assertEquals(0, codec.version());
-
-        int[] readLocks = {1};
-        int header = rand.nextInt();
-        byte[] data;
-
-        data = data();
-        AppendRequest appendRequest = new AppendRequest(reqId(), rand.nextLong(), new int[0], readLocks, new int[0], header, data, Utils.checksum(data));
-        ByteArrayMessageAttributeWriter writer = new ByteArrayMessageAttributeWriter();
-        codec.encode(appendRequest, writer);
-    }
-
-    @Test(expected = UnsupportedOperationException.class)
-    public void testUnsupported2() {
-        assertEquals(0, codec.version());
-
-        int[] appendLocks = {1};
-        int header = rand.nextInt();
-        byte[] data;
-
-        data = data();
-        AppendRequest appendRequest = new AppendRequest(reqId(), rand.nextLong(), new int[0], new int[0], appendLocks, header, data, Utils.checksum(data));
-        ByteArrayMessageAttributeWriter writer = new ByteArrayMessageAttributeWriter();
-        codec.encode(appendRequest, writer);
     }
 
     @SuppressWarnings("unchecked")

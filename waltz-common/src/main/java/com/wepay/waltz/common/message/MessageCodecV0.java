@@ -42,8 +42,8 @@ public class MessageCodecV0 implements MessageCodec {
                 return new MountRequest(reqId, clientHighWaterMark, seqNum);
 
             case MessageType.MOUNT_RESPONSE:
-                int partitionState = reader.readInt();
-                return new MountResponse(reqId, partitionState);
+                boolean partitionReady = reader.readBoolean();
+                return new MountResponse(reqId, partitionReady ? MountResponse.PartitionState.READY : MountResponse.PartitionState.NOT_READY);
 
             case MessageType.APPEND_REQUEST:
                 transactionId = reader.readLong(); // client High-water mark
@@ -120,7 +120,7 @@ public class MessageCodecV0 implements MessageCodec {
 
             case MessageType.MOUNT_RESPONSE:
                 MountResponse mountResponse = (MountResponse) msg;
-                writer.writeInt(mountResponse.partitionState);
+                writer.writeBoolean(mountResponse.partitionState == MountResponse.PartitionState.READY);
                 break;
 
             case MessageType.APPEND_REQUEST:

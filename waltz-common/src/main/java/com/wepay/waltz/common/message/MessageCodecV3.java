@@ -7,16 +7,17 @@ import com.wepay.riff.network.MessageCodec;
 import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.exception.RpcException;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-public class MessageCodecV1 implements MessageCodec {
+public class MessageCodecV3 implements MessageCodec {
 
-    public static final short VERSION = 1;
-    public static final MessageCodecV1 INSTANCE = new MessageCodecV1();
+    public static final short VERSION = 3;
+    public static final MessageCodecV3 INSTANCE = new MessageCodecV3();
 
     private static final byte MAGIC_BYTE = 'L';
-    private static final int[] NO_LOCKS = new int[0];
 
     @Override
     public byte magicByte() {
@@ -37,6 +38,7 @@ public class MessageCodecV1 implements MessageCodec {
         int header;
         byte[] data;
         int checksum;
+        boolean result;
 
         switch (messageType) {
             case MessageType.MOUNT_REQUEST:
@@ -45,18 +47,28 @@ public class MessageCodecV1 implements MessageCodec {
                 return new MountRequest(reqId, clientHighWaterMark, seqNum);
 
             case MessageType.MOUNT_RESPONSE:
-                boolean partitionReady = reader.readBoolean();
-                return new MountResponse(reqId, partitionReady ? MountResponse.PartitionState.READY : MountResponse.PartitionState.NOT_READY);
+                int partitionState = reader.readInt();
+                return new MountResponse(reqId, partitionState);
 
             case MessageType.APPEND_REQUEST:
                 transactionId = reader.readLong(); // client High-water mark
                 int[] writeLockRequest = reader.readIntArray();
                 int[] readLockRequest = reader.readIntArray();
+                int[] appendLockRequest = reader.readIntArray();
                 header = reader.readInt();
                 data = reader.readByteArray();
                 checksum = reader.readInt();
                 Utils.verifyChecksum(messageType, data, checksum);
-                return new AppendRequest(reqId, transactionId, writeLockRequest, readLockRequest, NO_LOCKS, header, data, checksum);
+                return new AppendRequest(
+                    reqId,
+                    transactionId,
+                    writeLockRequest,
+                    readLockRequest,
+                    appendLockRequest,
+                    header,
+                    data,
+                    checksum
+                );
 
             case MessageType.FEED_REQUEST:
                 transactionId = reader.readLong(); // client High-water mark
@@ -115,6 +127,26 @@ public class MessageCodecV1 implements MessageCodec {
                 }
                 return new CheckStorageConnectivityResponse(reqId, storageConnectivityMap);
 
+            case MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST:
+                return new ServerPartitionsAssignmentRequest(reqId);
+
+            case MessageType.SERVER_PARTITIONS_ASSIGNMENT_RESPONSE:
+                return new ServerPartitionsAssignmentResponse(reqId, buildListReader(reader));
+
+            case MessageType.ADD_PREFERRED_PARTITION_REQUEST:
+                return new AddPreferredPartitionRequest(reqId, buildListReader(reader));
+
+            case MessageType.ADD_PREFERRED_PARTITION_RESPONSE:
+                result = reader.readBoolean();
+                return new AddPreferredPartitionResponse(reqId, result);
+
+            case MessageType.REMOVE_PREFERRED_PARTITION_REQUEST:
+                return new RemovePreferredPartitionRequest(reqId, buildListReader(reader));
+
+            case MessageType.REMOVE_PREFERRED_PARTITION_RESPONSE:
+                result = reader.readBoolean();
+                return new RemovePreferredPartitionResponse(reqId, result);
+
             default:
                 throw new IllegalStateException("unknown message type: " + messageType);
         }
@@ -135,21 +167,15 @@ public class MessageCodecV1 implements MessageCodec {
 
             case MessageType.MOUNT_RESPONSE:
                 MountResponse mountResponse = (MountResponse) msg;
-                writer.writeBoolean(mountResponse.partitionState == MountResponse.PartitionState.READY);
+                writer.writeInt(mountResponse.partitionState);
                 break;
 
             case MessageType.APPEND_REQUEST:
                 AppendRequest appendRequest = (AppendRequest) msg;
-
-                if (appendRequest.appendLockRequest.length > 0) {
-                    throw new UnsupportedOperationException(
-                        "append locks not supported, upgrade servers"
-                    );
-                }
-
                 writer.writeLong(appendRequest.clientHighWaterMark);
                 writer.writeIntArray(appendRequest.writeLockRequest);
                 writer.writeIntArray(appendRequest.readLockRequest);
+                writer.writeIntArray(appendRequest.appendLockRequest);
                 writer.writeInt(appendRequest.header);
                 writer.writeByteArray(appendRequest.data);
                 writer.writeInt(appendRequest.checksum);
@@ -225,9 +251,55 @@ public class MessageCodecV1 implements MessageCodec {
                 }
                 break;
 
+            case MessageType.SERVER_PARTITIONS_ASSIGNMENT_REQUEST:
+                break;
+
+            case MessageType.SERVER_PARTITIONS_ASSIGNMENT_RESPONSE:
+                ServerPartitionsAssignmentResponse serverPartitionsAssignmentResponse =
+                    (ServerPartitionsAssignmentResponse) msg;
+                List<Integer> partitionsAssigned = serverPartitionsAssignmentResponse.serverPartitionAssignments;
+                writeListWriter(writer, partitionsAssigned);
+                break;
+
+            case MessageType.ADD_PREFERRED_PARTITION_REQUEST:
+                AddPreferredPartitionRequest addPreferredPartitionRequest = (AddPreferredPartitionRequest) msg;
+                writeListWriter(writer, addPreferredPartitionRequest.partitionIds);
+                break;
+
+            case MessageType.ADD_PREFERRED_PARTITION_RESPONSE:
+                AddPreferredPartitionResponse addPreferredPartitionResponse = (AddPreferredPartitionResponse) msg;
+                writer.writeBoolean(addPreferredPartitionResponse.result);
+                break;
+
+            case MessageType.REMOVE_PREFERRED_PARTITION_REQUEST:
+                RemovePreferredPartitionRequest removePreferredPartitionRequest = (RemovePreferredPartitionRequest) msg;
+                writeListWriter(writer, removePreferredPartitionRequest.partitionIds);
+                break;
+
+            case MessageType.REMOVE_PREFERRED_PARTITION_RESPONSE:
+                RemovePreferredPartitionResponse removePreferredPartitionResponse =
+                    (RemovePreferredPartitionResponse) msg;
+                writer.writeBoolean(removePreferredPartitionResponse.result);
+                break;
+
             default:
                 throw new IllegalStateException("unknown message type: " + msg.type());
         }
     }
 
+    private List<Integer> buildListReader(MessageAttributeReader reader) {
+        int listSize = reader.readInt();
+        List<Integer> list = new ArrayList<>(listSize);
+        for (int i = 0; i < listSize; i++) {
+            list.add(reader.readInt());
+        }
+        return list;
+    }
+
+    private void writeListWriter(MessageAttributeWriter writer, List<Integer> list) {
+        writer.writeInt(list.size());
+        for (Integer partition : list) {
+            writer.writeInt(partition);
+        }
+    }
 }
