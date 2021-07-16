@@ -7,32 +7,34 @@ storagePortBase=55280
 storagePortsOccupied=3
 serverPortsOccupied=3
 
-start() {
-    set -e
-    numWaltzClusters=$1
+# supported commands: start/stop/restart/clean
+# test-cluster.sh start <- initiate network, add 1 new cluster
+# test-cluster.sh stop (0) <- stop all clusters/(stop cluster with given cluster number)
+# test-cluster.sh restart (0) <- restart all clusters/(restart cluster with given cluster number)
+# test-cluster.sh clean (0) <- remove all clusters/(remove cluster with given cluster number)
+
+initNetwork() {
     $DIR/docker/create-network.sh
     $DIR/docker/zookeeper.sh start
-    for clusterNumber in $(seq 0 $(($numWaltzClusters - 1))); do
-        initiateCluster $clusterNumber
-        echo "----- Cluster $clusterNumber created!"
-    done
 }
 
-initiateCluster() {
-    clusterNumber=$1
-    serverPortLowerBound=$((serverPortBase + $clusterNumber * $serverPortsOccupied))
-    storagePortLowerBound=$(($storagePortBase + $clusterNumber * $storagePortsOccupied))
-    $DIR/docker/cluster-config-files.sh $clusterNumber $serverPortLowerBound $storagePortLowerBound
+startCluster() {
+    clusterId=$1
+    echo $clusterId
+    serverPortLowerBound=$((serverPortBase + $clusterId * $serverPortsOccupied))
+    storagePortLowerBound=$(($storagePortBase + $clusterId * $storagePortsOccupied))
+    $DIR/docker/cluster-config-files.sh $clusterId $serverPortLowerBound $storagePortLowerBound
 
-    $DIR/docker/cluster.sh create $clusterNumber
-    $DIR/docker/waltz-storage.sh start "$clusterNumber" $storagePortLowerBound $(($storagePortLowerBound + $storagePortsOccupied - 1)) 0
-    $DIR/docker/add-storage.sh $clusterNumber $storagePortLowerBound
-    $DIR/docker/waltz-server.sh start $clusterNumber $serverPortLowerBound $(($serverPortLowerBound + $serverPortsOccupied - 1))
+    $DIR/docker/cluster.sh create $clusterId
+    $DIR/docker/waltz-storage.sh start "$clusterId" $storagePortLowerBound $(($storagePortLowerBound + $storagePortsOccupied - 1)) 0
+    $DIR/docker/add-storage.sh $clusterId $storagePortLowerBound
+    $DIR/docker/waltz-server.sh start $clusterId $serverPortLowerBound $(($serverPortLowerBound + $serverPortsOccupied - 1))
+    echo "----- Cluster $clusterId created!"
 }
 
 stop() {
-    for clusterNumber in $(docker container ls --format '{{.Names}}' --filter "name=waltz-server-*" | sed 's/^.*-//'); do
-        stopCluster $clusterNumber
+    for clusterId in $(docker container ls --format '{{.Names}}' --filter "name=waltz-server-*" | sed 's/^.*-//'); do
+        stopCluster $clusterId
     done
     $DIR/docker/zookeeper.sh stop
 }
@@ -43,8 +45,8 @@ stopCluster() {
 }
 
 clean() {
-    for clusterNumber in $(docker container ls -a --format '{{.Names}}' --filter "name=waltz-server-*" | sed 's/^.*-//'); do
-        cleanCluster $clusterNumber
+    for clusterId in $(docker container ls -a --format '{{.Names}}' --filter "name=waltz-server-*" | sed 's/^.*-//'); do
+        cleanCluster $clusterId
     done
     $DIR/docker/zookeeper.sh clean
 }
@@ -55,60 +57,39 @@ cleanCluster() {
     rm -r $DIR/../build/config-$1
 }
 
-addCluster() {
-    # The total count of all clusters is also the name of the newly created cluster
-    count=$(docker container ls -a --format '{{.Names}}' --filter "name=waltz-server-*" | wc -l)
-    initiateCluster $count
-    echo "----- Cluster $count added"
-}
-
 case $cmd in
     start)
-        if [ "$#" -ne 2 ]; then
-            echo "Usage: $0 $1 Number_of_clusters_to_be_created" >&2
-            exit 1
-        fi
-        start $2
+        set -e
+        #
+        clusterId=$(docker container ls --format '{{.Names}}' --filter "name=waltz-server-*" | wc -l)
+        initNetwork
+        startCluster $clusterId
         ;;
     stop)
-        stop
+        if [ "$#" -eq 2 ]; then
+            stopCluster $2
+        else
+            stop
+        fi
         ;;
     restart)
-        count=$(docker container ls -a --format '{{.Names}}' --filter "name=waltz-server-*" | wc -l)
-        stop
-        start $count
+        if [ "$#" -eq 2 ]; then
+            stopCluster $2
+            startCluster $2
+        else
+            count=$(docker container ls -a --format '{{.Names}}' --filter "name=waltz-server-*" | wc -l)
+            stop
+            for clusterId in $($count); do
+                startCluster $clusterId
+            done
+        fi
         ;;
     clean)
-        clean
-        ;;
-    addCluster)
-        clusterNumber=$(docker container ls --format '{{.Names}}' --filter "name=waltz-server-*" | wc -l)
         if [ "$#" -eq 2 ]; then
-            clusterNumber=$2
+            cleanCluster $2
+        else
+            clean
         fi
-        addCluster $2
-        ;;
-    stopCluster)
-        if [ "$#" -ne 2 ]; then
-            echo "Usage: $0 $1 Number of a cluster to be stopped" >&2
-            exit 1
-        fi
-        stopCluster $2
-        ;;
-    cleanCluster)
-        if [ "$#" -ne 2 ]; then
-            echo "Usage: $0 $1 Number of a cluster to be removed" >&2
-            exit 1
-        fi
-        cleanCluster $2
-        ;;
-    restartCluster)
-        if [ "$#" -ne 2 ]; then
-            echo "Usage: $0 $1 Cluster to be restarted" >&2
-            exit 1
-        fi
-        stopCluster $2
-        initiateCluster $2
         ;;
     *)
         echo "invalid command"
