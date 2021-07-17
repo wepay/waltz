@@ -82,9 +82,9 @@ We implemented shell scripts to run a Waltz cluster in local Docker containers f
 
 This builds the Docker images.
 
-### Starting 1 test cluster
+### Starting test cluster
 
-    bin/test-cluster.sh start 1
+    bin/test-cluster.sh start
 
 This creates a user defined docker network `waltz-network` and 
 starts three container, a zookeeper server, a waltz storage node, and a waltz server node in `waltz-network`.

@@ -5,7 +5,7 @@ cmd=$1
 
 imageSource=waltz-storage:distDocker
 imageName=com.wepay.waltz/waltz-storage
-containerName=waltz-storage-$2
+containerName=waltz_ledger_store_$2
 configFolder="config-$2"
 
 networkName=waltz-network
@@ -17,7 +17,7 @@ fi
 
 runContainer() {
     local imageId=$(docker images -q ${imageName})
-    if [ "${imageId}" == "" ]
+    if [ "${imageId}" = "" ]
     then
         echo "...image not built correctly"
     else
