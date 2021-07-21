@@ -2,71 +2,76 @@
 
 DIR=$(dirname $0)
 cmd=$1
-serverPortBase=55180
-storagePortBase=55280
+defaultServerPortBase=55180
+defaultStoragePortBase=55280
 storagePortsOccupied=3
 serverPortsOccupied=3
-defaultClusterName="default"
 
 # supported commands: start/stop/restart/clean
 # test-cluster.sh start <- initiate network, add a default cluster
-# test-cluster.sh start name1 name2 name3<- initiate network, adds new clusters with the name specified
-# test-cluster.sh stop (nameX) <- stop all clusters/(stop cluster with given cluster number)
-# test-cluster.sh restart (nameX) <- restart all clusters/(restart cluster with given cluster number)
-# test-cluster.sh clean (name1) <- remove all clusters/(remove cluster with given cluster number)
+# test-cluster.sh start <cluster_name> <- starts again already created cluster on the same ports
+# test-cluster.sh start <cluster_name> <base_server_port> <base_storage_port> <- initiate network,
+# adds new cluster of one storage & server node running on provided ports
+# test-cluster.sh stop (cluster_name) <- stop all clusters/(stop cluster with given cluster name)
+# test-cluster.sh restart (cluster_name) <- restart all clusters/(restart cluster with given cluster name)
+# test-cluster.sh clean (cluster_name) <- remove all clusters/(remove cluster with given cluster name)
 
 initNetwork() {
     $DIR/docker/create-network.sh
     $DIR/docker/zookeeper.sh start
 }
 
-getClusterId() {
-    clusterName=$1
-    clusterIdNew=$(docker container ls -a --format '{{.Names}}' --filter "name=waltz_ledger_server_*" | wc -l)
-    clusterExists=$(docker container ls -a --format '{{.Names}}' --filter "name=waltz_ledger_server_$clusterName" | wc -l)
-    if [[ "$clusterExists" -gt 0 ]]; then
-        containerId=$(docker container ls -a --format '{{.ID}}' --filter "name=waltz_ledger_server_$clusterName" | head -1)
+getContainerPort() {
+    containerName=$1
+    containerExists=$(docker container ls -a --format '{{.Names}}' --filter "name=$containerName" | wc -l)
+    if [ "$containerExists" -gt 0 ]; then
+        containerId=$(docker container ls -a --format '{{.ID}}' --filter "name=$containerName" | head -1)
         assignedPort=$(docker inspect --format='{{.HostConfig.PortBindings}}' $containerId | grep -o -E '[0-9]+' | head -1)
-        echo $((($assignedPort - $serverPortBase) / $serverPortsOccupied))
+        echo "$assignedPort"
     else
-        echo $clusterIdNew
+        echo "docker container $containerName not found"
+        exit 1
     fi
+}
+
+rerun() {
+    clusterName=$1
+    serverPortBase=$(getContainerPort "${clusterName}_server")
+    storePortBase=$(getContainerPort "${clusterName}_store")
+    startCluster $clusterName $serverPortBase $storePortBase
 }
 
 startCluster() {
     clusterName=$1
-    clusterId=$(getClusterId $clusterName)
-    echo "----- Creating waltz_ledger_$clusterName cluster"
-    serverPortLowerBound=$(($serverPortBase + $clusterId * $serverPortsOccupied))
-    storagePortLowerBound=$(($storagePortBase + $clusterId * $storagePortsOccupied))
-    if [ "$clusterName" = "$defaultClusterName" ]; then
-        $DIR/docker/cluster-config-files.sh "$clusterName" $serverPortLowerBound $storagePortLowerBound ""
-    else
-        $DIR/docker/cluster-config-files.sh "$clusterName" $serverPortLowerBound $storagePortLowerBound "_$clusterName"
-    fi
+    serverPortLowerBound="$2"
+    storagePortLowerBound="$3"
+    echo "----- Creating $clusterName cluster"
+    $DIR/docker/cluster-config-files.sh "$clusterName" $serverPortLowerBound $storagePortLowerBound
 
     $DIR/docker/cluster.sh create "$clusterName"
-    $DIR/docker/waltz-storage.sh start "$clusterName" $storagePortLowerBound $(($storagePortLowerBound + $storagePortsOccupied - 1)) 0
+    $DIR/docker/waltz-storage.sh start "$clusterName" $storagePortLowerBound $(($storagePortLowerBound + $storagePortsOccupied - 1))
     $DIR/docker/add-storage.sh "$clusterName" $storagePortLowerBound
     $DIR/docker/waltz-server.sh start "$clusterName" $serverPortLowerBound $(($serverPortLowerBound + $serverPortsOccupied - 1))
-    echo "----- Cluster waltz_ledger_$clusterName created!"
+    echo "----- Cluster $clusterName created!"
 }
 
 stopCluster() {
     $DIR/docker/waltz-server.sh stop "$1"
     $DIR/docker/waltz-storage.sh stop "$1"
+    echo "----- Cluster $clusterName stopped!"
 }
 
 stop() {
-    for clusterId in $(docker container ls --format '{{.Names}}' --filter "name=waltz_ledger_server_*" | sed 's/^.*server_//'); do
-        stopCluster "$clusterId"
+    for clusterName in $(docker container ls --format '{{.Names}}' --filter "name=waltz_.*" | sed 's/_server//; s/_store//' | uniq); do
+        echo $clusterName
+        stopCluster "$clusterName"
     done
     $DIR/docker/zookeeper.sh stop
 }
 
 clean() {
-    for clusterId in $(docker container ls -a --format '{{.Names}}' --filter "name=waltz_ledger_server_*" | sed 's/^.*server_//'); do
-        cleanCluster "$clusterId"
+    for clusterName in $(docker container ls -a --format '{{.Names}}' --filter "name=waltz_.*" | sed 's/_server//; s/_store//' | uniq); do
+        cleanCluster "$clusterName"
     done
     $DIR/docker/zookeeper.sh clean
 }
@@ -74,7 +79,8 @@ clean() {
 cleanCluster() {
     $DIR/docker/waltz-server.sh clean "$1"
     $DIR/docker/waltz-storage.sh clean "$1"
-    rm -r $DIR/../build/config-"$1"
+    rm -r $DIR/../config/local-docker/"$1"
+    echo "----- Cluster $clusterName cleaned!"
 }
 
 case $cmd in
@@ -82,36 +88,49 @@ case $cmd in
         set -e
         if [ "$#" -eq 1 ]; then
             initNetwork
-            startCluster "$defaultClusterName"
-        else
+            startCluster "waltz_cluster" "$defaultServerPortBase" "$defaultStoragePortBase"
+        elif [ "$#" -eq 2 ]; then
+            containerExists=$(docker container ls -a --format '{{.Names}}' --filter "name=waltz_$2.*" | sed 's/_server//; s/_store//' | uniq | wc -l)
+            if [ $containerExists -ne 1 ]; then
+                echo "Missing cluster with name waltz_$2. No attempt to start cluster again at the same port numbers."
+                exit 1
+            fi
+            rerun "waltz_$2"
+        elif [ "$#" -eq 4 ]; then
+            containerExists=$(docker container ls -a --format '{{.Names}}' --filter "name=waltz_$2.*" | wc -l)
+            if [ $containerExists -gt 0 ]; then
+                echo "Cluster waltz_$2 already exists. Please create another one or perform restart"
+                exit 1
+            fi
             initNetwork
-            for clusterName in "${@:2}"; do
-                startCluster "$clusterName"
-            done
+            startCluster "waltz_$2" "$3" "$4"
+        else
+            echo "Usage: test-cluster.sh start <cluster_name> <server_base_port> <storage_base_port>"
         fi
         ;;
     stop)
         if [ "$#" -eq 2 ]; then
-            stopCluster $2
+            stopCluster "waltz_$2"
         else
             stop
         fi
         ;;
     restart)
         if [ "$#" -eq 2 ]; then
-            stopCluster $2
-            startCluster $2
+            clusterName="waltz_$2"
+            stopCluster "$clusterName"
+            rerun "$clusterName"
         else
             stop
             initNetwork
-            for clusterName in $(docker container ls -a --format '{{.Names}}' --filter "name=waltz_ledger_server_*" | sed 's/^.*server_//'); do
-                startCluster $clusterName
+            for clusterName in $(docker container ls -a --format '{{.Names}}' --filter "name=waltz_.*" | sed 's/_server//; s/_store//' | uniq); do
+                rerun "$clusterName"
             done
         fi
         ;;
     clean)
         if [ "$#" -eq 2 ]; then
-            cleanCluster $2
+            cleanCluster "waltz_$2"
         else
             clean
         fi

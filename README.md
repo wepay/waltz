@@ -84,7 +84,9 @@ This builds the Docker images.
 
 ### Starting test cluster
 
-    bin/test-cluster.sh start
+    bin/test-cluster.sh start <- Start default cluster
+    bin/test-cluster.sh start <cluster_name> <- Start stopped cluster that is been already created
+    bin/test-cluster.sh start <cluster_name> <base_server_port> <base_storage_port> <- Start new cluster of one storage & server node running on provided ports
 
 This creates a user defined docker network `waltz-network` and 
 starts three container, a zookeeper server, a waltz storage node, and a waltz server node in `waltz-network`.
@@ -97,17 +99,17 @@ If the Docker images are not built yet, this script builds them.
 However, it doesn't automatically build a new images even when the source code is modified. 
 You must rebuild images using `distDocker` gradle task.
 
-### Stopping the test cluster
+### Stopping waltz test cluster
 
-    bin/test-cluster.sh stop
+    bin/test-cluster.sh stop <- stop all created clusters
+    bin/test-cluster.sh stop <cluster_name> <- stop cluster with the given cluster name
 
-This stops all three containers. You can resume the cluster using `start` command. All data in zookeeper and storages are preserved.
+This stops waltz containers. You can resume the cluster using `start <cluster_name>` command. All data in zookeeper and storages are preserved.
 
 ### Destroying the test cluster
 
-    bin/test-cluster.sh clean
-    
-This will remove all three containers, thus removes all data.
+    bin/test-cluster.sh clean <- This will remove all waltz containers including zookeeper, thus removes all data.
+    bin/test-cluster.sh clean <cluster_name> <- This will remove all two containers belonging to the same cluster. Zookeeper stays intact.
 
 ### Setting up the test cluster with multiple partitions.
 
@@ -117,7 +119,7 @@ the environment variable WALTZ_TEST_CLUSTER_NUM_PARTITIONS to the desired number
 For example, to create the test cluster with five partitions, do the following.
 
     export WALTZ_TEST_CLUSTER_NUM_PARTITIONS=5
-    bin/test-cluster.sh start 1
+    bin/test-cluster.sh start
 
 ### Running DemoBankApp
 

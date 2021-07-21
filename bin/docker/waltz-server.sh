@@ -5,9 +5,9 @@ cmd=$1
 
 imageSource=waltz-server:distDocker
 imageName=com.wepay.waltz/waltz-server
-containerName=waltz_ledger_server_"$2"
+containerName="$2_server"
 networkName=waltz-network
-configFolder="config-$2"
+configFolder="$2"
 
 if [ $cmd = "start" ]; then
     port_lower_bound=$3
@@ -23,7 +23,7 @@ runContainer() {
     else
         docker run \
             --network=$networkName --net-alias $(hostname) -h $(hostname) -p $ports \
-            --name $containerName -d -v $PWD/build/$configFolder:/config/ \
+            --name $containerName -d -v $PWD/config/local-docker/$configFolder:/config/ \
             $imageId /config/waltz-server.yml
     fi
 }

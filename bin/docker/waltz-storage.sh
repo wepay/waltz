@@ -5,8 +5,8 @@ cmd=$1
 
 imageSource=waltz-storage:distDocker
 imageName=com.wepay.waltz/waltz-storage
-containerName=waltz_ledger_store_$2
-configFolder="config-$2"
+containerName="$2_store"
+configFolder="$2"
 
 networkName=waltz-network
 if [ $cmd = "start" ]; then
@@ -22,7 +22,7 @@ runContainer() {
         echo "...image not built correctly"
     else
         docker run \
-            --network=$networkName -p $ports --name $containerName -d -v $PWD/build/$configFolder:/config/ \
+            --network=$networkName -p $ports --name $containerName -d -v $PWD/config/local-docker/$configFolder:/config/ \
             $imageId /config/waltz-storage.yml
     fi
 }
