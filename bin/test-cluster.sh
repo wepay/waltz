@@ -37,7 +37,7 @@ getContainerPort() {
 rerun() {
     clusterName=$1
     serverPortBase=$(getContainerPort "${clusterName}_server")
-    storePortBase=$(getContainerPort "${clusterName}_store")
+    storePortBase=$(getContainerPort "${clusterName}_storage")
     startCluster $clusterName $serverPortBase $storePortBase
 }
 
@@ -62,7 +62,7 @@ stopCluster() {
 }
 
 stop() {
-    for clusterName in $(docker container ls --format '{{.Names}}' --filter "name=waltz_.*" | sed 's/_server//; s/_store//' | uniq); do
+    for clusterName in $(docker container ls --format '{{.Names}}' --filter "name=waltz_.*" | sed 's/_server//; s/_storage//' | uniq); do
         echo $clusterName
         stopCluster "$clusterName"
     done
@@ -70,7 +70,7 @@ stop() {
 }
 
 clean() {
-    for clusterName in $(docker container ls -a --format '{{.Names}}' --filter "name=waltz_.*" | sed 's/_server//; s/_store//' | uniq); do
+    for clusterName in $(docker container ls -a --format '{{.Names}}' --filter "name=waltz_.*" | sed 's/_server//; s/_storage//' | uniq); do
         cleanCluster "$clusterName"
     done
     $DIR/docker/zookeeper.sh clean
@@ -90,7 +90,7 @@ case $cmd in
             initNetwork
             startCluster "waltz_cluster" "$defaultServerPortBase" "$defaultStoragePortBase"
         elif [ "$#" -eq 2 ]; then
-            containerExists=$(docker container ls -a --format '{{.Names}}' --filter "name=waltz_$2.*" | sed 's/_server//; s/_store//' | uniq | wc -l)
+            containerExists=$(docker container ls -a --format '{{.Names}}' --filter "name=waltz_$2.*" | sed 's/_server//; s/_storage//' | uniq | wc -l)
             if [ $containerExists -ne 1 ]; then
                 echo "Missing cluster with name waltz_$2. No attempt to start cluster again at the same port numbers."
                 exit 1
@@ -123,7 +123,7 @@ case $cmd in
         else
             stop
             initNetwork
-            for clusterName in $(docker container ls -a --format '{{.Names}}' --filter "name=waltz_.*" | sed 's/_server//; s/_store//' | uniq); do
+            for clusterName in $(docker container ls -a --format '{{.Names}}' --filter "name=waltz_.*" | sed 's/_server//; s/_storage//' | uniq); do
                 rerun "$clusterName"
             done
         fi

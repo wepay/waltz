@@ -5,7 +5,7 @@ cmd=$1
 
 imageSource=waltz-storage:distDocker
 imageName=com.wepay.waltz/waltz-storage
-containerName="$2_store"
+containerName="$2_storage"
 configFolder="$2"
 
 networkName=waltz-network
