@@ -10,9 +10,9 @@ networkName=waltz-network
 configFolder="$2"
 
 if [ $cmd = "start" ]; then
-    port_lower_bound=$3
-    port_upper_bound=$4
-    ports="$port_lower_bound-$port_upper_bound:$port_lower_bound-$port_upper_bound"
+    portsOccupiedLowerBound=$3
+    portsOccupiedUpperBound=$(($3 + 2))
+    ports="$portsOccupiedLowerBound-$portsOccupiedUpperBound:$portsOccupiedLowerBound-$portsOccupiedUpperBound"
 fi
 
 runContainer() {

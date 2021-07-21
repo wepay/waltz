@@ -4,11 +4,9 @@ DIR=$(dirname $0)
 cmd=$1
 defaultServerPortBase=55180
 defaultStoragePortBase=55280
-storagePortsOccupied=3
-serverPortsOccupied=3
 
 # supported commands: start/stop/restart/clean
-# test-cluster.sh start <- initiate network, add a default cluster
+# test-cluster.sh start <- initiate network, create a default cluster
 # test-cluster.sh start <cluster_name> <- starts again already created cluster on the same ports
 # test-cluster.sh start <cluster_name> <base_server_port> <base_storage_port> <- initiate network,
 # adds new cluster of one storage & server node running on provided ports
@@ -45,25 +43,21 @@ startCluster() {
     clusterName=$1
     serverPortLowerBound="$2"
     storagePortLowerBound="$3"
-    echo "----- Creating $clusterName cluster"
     $DIR/docker/cluster-config-files.sh "$clusterName" $serverPortLowerBound $storagePortLowerBound
 
     $DIR/docker/cluster.sh create "$clusterName"
-    $DIR/docker/waltz-storage.sh start "$clusterName" $storagePortLowerBound $(($storagePortLowerBound + $storagePortsOccupied - 1))
+    $DIR/docker/waltz-storage.sh start "$clusterName" $storagePortLowerBound
     $DIR/docker/add-storage.sh "$clusterName" $storagePortLowerBound
-    $DIR/docker/waltz-server.sh start "$clusterName" $serverPortLowerBound $(($serverPortLowerBound + $serverPortsOccupied - 1))
-    echo "----- Cluster $clusterName created!"
+    $DIR/docker/waltz-server.sh start "$clusterName" $serverPortLowerBound
 }
 
 stopCluster() {
     $DIR/docker/waltz-server.sh stop "$1"
     $DIR/docker/waltz-storage.sh stop "$1"
-    echo "----- Cluster $clusterName stopped!"
 }
 
 stop() {
     for clusterName in $(docker container ls --format '{{.Names}}' --filter "name=waltz_.*" | sed 's/_server//; s/_storage//' | uniq); do
-        echo $clusterName
         stopCluster "$clusterName"
     done
     $DIR/docker/zookeeper.sh stop
@@ -80,7 +74,6 @@ cleanCluster() {
     $DIR/docker/waltz-server.sh clean "$1"
     $DIR/docker/waltz-storage.sh clean "$1"
     rm -r $DIR/../config/local-docker/"$1"
-    echo "----- Cluster $clusterName cleaned!"
 }
 
 case $cmd in

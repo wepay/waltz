@@ -24,12 +24,12 @@ case $cmd in
     create)
         if [ "${clusterKey}" != "" ]
         then
-            echo "----- cluster already created -----"
+            echo "----- cluster $clusterName already created -----"
         else
-            echo "----- creating a cluster -----"
+            echo "----- creating $clusterName cluster -----"
 
             java $JVMOPTS -cp ${CLASSPATH#:} $ZKCLI create -c $TOOLSCONFIG -n "$clusterName" -p $numPartitions
-            echo "waltz cluster created"
+            echo "$clusterName cluster created"
         fi
         ;;
 
