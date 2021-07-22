@@ -2,6 +2,7 @@
 
 DIR=$(dirname $0)
 cmd=$1
+clusterName=$2
 
 $DIR/../../gradlew --console=plain -q copyLibs
 
@@ -13,7 +14,7 @@ done
 
 JVMOPTS=-Dlog4j.configuration=file:config/log4j.properties
 
-TOOLSCONFIG=config/local-docker/waltz-tools.yml
+TOOLSCONFIG=config/local-docker/"$clusterName"/waltz-tools.yml
 ZKCLI=com.wepay.waltz.tools.zk.ZooKeeperCli
 
 numPartitions=${WALTZ_TEST_CLUSTER_NUM_PARTITIONS:-1}
@@ -23,26 +24,19 @@ case $cmd in
     create)
         if [ "${clusterKey}" != "" ]
         then
-            echo "----- cluster already created -----"
+            echo "----- cluster $clusterName already created -----"
         else
-            echo "----- creating a cluster -----"
+            echo "----- creating $clusterName cluster -----"
 
-            java $JVMOPTS -cp ${CLASSPATH#:} $ZKCLI create -c $TOOLSCONFIG -n waltz_cluster -p $numPartitions
-            echo "waltz cluster created"
+            java $JVMOPTS -cp ${CLASSPATH#:} $ZKCLI create -c $TOOLSCONFIG -n "$clusterName" -p $numPartitions
+            echo "$clusterName cluster created"
         fi
-
-        mkdir -p build/config
-
-        cp config/local-docker/waltz-server.yml build/config/waltz-server.yml
-        cp config/local-docker/waltz-storage.yml build/config/waltz-storage.yml
-
-        echo "config files are generated in build/config"
         ;;
 
     delete)
         if [ "$clusterKey" != "" ]
         then
-            java $JVMOPTS -cp ${CLASSPATH#:} $ZKCLI delete -c $TOOLSCONFIG -n waltz_cluster
+            java $JVMOPTS -cp ${CLASSPATH#:} $ZKCLI delete -c $TOOLSCONFIG -n "$clusterName"
             echo "cluster deleted"
         fi
         ;;
