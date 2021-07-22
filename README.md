@@ -111,6 +111,11 @@ This stops waltz containers. You can resume the cluster using `start <cluster_na
     bin/test-cluster.sh clean <- This will remove all waltz containers including zookeeper, thus removes all data.
     bin/test-cluster.sh clean <cluster_name> <- This will remove all two containers belonging to the same cluster. Zookeeper stays intact.
 
+### Restarting the test cluster
+
+    bin/test-cluster.sh restart <- This will restart all waltz containers and regenerate config files (equivalent to stop, start).
+    bin/test-cluster.sh restart <cluster_name> <- This will restart all two containers belonging to the same cluster and regenerate config files.
+
 ### Setting up the test cluster with multiple partitions.
 
 The test cluster is set up with a single partition by default.
