@@ -5,6 +5,7 @@ DIR=$(dirname $0)
 $DIR/../../gradlew --console=plain -q copyLibs
 base_port="$2"
 admin_port=$(($2 + 1))
+containerName="$1_storage"
 
 CLASSPATH=""
 for file in waltz-tools/build/libs/*.jar;
@@ -22,14 +23,14 @@ numPartitions=${WALTZ_TEST_CLUSTER_NUM_PARTITIONS:-1}
 
 echo "----- adding a storage to the cluster -----"
 
-java $JVMOPTS -cp ${CLASSPATH#:} $ZKCLI add-storage-node -c $TOOLSCONFIG -s "$1":"$base_port" -a "$admin_port" -g 0
+java $JVMOPTS -cp ${CLASSPATH#:} $ZKCLI add-storage-node -c $TOOLSCONFIG -s "$containerName":"$base_port" -a "$admin_port" -g 0
 echo "...a storage node added the cluster"
 
 echo "----- assigning partitions to the storage -----"
 partitionId=0
 while [ $partitionId -lt $numPartitions ]
 do
-    java $JVMOPTS -cp ${CLASSPATH#:} $ZKCLI assign-partition -c $TOOLSCONFIG -s "$1":"$base_port" -p $partitionId
+    java $JVMOPTS -cp ${CLASSPATH#:} $ZKCLI assign-partition -c $TOOLSCONFIG -s "$containerName":"$base_port" -p $partitionId
     echo "...a partition [$partitionId] assigned to the storage node"
     partitionId=$[$partitionId + 1]
 done
