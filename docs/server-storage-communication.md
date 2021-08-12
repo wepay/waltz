@@ -5,7 +5,7 @@ title: Server-Storage Communication
 
 ## Quorum Writes
 
-Waltz is a replicated transaction log. It does not use a master-slave replication method, but it uses a quorum write method. A quorum in Walt is equivalent to a majority vote. We will use "quorum" to mean "majority" in this document.
+Waltz is a replicated transaction log. It does not use a master-slave replication method, but it uses a quorum write method. A quorum in Waltz is equivalent to a majority vote. We will use "quorum" to mean "majority" in this document.
 
 A quorum system has a number of benefits over master-slave replication. In master-slave replication, the master is the authoritative source of data, and slaves are always catching up with some latency. When a master dies due to a fault, we may want to promote one of slaves to a new master to continue a service. However, there is no guarantee that the slave has finished replication of all data before the death of the old master or knows the final commit decision that the master made. On the other hand, for a quorum system like Waltz a commit is consensus among participating storage servers, i.e., there is no central authority that may fail to propagate the commit information to other servers. A writer does not decide whether or not the write is committed, but it merely observe the commit is established by quorum. This distinction is important for recovery. A recovery process simply observes whether or not a particular write is committed by investigating the state of storages.
 
