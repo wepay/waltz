@@ -46,4 +46,11 @@ public class PartitionLocalLock {
         }
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public long getId() {
+        return id;
+    }
 }
