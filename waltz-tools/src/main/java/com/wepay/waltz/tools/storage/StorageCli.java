@@ -68,6 +68,7 @@ public final class StorageCli extends SubcommandCli {
     private static final class ListPartition extends Cli {
         private static final String NAME = "list";
         private static final String DESCRIPTION = "List partition ownership data of a storage node";
+        private static final StringBuilder OUTPUT_BUILDER = new StringBuilder();
 
         private static final String STORAGE_PARTITION_METRIC_KEY = "waltz-storage.waltz-storage-partition-ids";
         private final ObjectMapper mapper = new ObjectMapper();
@@ -125,7 +126,6 @@ public final class StorageCli extends SubcommandCli {
             }
 
             boolean loggerAsOutput = cmd.hasOption("logger-as-output");
-            StringBuilder partitionInfoStringBuilder = new StringBuilder();
             for (String[] hostAndPortArray : hostsAndPorts) {
                 try {
                     String storageHost = hostAndPortArray[0];
@@ -133,8 +133,8 @@ public final class StorageCli extends SubcommandCli {
 
                     String metricsJson = getMetricsJson(storageHost, Integer.parseInt(storagePort), cliConfigPath);
                     Map<Integer, PartitionInfoSnapshot> partitionInfo = getPartitionInfo(metricsJson);
-                    partitionInfoStringBuilder.append(formatPartitionInfo(partitionInfo, storageHost, storagePort));
-                    partitionInfoStringBuilder.append(System.lineSeparator());
+                    OUTPUT_BUILDER.append(formatPartitionInfo(partitionInfo, storageHost, storagePort));
+                    OUTPUT_BUILDER.append(System.lineSeparator());
                 } catch (Exception e) {
                     throw new SubCommandFailedException(String.format("Cannot fetch partition ownership for %s:%s:%n%s",
                             hostAndPortArray[0], hostAndPortArray[1], e.getMessage()));
@@ -142,9 +142,12 @@ public final class StorageCli extends SubcommandCli {
             }
             if (loggerAsOutput) {
                 Logger logger = Logging.getLogger(ListPartition.class);
-                logger.info(partitionInfoStringBuilder.toString());
+                String[] splitParagraphs = OUTPUT_BUILDER.toString().split("\n(?=[^ ])");
+                for (String paragraph : splitParagraphs) {
+                    logger.info(paragraph);
+                }
             } else {
-                System.out.println(partitionInfoStringBuilder);
+                System.out.println(OUTPUT_BUILDER);
             }
         }
 

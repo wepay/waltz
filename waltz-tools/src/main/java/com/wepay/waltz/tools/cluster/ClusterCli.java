@@ -315,7 +315,10 @@ public final class ClusterCli extends SubcommandCli {
 
                 if (loggerAsOutput) {
                     Logger logger = Logging.getLogger(Verify.class);
-                    logger.info(OUTPUT_BUILDER.toString());
+                    String[] splitParagraphs = OUTPUT_BUILDER.toString().split("\n(?=[^ ])");
+                    for (String paragraph : splitParagraphs) {
+                        logger.info(paragraph);
+                    }
                 } else {
                     System.out.println(OUTPUT_BUILDER);
                 }
@@ -633,7 +636,7 @@ public final class ClusterCli extends SubcommandCli {
             ValidationResult validationResult = partitionResult.validationResultsMap.get(type);
             if (validationResult.status.equals(ValidationResult.Status.FAILURE)) {
                 OUTPUT_BUILDER.append(String.format("Validation %s failed for partition %s%n", type.name(), partitionId));
-                OUTPUT_BUILDER.append(String.format("Validation error is: %s%n", validationResult.error));
+                OUTPUT_BUILDER.append(String.format("  Validation error is: %s%n", validationResult.error.replace("\n", "\n  ")));
                 return false;
             }
             return true;

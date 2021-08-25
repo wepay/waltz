@@ -155,7 +155,10 @@ public final class ZooKeeperCli extends SubcommandCli {
                 }
                 if (loggerAsOutput) {
                     Logger logger = Logging.getLogger(ListZk.class);
-                    logger.info(OUTPUT_BUILDER.toString());
+                    String[] splitParagraphs = OUTPUT_BUILDER.toString().split("\n(?=[^ ])");
+                    for (String paragraph : splitParagraphs) {
+                        logger.info(paragraph);
+                    }
                 } else {
                     System.out.println(OUTPUT_BUILDER);
                 }
