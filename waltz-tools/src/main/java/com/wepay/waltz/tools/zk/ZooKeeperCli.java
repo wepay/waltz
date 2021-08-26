@@ -155,7 +155,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                 }
                 if (loggerAsOutput) {
                     Logger logger = Logging.getLogger(ListZk.class);
-                    String[] splitParagraphs = OUTPUT_BUILDER.toString().split("\n(?=[^ ])");
+                    String[] splitParagraphs = OUTPUT_BUILDER.toString().split("\n(?=[^\\s])");
                     for (String paragraph : splitParagraphs) {
                         logger.info(paragraph);
                     }
@@ -172,7 +172,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                 OUTPUT_BUILDER.append(String.format("  key=%s%n", storeParams.key.toString()));
                 OUTPUT_BUILDER.append(String.format("  numPartitions=%s%n", storeParams.numPartitions));
             } else {
-                OUTPUT_BUILDER.append(String.format("Store parameters not found%n"));
+                OUTPUT_BUILDER.append(String.format("  Store parameters not found%n"));
             }
         }
 
@@ -186,7 +186,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     OUTPUT_BUILDER.append(String.format("  %s = %s, GroupId: %s%n", entry.getKey(), Arrays.toString(entry.getValue()), groups.get(entry.getKey())));
                 }
             } else {
-                OUTPUT_BUILDER.append(String.format("Replicas not found%n"));
+                OUTPUT_BUILDER.append(String.format("  Replicas not found%n"));
             }
         }
 
@@ -199,7 +199,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                     OUTPUT_BUILDER.append(String.format("  %s has admin port: %s%n", entry.getKey(), entry.getValue()));
                 }
             } else {
-                OUTPUT_BUILDER.append(String.format("Connections not found%n"));
+                OUTPUT_BUILDER.append(String.format("  Connections not found%n"));
             }
         }
 
@@ -217,7 +217,7 @@ public final class ZooKeeperCli extends SubcommandCli {
                         entry.getKey(), entry.getValue().sessionId, ((entry.getValue().closingHighWaterMark) == ReplicaState.UNRESOLVED ? "UNRESOLVED" : entry.getValue().closingHighWaterMark)));
                 }
             } else {
-                OUTPUT_BUILDER.append(String.format("No node found%n"));
+                OUTPUT_BUILDER.append(String.format("  No node found%n"));
             }
         }
 

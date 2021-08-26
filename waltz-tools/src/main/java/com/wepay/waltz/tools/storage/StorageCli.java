@@ -142,7 +142,7 @@ public final class StorageCli extends SubcommandCli {
             }
             if (loggerAsOutput) {
                 Logger logger = Logging.getLogger(ListPartition.class);
-                String[] splitParagraphs = OUTPUT_BUILDER.toString().split("\n(?=[^ ])");
+                String[] splitParagraphs = OUTPUT_BUILDER.toString().split("\n(?=[^\\s])");
                 for (String paragraph : splitParagraphs) {
                     logger.info(paragraph);
                 }

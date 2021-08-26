@@ -315,7 +315,7 @@ public final class ClusterCli extends SubcommandCli {
 
                 if (loggerAsOutput) {
                     Logger logger = Logging.getLogger(Verify.class);
-                    String[] splitParagraphs = OUTPUT_BUILDER.toString().split("\n(?=[^ ])");
+                    String[] splitParagraphs = OUTPUT_BUILDER.toString().split("\n(?=[^\\s])");
                     for (String paragraph : splitParagraphs) {
                         logger.info(paragraph);
                     }

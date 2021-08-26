@@ -150,7 +150,7 @@ public final class ServerCli extends SubcommandCli {
             }
             if (loggerAsOutput) {
                 Logger logger = Logging.getLogger(ListPartition.class);
-                String[] splitParagraphs = sb.toString().split("\n(?=[^ ])");
+                String[] splitParagraphs = sb.toString().split("\n(?=[^\\s])");
                 for (String paragraph : splitParagraphs) {
                     logger.info(paragraph);
                 }
