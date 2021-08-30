@@ -36,6 +36,9 @@ import java.util.concurrent.TimeUnit;
 public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks, ManagedClient {
 
     private static final Logger logger = Logging.getLogger(InternalBaseClient.class);
+    private enum ClientConnectionType {
+        RPC, STREAM
+    }
 
     private int clientId = -1;
     private String clusterName = null;
@@ -258,9 +261,14 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         }
 
         this.numPartitions = numPartitions;
-
+        String connectionType;
         for (int partitionId = 0; partitionId < numPartitions; partitionId++) {
-            Partition partition = new Partition(partitionId, clientId, maxConcurrentTransactions);
+            if (this instanceof RpcClient) {
+                connectionType = ClientConnectionType.RPC.toString().toLowerCase();
+            } else {
+                connectionType = ClientConnectionType.STREAM.toString().toLowerCase();
+            }
+            Partition partition = new Partition(partitionId, clientId, maxConcurrentTransactions, connectionType);
             partitions.put(partitionId, partition);
         }
 
