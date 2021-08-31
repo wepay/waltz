@@ -140,7 +140,7 @@ public final class ServerCli extends SubcommandCli {
         private void printResult(Integer numPartitions, Map<Integer, List<String>> replicaInfo, boolean loggerAsOutput) {
             // display partition info
             StringBuilder sb = new StringBuilder();
-            sb.append(String.format("%nThere are %d partitions for current server%n", numPartitions));
+            sb.append(String.format("There are %d partitions for current server%n", numPartitions));
 
             // display replica info
             for (Map.Entry<Integer, List<String>> entry: replicaInfo.entrySet()) {
@@ -150,7 +150,10 @@ public final class ServerCli extends SubcommandCli {
             }
             if (loggerAsOutput) {
                 Logger logger = Logging.getLogger(ListPartition.class);
-                logger.info(sb.toString());
+                String[] splitParagraphs = sb.toString().split("\n(?=[^\\s])");
+                for (String paragraph : splitParagraphs) {
+                    logger.info(paragraph);
+                }
             } else {
                 System.out.println(sb);
             }
