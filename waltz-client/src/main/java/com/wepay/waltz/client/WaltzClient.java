@@ -267,7 +267,7 @@ public class WaltzClient {
 
     private void registerMetrics() {
         REGISTRY.gauge(metricsGroup, "cluster-name", (Gauge<String>) () -> clusterName());
-        REGISTRY.gauge(metricsGroup, "cluster-id", (Gauge<Integer>) () -> clientId());
+        REGISTRY.gauge(metricsGroup, "client-id", (Gauge<Integer>) () -> clientId());
         REGISTRY.gauge(metricsGroup, "num-active-partitions", (Gauge<Integer>) () -> getPartitions().size());
         REGISTRY.gauge(metricsGroup, "active-partition-ids", (Gauge<Set<Integer>>) () -> getPartitions());
     }
