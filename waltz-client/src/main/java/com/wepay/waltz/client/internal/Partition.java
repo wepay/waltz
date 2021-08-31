@@ -79,9 +79,9 @@ public class Partition {
      * @param partitionId the partition id.
      * @param clientId the client id.
      * @param maxConcurrentTransactions the maximum concurrent transactions that can be submitted to this partition.
-     * @param connectionType the type of client connection i.e. rpc or stream.
+     * @param clientConnectionType the type of client connection i.e. rpc or stream.
      */
-    public Partition(int partitionId, int clientId, int maxConcurrentTransactions, String connectionType) {
+    public Partition(int partitionId, int clientId, int maxConcurrentTransactions, String clientConnectionType) {
         this.partitionId = partitionId;
         this.clientId = clientId;
         this.generation = -1;
@@ -91,7 +91,7 @@ public class Partition {
         this.clientHighWaterMark = new AtomicLong(-1);
         this.dataFutures = new HashMap<>();
         this.metricGroup = String.format("%s-%s.partition-%d", MetricGroup.WALTZ_CLIENT_METRIC_GROUP,
-            connectionType, partitionId);
+            clientConnectionType, partitionId);
         registerMetrics();
     }
 

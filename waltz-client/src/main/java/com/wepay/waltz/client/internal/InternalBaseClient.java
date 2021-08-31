@@ -261,14 +261,12 @@ public abstract class InternalBaseClient implements WaltzNetworkClientCallbacks,
         }
 
         this.numPartitions = numPartitions;
-        String connectionType;
         for (int partitionId = 0; partitionId < numPartitions; partitionId++) {
-            if (this instanceof RpcClient) {
-                connectionType = ClientConnectionType.RPC.toString().toLowerCase();
-            } else {
-                connectionType = ClientConnectionType.STREAM.toString().toLowerCase();
-            }
-            Partition partition = new Partition(partitionId, clientId, maxConcurrentTransactions, connectionType);
+            String clientConnectionType = (this instanceof RpcClient) ?
+                ClientConnectionType.RPC.toString().toLowerCase() :
+                ClientConnectionType.STREAM.toString().toLowerCase();
+
+            Partition partition = new Partition(partitionId, clientId, maxConcurrentTransactions, clientConnectionType);
             partitions.put(partitionId, partition);
         }
 
