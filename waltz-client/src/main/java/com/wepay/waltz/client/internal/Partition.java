@@ -79,8 +79,9 @@ public class Partition {
      * @param partitionId the partition id.
      * @param clientId the client id.
      * @param maxConcurrentTransactions the maximum concurrent transactions that can be submitted to this partition.
+     * @param clientConnectionType the type of client connection i.e. rpc or stream.
      */
-    public Partition(int partitionId, int clientId, int maxConcurrentTransactions) {
+    public Partition(int partitionId, int clientId, int maxConcurrentTransactions, String clientConnectionType) {
         this.partitionId = partitionId;
         this.clientId = clientId;
         this.generation = -1;
@@ -89,8 +90,8 @@ public class Partition {
         this.networkClient = null;
         this.clientHighWaterMark = new AtomicLong(-1);
         this.dataFutures = new HashMap<>();
-        this.metricGroup = String.format("%s.partition-%d", MetricGroup.WALTZ_CLIENT_METRIC_GROUP, partitionId);
-
+        this.metricGroup = String.format("%s-%s.partition-%d", MetricGroup.WALTZ_CLIENT_METRIC_GROUP,
+            clientConnectionType, partitionId);
         registerMetrics();
     }
 
@@ -738,6 +739,7 @@ public class Partition {
 
     private void registerMetrics() {
         REGISTRY.gauge(metricGroup, "is-mounted", (Gauge<Boolean>) () -> isMounted());
+        REGISTRY.gauge(metricGroup, "is-partition-active", (Gauge<Boolean>) () -> isActive());
         REGISTRY.gauge(metricGroup, "high-water-mark", (Gauge<Long>) () -> clientHighWaterMark());
         REGISTRY.gauge(metricGroup, "num-registered-transactions",
             (Gauge<Integer>) transactionMonitor::registeredCount);
@@ -752,6 +754,7 @@ public class Partition {
 
     private void unregisterMetrics() {
         REGISTRY.remove(metricGroup, "is-mounted");
+        REGISTRY.remove(metricGroup, "is-partition-active");
         REGISTRY.remove(metricGroup, "high-water-mark");
         REGISTRY.remove(metricGroup, "num-registered-transactions");
         REGISTRY.remove(metricGroup, "lock-failure");
