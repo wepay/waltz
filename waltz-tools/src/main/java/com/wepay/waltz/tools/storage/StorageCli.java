@@ -149,7 +149,6 @@ public final class StorageCli extends SubcommandCli {
             } else {
                 System.out.println(outputBuilder);
             }
-            outputBuilder.setLength(0);
         }
 
         private List<String[]> getAllHostsAndPorts(String cliConfigPath) throws Exception {

@@ -322,7 +322,6 @@ public final class ClusterCli extends SubcommandCli {
                 } else {
                     System.out.println(outputBuilder);
                 }
-                outputBuilder.setLength(0);
             }
         }
 

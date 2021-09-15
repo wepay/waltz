@@ -163,7 +163,6 @@ public final class ZooKeeperCli extends SubcommandCli {
                 } else {
                     System.out.println(outputBuilder);
                 }
-                outputBuilder.setLength(0);
             }
         }
 
