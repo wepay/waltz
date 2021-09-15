@@ -68,10 +68,10 @@ public final class StorageCli extends SubcommandCli {
     private static final class ListPartition extends Cli {
         private static final String NAME = "list";
         private static final String DESCRIPTION = "List partition ownership data of a storage node";
-        private static final StringBuilder OUTPUT_BUILDER = new StringBuilder();
 
         private static final String STORAGE_PARTITION_METRIC_KEY = "waltz-storage.waltz-storage-partition-ids";
         private final ObjectMapper mapper = new ObjectMapper();
+        private final StringBuilder outputBuilder = new StringBuilder();
 
         protected ListPartition(String[] args) {
             super(args);
@@ -133,8 +133,8 @@ public final class StorageCli extends SubcommandCli {
 
                     String metricsJson = getMetricsJson(storageHost, Integer.parseInt(storagePort), cliConfigPath);
                     Map<Integer, PartitionInfoSnapshot> partitionInfo = getPartitionInfo(metricsJson);
-                    OUTPUT_BUILDER.append(formatPartitionInfo(partitionInfo, storageHost, storagePort));
-                    OUTPUT_BUILDER.append(System.lineSeparator());
+                    outputBuilder.append(formatPartitionInfo(partitionInfo, storageHost, storagePort));
+                    outputBuilder.append(System.lineSeparator());
                 } catch (Exception e) {
                     throw new SubCommandFailedException(String.format("Cannot fetch partition ownership for %s:%s:%n%s",
                             hostAndPortArray[0], hostAndPortArray[1], e.getMessage()));
@@ -142,13 +142,14 @@ public final class StorageCli extends SubcommandCli {
             }
             if (loggerAsOutput) {
                 Logger logger = Logging.getLogger(ListPartition.class);
-                String[] splitParagraphs = OUTPUT_BUILDER.toString().split("\n(?=[^\\s])");
+                String[] splitParagraphs = outputBuilder.toString().split("\n(?=[^\\s])");
                 for (String paragraph : splitParagraphs) {
                     logger.info(paragraph);
                 }
             } else {
-                System.out.println(OUTPUT_BUILDER);
+                System.out.println(outputBuilder);
             }
+            outputBuilder.setLength(0);
         }
 
         private List<String[]> getAllHostsAndPorts(String cliConfigPath) throws Exception {
