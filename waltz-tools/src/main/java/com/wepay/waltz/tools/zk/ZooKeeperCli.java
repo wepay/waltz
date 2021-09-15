@@ -83,7 +83,8 @@ public final class ZooKeeperCli extends SubcommandCli {
     private static final class ListZk extends Cli {
         private static final String NAME = "list";
         private static final String DESCRIPTION = "Displays server metadata.";
-        private static final StringBuilder OUTPUT_BUILDER = new StringBuilder();
+
+        private final StringBuilder outputBuilder = new StringBuilder();
 
         protected ListZk(String[] args) {
             super(args);
@@ -155,69 +156,69 @@ public final class ZooKeeperCli extends SubcommandCli {
                 }
                 if (loggerAsOutput) {
                     Logger logger = Logging.getLogger(ListZk.class);
-                    String[] splitParagraphs = OUTPUT_BUILDER.toString().split("\n(?=[^\\s])");
+                    String[] splitParagraphs = outputBuilder.toString().split("\n(?=[^\\s])");
                     for (String paragraph : splitParagraphs) {
                         logger.info(paragraph);
                     }
                 } else {
-                    System.out.println(OUTPUT_BUILDER);
+                    System.out.println(outputBuilder);
                 }
             }
         }
 
         private void listStoreParams(ZNode storeRoot, StoreParams storeParams) {
-            OUTPUT_BUILDER.append(String.format("store [%s] parameters:%n", storeRoot));
+            outputBuilder.append(String.format("store [%s] parameters:%n", storeRoot));
 
             if (storeParams != null) {
-                OUTPUT_BUILDER.append(String.format("  key=%s%n", storeParams.key.toString()));
-                OUTPUT_BUILDER.append(String.format("  numPartitions=%s%n", storeParams.numPartitions));
+                outputBuilder.append(String.format("  key=%s%n", storeParams.key.toString()));
+                outputBuilder.append(String.format("  numPartitions=%s%n", storeParams.numPartitions));
             } else {
-                OUTPUT_BUILDER.append(String.format("  Store parameters not found%n"));
+                outputBuilder.append(String.format("  Store parameters not found%n"));
             }
         }
 
         private void listReplicaAndGroupAssignments(ZNode storeRoot, ReplicaAssignments replicaAssignments, GroupDescriptor groupDescriptor) throws Exception {
-            OUTPUT_BUILDER.append(String.format("store [%s] replica and group assignments:%n", storeRoot));
+            outputBuilder.append(String.format("store [%s] replica and group assignments:%n", storeRoot));
 
             if ((replicaAssignments != null) && (groupDescriptor != null)) {
                 Map<String, int[]> replicas = new TreeMap<>(replicaAssignments.replicas);
                 Map<String, Integer> groups = groupDescriptor.groups;
                 for (Map.Entry<String, int[]> entry : replicas.entrySet()) {
-                    OUTPUT_BUILDER.append(String.format("  %s = %s, GroupId: %s%n", entry.getKey(), Arrays.toString(entry.getValue()), groups.get(entry.getKey())));
+                    outputBuilder.append(String.format("  %s = %s, GroupId: %s%n", entry.getKey(), Arrays.toString(entry.getValue()), groups.get(entry.getKey())));
                 }
             } else {
-                OUTPUT_BUILDER.append(String.format("  Replicas not found%n"));
+                outputBuilder.append(String.format("  Replicas not found%n"));
             }
         }
 
         private void listConnections(ZNode storeRoot, ConnectionMetadata connectionMetadata) {
-            OUTPUT_BUILDER.append(String.format("store [%s] connections:%n", storeRoot));
+            outputBuilder.append(String.format("store [%s] connections:%n", storeRoot));
 
             if ((connectionMetadata != null)) {
                 Map<String, Integer> connections = connectionMetadata.connections;
                 for (Map.Entry<String, Integer> entry : connections.entrySet()) {
-                    OUTPUT_BUILDER.append(String.format("  %s has admin port: %s%n", entry.getKey(), entry.getValue()));
+                    outputBuilder.append(String.format("  %s has admin port: %s%n", entry.getKey(), entry.getValue()));
                 }
             } else {
-                OUTPUT_BUILDER.append(String.format("  Connections not found%n"));
+                outputBuilder.append(String.format("  Connections not found%n"));
             }
         }
 
         private void listClusterInfoAndServerPartitionAssignments(ZooKeeperClient zkClient, ZNode root) throws Exception {
-            OUTPUT_BUILDER.append(ListCluster.list(root, zkClient));
+            outputBuilder.append(ListCluster.list(root, zkClient));
         }
 
         private void listReplicaState(ZNode znode, Map<ReplicaId, ReplicaState> replicaState) {
-            OUTPUT_BUILDER.append(String.format("store [%s] replica states:%n", znode));
+            outputBuilder.append(String.format("store [%s] replica states:%n", znode));
 
             if (replicaState.size() > 0) {
                 Map<ReplicaId, ReplicaState> sortedReplicaState = new TreeMap<>(replicaState);
                 for (Map.Entry<ReplicaId, ReplicaState> entry : sortedReplicaState.entrySet()) {
-                    OUTPUT_BUILDER.append(String.format("  %s, SessionId: %s, closingHighWaterMark: %s%n",
+                    outputBuilder.append(String.format("  %s, SessionId: %s, closingHighWaterMark: %s%n",
                         entry.getKey(), entry.getValue().sessionId, ((entry.getValue().closingHighWaterMark) == ReplicaState.UNRESOLVED ? "UNRESOLVED" : entry.getValue().closingHighWaterMark)));
                 }
             } else {
-                OUTPUT_BUILDER.append(String.format("  No node found%n"));
+                outputBuilder.append(String.format("  No node found%n"));
             }
         }
 

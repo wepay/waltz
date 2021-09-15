@@ -163,9 +163,9 @@ public final class ClusterCli extends SubcommandCli {
     private static final class Verify extends Cli {
         private static final String NAME = "verify";
         private static final String DESCRIPTION = "Validates if partition(s) is handled by some server";
-        private static final StringBuilder OUTPUT_BUILDER = new StringBuilder();
 
         private final PartitionAssignmentPolicy partitionAssignmentPolicy = new DynamicPartitionAssignmentPolicy();
+        private final StringBuilder outputBuilder = new StringBuilder();
 
         private long timeoutInSeconds = 10;
 
@@ -315,14 +315,13 @@ public final class ClusterCli extends SubcommandCli {
 
                 if (loggerAsOutput) {
                     Logger logger = Logging.getLogger(Verify.class);
-                    String[] splitParagraphs = OUTPUT_BUILDER.toString().split("\n(?=[^\\s])");
+                    String[] splitParagraphs = outputBuilder.toString().split("\n(?=[^\\s])");
                     for (String paragraph : splitParagraphs) {
                         logger.info(paragraph);
                     }
                 } else {
-                    System.out.println(OUTPUT_BUILDER);
+                    System.out.println(outputBuilder);
                 }
-                OUTPUT_BUILDER.setLength(0);
             }
         }
 
@@ -635,8 +634,8 @@ public final class ClusterCli extends SubcommandCli {
 
             ValidationResult validationResult = partitionResult.validationResultsMap.get(type);
             if (validationResult.status.equals(ValidationResult.Status.FAILURE)) {
-                OUTPUT_BUILDER.append(String.format("Validation %s failed for partition %s%n", type.name(), partitionId));
-                OUTPUT_BUILDER.append(String.format("  Validation error is: %s%n", validationResult.error.replace("\n", "\n  ")));
+                outputBuilder.append(String.format("Validation %s failed for partition %s%n", type.name(), partitionId));
+                outputBuilder.append(String.format("  Validation error is: %s%n", validationResult.error.replace("\n", "\n  ")));
                 return false;
             }
             return true;
