@@ -101,7 +101,6 @@ public class Partition {
         this.catchupFeedTask = new FeedTask("C", new LinkedBlockingQueue<>());
         this.pausedFeedContexts = new LinkedList<>();
         this.metricsGroup = String.format("%s.partition-%d", MetricGroup.WALTZ_SERVER_METRIC_GROUP, partitionId);
-
         // Register metrics
         registerMetrics();
 
@@ -336,7 +335,14 @@ public class Partition {
         REGISTRY.gauge(metricsGroup, "total-real-time-feed-context-removed", (Gauge<Long>) () -> getTotalRealtimeFeedContextRemoved());
         REGISTRY.gauge(metricsGroup, "total-catchup-feed-context-added", (Gauge<Integer>) () -> getTotalCatchupFeedContextAdded());
         REGISTRY.gauge(metricsGroup, "total-catchup-feed-context-removed", (Gauge<Integer>) () -> getTotalCatchupFeedContextRemoved());
-        REGISTRY.gauge(metricsGroup, "high-water-mark", (Gauge<Long>) () -> commitHighWaterMark);
+        REGISTRY.gauge(metricsGroup, "high-water-mark", (Gauge<Long>) () -> {
+            try {
+                return storePartition.highWaterMark();
+            } catch (Exception e) {
+                logger.info("Failed to fetch highWaterMark for partition " + partitionId + ".");
+                return Long.MIN_VALUE;
+            }
+        });
     }
 
     private void unregisterMetrics() {
