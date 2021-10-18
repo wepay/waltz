@@ -101,6 +101,7 @@ public class Partition {
         this.catchupFeedTask = new FeedTask("C", new LinkedBlockingQueue<>());
         this.pausedFeedContexts = new LinkedList<>();
         this.metricsGroup = String.format("%s.partition-%d", MetricGroup.WALTZ_SERVER_METRIC_GROUP, partitionId);
+
         // Register metrics
         registerMetrics();
 
