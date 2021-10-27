@@ -336,14 +336,7 @@ public class Partition {
         REGISTRY.gauge(metricsGroup, "total-real-time-feed-context-removed", (Gauge<Long>) () -> getTotalRealtimeFeedContextRemoved());
         REGISTRY.gauge(metricsGroup, "total-catchup-feed-context-added", (Gauge<Integer>) () -> getTotalCatchupFeedContextAdded());
         REGISTRY.gauge(metricsGroup, "total-catchup-feed-context-removed", (Gauge<Integer>) () -> getTotalCatchupFeedContextRemoved());
-        REGISTRY.gauge(metricsGroup, "high-water-mark", (Gauge<Long>) () -> {
-            try {
-                return storePartition.highWaterMark();
-            } catch (Exception e) {
-                logger.info("Failed to fetch highWaterMark for partition " + partitionId + ".");
-                return Long.MIN_VALUE;
-            }
-        });
+        REGISTRY.gauge(metricsGroup, "high-water-mark", (Gauge<Long>) () -> commitHighWaterMark);
     }
 
     private void unregisterMetrics() {
@@ -528,7 +521,8 @@ public class Partition {
 
         @Override
         public void init() throws Exception {
-            locks = new Locks(lockTableSize, 3, storePartition.highWaterMark());
+            commitHighWaterMark = storePartition.highWaterMark();
+            locks = new Locks(lockTableSize, 3, commitHighWaterMark);
         }
 
         @Override

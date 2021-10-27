@@ -64,25 +64,17 @@ public final class ServerCliTest {
 
     @Test
     public void testListPartition() throws Exception {
-        int numStorages = 3;
+//        int numStorages = 3;
         Properties properties =  new Properties();
         properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/server/cli/test");
         properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, "3");
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
-        properties.setProperty(IntegrationTestHelper.Config.NUM_STORAGES, String.valueOf(numStorages));
 
         IntegrationTestHelper helper = new IntegrationTestHelper(properties);
         int jettyPort = helper.getServerJettyPort();
 
         try {
             helper.startZooKeeperServer();
-
-            for (int s = 0; s < numStorages; s++) {
-                WaltzStorageRunner storageRunner = helper.getWaltzStorageRunner(s);
-                storageRunner.startAsync();
-                storageRunner.awaitStart();
-                helper.setWaltzStorageAssignmentWithIndex(s, true);
-            }
 
             helper.startWaltzServer(true);
 
@@ -103,13 +95,11 @@ public final class ServerCliTest {
     public void testAddAndRemovePreferredPartition() throws Exception {
         int numPartitions = 8;
         int numServers = 2;
-        int numStorages = 3;
         Properties properties =  new Properties();
         properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/server/cli/test");
         properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, String.valueOf(numPartitions));
         properties.setProperty(IntegrationTestHelper.Config.NUM_SERVERS, String.valueOf(numServers));
         properties.setProperty(IntegrationTestHelper.Config.ZK_SESSION_TIMEOUT, "30000");
-        properties.setProperty(IntegrationTestHelper.Config.NUM_STORAGES, String.valueOf(numStorages));
 
         IntegrationTestHelper helper = new IntegrationTestHelper(properties);
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(), helper.getSslSetup());
@@ -121,13 +111,6 @@ public final class ServerCliTest {
         PartitionAssignment partitionAssignment = null;
         try {
             helper.startZooKeeperServer();
-
-            for (int s = 0; s < numStorages; s++) {
-                WaltzStorageRunner storageRunner = helper.getWaltzStorageRunner(s);
-                storageRunner.startAsync();
-                storageRunner.awaitStart();
-                helper.setWaltzStorageAssignmentWithIndex(s, true);
-            }
 
             // Start Server 1
             WaltzServerRunner serverRunner1 = helper.getWaltzServerRunner(0);
