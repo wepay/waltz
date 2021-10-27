@@ -4,7 +4,6 @@ import com.wepay.waltz.test.util.IntegrationTestHelper;
 import com.wepay.waltz.test.util.SeparateClassLoaderJUnitRunner;
 import com.wepay.waltz.test.util.SslSetup;
 import com.wepay.waltz.test.util.WaltzServerRunner;
-import com.wepay.waltz.test.util.WaltzStorageRunner;
 import com.wepay.waltz.tools.CliConfig;
 import com.wepay.zktools.clustermgr.PartitionInfo;
 import com.wepay.zktools.clustermgr.internal.PartitionAssignment;
@@ -64,7 +63,6 @@ public final class ServerCliTest {
 
     @Test
     public void testListPartition() throws Exception {
-//        int numStorages = 3;
         Properties properties =  new Properties();
         properties.setProperty(IntegrationTestHelper.Config.ZNODE_PATH, "/server/cli/test");
         properties.setProperty(IntegrationTestHelper.Config.NUM_PARTITIONS, "3");
@@ -75,7 +73,6 @@ public final class ServerCliTest {
 
         try {
             helper.startZooKeeperServer();
-
             helper.startWaltzServer(true);
 
             String[] args = {
