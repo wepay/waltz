@@ -25,6 +25,7 @@ project.ext {
     riffVersion = '2.4.6'
     jacksonVersion = '2.9.6'
     jettyVersion = '9.4.12.v20180830'
+    bouncyCastle = '1.68'
     mainClass = 'Main'
     buildVersionFileName = "waltz-version.properties"
 }
@@ -217,6 +218,7 @@ project(':waltz-server') {
             "org.slf4j:slf4j-api:$slf4jVersion",
             "org.eclipse.jetty:jetty-server:$jettyVersion",
             "org.eclipse.jetty:jetty-servlet:$jettyVersion",
+            "org.bouncycastle:bcpkix-jdk15on:$bouncyCastle",
         )
 
         testCompile (
@@ -278,6 +280,7 @@ project(':waltz-storage') {
             "org.yaml:snakeyaml:$yamlVersion",
             "org.eclipse.jetty:jetty-server:$jettyVersion",
             "org.eclipse.jetty:jetty-servlet:$jettyVersion",
+            "org.bouncycastle:bcpkix-jdk15on:$bouncyCastle",
         )
 
         testCompile (
@@ -382,7 +385,8 @@ project(':waltz-client') {
             "com.wepay.riff:riff-config:$riffVersion",
             "com.wepay.zktools:zktools:$zkToolsVersion",
             "io.netty:netty-all:$nettyVersion",
-            "org.slf4j:slf4j-api:$slf4jVersion"
+            "org.slf4j:slf4j-api:$slf4jVersion",
+            "org.bouncycastle:bcpkix-jdk15on:$bouncyCastle",
         )
 
         testCompile (
