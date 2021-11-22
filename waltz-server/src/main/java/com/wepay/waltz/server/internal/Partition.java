@@ -521,7 +521,8 @@ public class Partition {
 
         @Override
         public void init() throws Exception {
-            locks = new Locks(lockTableSize, 3, storePartition.highWaterMark());
+            commitHighWaterMark = storePartition.highWaterMark();
+            locks = new Locks(lockTableSize, 3, commitHighWaterMark);
         }
 
         @Override
