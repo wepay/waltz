@@ -407,7 +407,19 @@ public class Partition {
     private boolean isValid(PartitionClient client) {
         synchronized (partitionClientSeqNums) {
             Long currentSeqNum = partitionClientSeqNums.get(client.clientId());
-            return currentSeqNum != null && currentSeqNum.equals(client.seqNum());
+            if (currentSeqNum == null) {
+                logger.info(String.format("CurrentSeqNum is null. PartitionClient not valid. ClientId: %s, PartitionId: %d, "
+                        + "WaltzServerHandler SeqNum: %s",
+                    client.clientId(), partitionId, client.seqNum()));
+                return false;
+            } else if (!currentSeqNum.equals(client.seqNum())) {
+                logger.info(String.format("CurrentSeqNum is not equal to WaltzServerHandler seqNum. PartitionClient not valid. "
+                        + "WaltzServerHandler seqNum %d, PartitionId: %d, CurrentSeqNum: %d",
+                    client.clientId(), partitionId, currentSeqNum));
+                return false;
+            } else {
+                return true;
+            }
         }
     }
 
@@ -428,7 +440,10 @@ public class Partition {
 
             if (fetchSize == 0) {
                 // The client is up to date. Send the response immediately. No need to enqueue a feed context.
-                client.sendMessage(response, true);
+                if (!client.sendMessage(response, true)) {
+                    logger.info(String.format("Unable to send mount response message. Channel ctx is null. ClientId: %s, SeqNum: %d, RequestId: %s",
+                        client.clientId(), request.seqNum, request.reqId));
+                }
             } else {
                 // Must bring the client up to date before mounting the partition
                 addFeedContext(request, fetchSize, response, client);
