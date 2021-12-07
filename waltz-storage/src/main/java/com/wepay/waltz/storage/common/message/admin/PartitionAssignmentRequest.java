@@ -1,5 +1,7 @@
 package com.wepay.waltz.storage.common.message.admin;
 
+import java.util.List;
+
 /**
  * An subclass of {@link AdminMessage} that updates the partition ownership of a given storage node.
  * Toggle true to add a partition ownership to a storage node. Toggle false to remove a partition
@@ -9,14 +11,14 @@ package com.wepay.waltz.storage.common.message.admin;
  */
 public class PartitionAssignmentRequest extends AdminMessage {
 
-    public final int partitionId;
+    public final List<Integer> partitionIds;
     public final boolean toggled;
     public final boolean deleteStorageFiles;
 
-    public PartitionAssignmentRequest(long seqNum, int partitionId, boolean toggled, boolean deleteStorageFiles) {
+    public PartitionAssignmentRequest(long seqNum, List<Integer> partitionIds, boolean toggled, boolean deleteStorageFiles) {
         super(seqNum);
 
-        this.partitionId = partitionId;
+        this.partitionIds = partitionIds;
         this.toggled = toggled;
         this.deleteStorageFiles = deleteStorageFiles;
     }

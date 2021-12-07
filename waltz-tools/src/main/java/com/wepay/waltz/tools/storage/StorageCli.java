@@ -23,6 +23,7 @@ import com.wepay.waltz.common.metadata.ReplicaAssignments;
 import com.wepay.waltz.common.metadata.StoreMetadata;
 import com.wepay.waltz.common.metadata.StoreParams;
 import com.wepay.waltz.tools.CliConfig;
+import com.wepay.waltz.tools.CliUtils;
 import com.wepay.zktools.zookeeper.ZNode;
 import com.wepay.zktools.zookeeper.ZooKeeperClient;
 import com.wepay.zktools.zookeeper.internal.ZooKeeperClientImpl;
@@ -272,7 +273,7 @@ public final class StorageCli extends SubcommandCli {
                     .build();
             Option partitionOption = Option.builder("p")
                     .longOpt("partition")
-                    .desc("Specify the partition id to be added to the storage node")
+                    .desc("Specify the partition (or multiple partitions as comma-separated int ranges such as 0-6,7,10-16) to be added to the given server")
                     .hasArg()
                     .build();
             Option cliCfgOption = Option.builder("c")
@@ -304,17 +305,15 @@ public final class StorageCli extends SubcommandCli {
                 String storageHost = hostAndPortArray[0];
                 String storagePort = hostAndPortArray[1];
 
-                if (!partitionId.matches("^[0-9]+$")) {
-                    throw new IllegalArgumentException(String.format("Partition id '%s' is invalid. Expected a non-negative integer", partitionId));
-                }
+                List<Integer> partitionIds = CliUtils.parseIntRanges(partitionId);
 
-                addPartition(storageHost, Integer.parseInt(storagePort), Integer.parseInt(partitionId), cliConfigPath);
+                addPartition(storageHost, Integer.parseInt(storagePort), partitionIds, cliConfigPath);
             } catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Failed to add partition %s. %n%s", partitionId, e.getMessage()));
             }
         }
 
-        private void addPartition(String storageHost, int storagePort, int partitionId, String cliConfigPath) throws Exception {
+        private void addPartition(String storageHost, int storagePort, List<Integer> partitionIds, String cliConfigPath) throws Exception {
             ZooKeeperClient zkClient = null;
             StorageAdminClient storageAdminClient = null;
             CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
@@ -330,7 +329,7 @@ public final class StorageCli extends SubcommandCli {
 
                 storageAdminClient = openStorageAdminClient(storageHost, storagePort, sslContext, zkClient, zkRoot);
 
-                storageAdminClient.setPartitionAssignment(partitionId, true, false).get();
+                storageAdminClient.setPartitionAssignment(partitionIds, true, false).get();
             } finally {
                 if (zkClient != null) {
                     zkClient.close();
@@ -367,7 +366,7 @@ public final class StorageCli extends SubcommandCli {
                     .build();
             Option partitionOption = Option.builder("p")
                     .longOpt("partition")
-                    .desc("Specify the partition id to be added to the storage node")
+                    .desc("Specify partition (or multiple partitions as comma-separated int ranges such as 0-6,7,10-16) to be added to the storage node")
                     .hasArg()
                     .build();
             Option onlineOption = Option.builder("o")
@@ -407,22 +406,20 @@ public final class StorageCli extends SubcommandCli {
                 String storageHost = hostAndPortArray[0];
                 String storagePort = hostAndPortArray[1];
 
-                if (!partitionId.matches("^[0-9]+$")) {
-                    throw new IllegalArgumentException("Partition id must be a non-negative integer");
-                }
+                List<Integer> partitionIds = CliUtils.parseIntRanges(partitionId);
 
                 if (isOnline != null && !isOnline.equals("true") && !isOnline.equals("false")) {
                     throw new IllegalArgumentException("--online must be set to 'true' or 'false'");
                 }
 
-                setAvailability(storageHost, Integer.parseInt(storagePort), Integer.parseInt(partitionId), Boolean.parseBoolean(isOnline), cliConfigPath);
+                setAvailability(storageHost, Integer.parseInt(storagePort), partitionIds, Boolean.parseBoolean(isOnline), cliConfigPath);
             } catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Failed to set availability of partition %s to %s "
                         + "for %s. %n%s", partitionId, isOnline, hostAndPort, e.getMessage()));
             }
         }
 
-        private void setAvailability(String storageHost, int storagePort, int partitionId, boolean isAvailable, String cliConfigPath) throws Exception {
+        private void setAvailability(String storageHost, int storagePort, List<Integer> partitionIds, boolean isAvailable, String cliConfigPath) throws Exception {
             ZooKeeperClient zkClient = null;
             StorageAdminClient storageAdminClient = null;
             CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
@@ -435,7 +432,7 @@ public final class StorageCli extends SubcommandCli {
                 SslContext sslContext = Utils.getSslContext(cliConfigPath, CliConfig.SSL_CONFIG_PREFIX);
                 zkClient = new ZooKeeperClientImpl(zkConnectString, zkSessionTimeout, zkConnectTimeout);
                 storageAdminClient = openStorageAdminClient(storageHost, storagePort, sslContext, zkClient, zkRoot);
-                storageAdminClient.setPartitionAvailable(partitionId, isAvailable).get();
+                storageAdminClient.setPartitionAvailable(partitionIds, isAvailable).get();
             } finally {
                 if (zkClient != null) {
                     zkClient.close();
@@ -474,7 +471,7 @@ public final class StorageCli extends SubcommandCli {
                     .build();
             Option partitionOption = Option.builder("p")
                     .longOpt("partition")
-                    .desc("Specify the partition id to be removed from the storage node")
+                    .desc("Specify preferred partition (or multiple partitions as comma-separated int ranges such as 0-6,7,10-16) to be removed from the storage node")
                     .hasArg()
                     .build();
             Option cliCfgOption = Option.builder("c")
@@ -517,11 +514,9 @@ public final class StorageCli extends SubcommandCli {
                 String storageHost = hostAndPortArray[0];
                 String storagePort = hostAndPortArray[1];
 
-                if (!partitionId.matches("^[0-9]+$")) {
-                    throw new IllegalArgumentException("Partition id must be a non-negative integer");
-                }
+                List<Integer> partitionIds = CliUtils.parseIntRanges(partitionId);
 
-                removePartition(storageHost, Integer.parseInt(storagePort), Integer.parseInt(partitionId), cliConfigPath, deleteStorageFiles);
+                removePartition(storageHost, Integer.parseInt(storagePort), partitionIds, cliConfigPath, deleteStorageFiles);
             } catch (Exception e) {
                 throw new SubCommandFailedException(String.format("Failed to remove partition %s from %s. %n%s",
                     partitionId, hostAndPort, e.getMessage()));
@@ -534,12 +529,12 @@ public final class StorageCli extends SubcommandCli {
          *
          * @param storageHost                   storage host
          * @param storagePort                   storage port
-         * @param partitionId                   the partition id
+         * @param partitionIds                  the list of partition Ids.
          * @param cliConfigPath                 the cli config file path required for zooKeeper connection string, zooKeeper root path and SSL config file path
          * @param deleteStorageFiles            Determines whether to delete the storage files within the partition or not
          * @throws Exception
          */
-        private void removePartition(String storageHost, int storagePort, int partitionId, String cliConfigPath, boolean deleteStorageFiles) throws Exception {
+        private void removePartition(String storageHost, int storagePort, List<Integer> partitionIds, String cliConfigPath, boolean deleteStorageFiles) throws Exception {
             ZooKeeperClient zkClient = null;
             StorageAdminClient storageAdminClient = null;
             CliConfig cliConfig = CliConfig.parseCliConfigFile(cliConfigPath);
@@ -555,7 +550,7 @@ public final class StorageCli extends SubcommandCli {
 
                 storageAdminClient = openStorageAdminClient(storageHost, storagePort, sslContext, zkClient, zkRoot);
 
-                storageAdminClient.setPartitionAssignment(partitionId, false, deleteStorageFiles).get();
+                storageAdminClient.setPartitionAssignment(partitionIds, false, deleteStorageFiles).get();
             } finally {
                 if (zkClient != null) {
                     zkClient.close();
@@ -806,7 +801,7 @@ public final class StorageCli extends SubcommandCli {
                 for (Map.Entry<String, int[]> assignment : assignments.replicas.entrySet()) {
                     String storageConnectString = assignment.getKey();
                     String storageHost = storageConnectString.split(":")[0];
-                    int[] partitionIds = assignment.getValue();
+                    List<Integer> partitionIds = Arrays.stream(assignment.getValue()).boxed().collect(Collectors.toList());
                     int storageAdminPort = connectionMetadata.connections.get(storageConnectString);
                     StorageAdminClient storageAdminClient = null;
 
@@ -819,17 +814,12 @@ public final class StorageCli extends SubcommandCli {
                         HashMap<Integer, Boolean> assignedPartitionStatus =
                             (HashMap<Integer, Boolean>) storageAdminClient.getAssignedPartitionStatus().get();
 
-                        for (int partitionId : partitionIds) {
-                            if ((assignedPartitionStatus.get(partitionId) == null) || !assignedPartitionStatus.get(partitionId)) {
-                                futures.add(storageAdminClient.setPartitionAssignment(partitionId, true, false));
-                            }
-                            assignedPartitionStatus.remove(partitionId);
-                        }
+                        List<Integer> unassignedPartitions = partitionIds.stream().filter(partitionId -> assignedPartitionStatus.get(partitionId) == null || !assignedPartitionStatus.get(partitionId)).collect(Collectors.toList());
+                        partitionIds.stream().forEach(assignedPartitionStatus::remove);
+                        futures.add(storageAdminClient.setPartitionAssignment(unassignedPartitions, true, false));
 
                         // Remove the remaining old partitions that are no longer to be handled.
-                        for (int partitionId : assignedPartitionStatus.keySet()) {
-                            futures.add(storageAdminClient.setPartitionAssignment(partitionId, false, false));
-                        }
+                        futures.add(storageAdminClient.setPartitionAssignment(new ArrayList<>(assignedPartitionStatus.keySet()), false, false));
 
                         CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).get();
                     } finally {

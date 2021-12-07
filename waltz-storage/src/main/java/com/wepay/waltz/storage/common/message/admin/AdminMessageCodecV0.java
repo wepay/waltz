@@ -47,10 +47,10 @@ public class AdminMessageCodecV0 implements MessageCodec {
                 return new AdminOpenRequest(new UUID(reader.readLong(), reader.readLong()), reader.readInt());
 
             case AdminMessageType.PARTITION_AVAILABLE_REQUEST:
-                return new PartitionAvailableRequest(seqNum, reader.readInt(), reader.readBoolean());
+                return new PartitionAvailableRequest(seqNum, reader.readIntList(), reader.readBoolean());
 
             case AdminMessageType.PARTITION_ASSIGNMENT_REQUEST:
-                return new PartitionAssignmentRequest(seqNum, reader.readInt(), reader.readBoolean(), reader.readBoolean());
+                return new PartitionAssignmentRequest(seqNum, reader.readIntList(), reader.readBoolean(), reader.readBoolean());
 
             case AdminMessageType.RECORD_LIST_REQUEST:
                 return new RecordListRequest(seqNum, reader.readInt(), reader.readLong(), reader.readInt());
@@ -117,13 +117,13 @@ public class AdminMessageCodecV0 implements MessageCodec {
 
             case AdminMessageType.PARTITION_AVAILABLE_REQUEST:
                 PartitionAvailableRequest partitionAvailableRequest = (PartitionAvailableRequest) msg;
-                writer.writeInt(partitionAvailableRequest.partitionId);
+                writer.writeIntList(partitionAvailableRequest.partitionsIds);
                 writer.writeBoolean(partitionAvailableRequest.toggled);
                 break;
 
             case AdminMessageType.PARTITION_ASSIGNMENT_REQUEST:
                 PartitionAssignmentRequest partitionAssignmentRequest = (PartitionAssignmentRequest) msg;
-                writer.writeInt(partitionAssignmentRequest.partitionId);
+                writer.writeIntList(partitionAssignmentRequest.partitionIds);
                 writer.writeBoolean(partitionAssignmentRequest.toggled);
                 writer.writeBoolean(partitionAssignmentRequest.deleteStorageFiles);
                 break;

@@ -1,5 +1,7 @@
 package com.wepay.waltz.storage.common.message.admin;
 
+import java.util.List;
+
 /**
  * An subclass of {@link AdminMessage} that updates the partition availability of a given storage node.
  * Toggle true to allow the storage node to read and write a partition. Toggle false to
@@ -7,13 +9,13 @@ package com.wepay.waltz.storage.common.message.admin;
  */
 public class PartitionAvailableRequest extends AdminMessage {
 
-    public final int partitionId;
+    public final List<Integer> partitionsIds;
     public final boolean toggled;
 
-    public PartitionAvailableRequest(long seqNum, int partitionId, boolean toggled) {
+    public PartitionAvailableRequest(long seqNum, List<Integer> partitionIds, boolean toggled) {
         super(seqNum);
 
-        this.partitionId = partitionId;
+        this.partitionsIds = partitionIds;
         this.toggled = toggled;
     }
 

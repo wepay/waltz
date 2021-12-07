@@ -30,7 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.concurrent.Future;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * This an utility class that helps integration test. It is common
@@ -422,13 +423,8 @@ public class IntegrationTestHelper {
     public void setWaltzStorageAssignmentWithPort(int adminPort, boolean isAssigned) throws Exception {
         StorageAdminClient storageAdminClient = getStorageAdminClientWithAdminPort(adminPort);
 
-        List<Future<?>> futures = new ArrayList<>(numPartitions);
-        for (int i = 0; i < numPartitions; i++) {
-            futures.add(storageAdminClient.setPartitionAssignment(i, isAssigned, isAssigned ? false : true));
-        }
-        for (Future<?> future : futures) {
-            future.get();
-        }
+        List<Integer> partitionIds = IntStream.range(0, numPartitions).boxed().collect(Collectors.toList());
+        storageAdminClient.setPartitionAssignment(partitionIds, isAssigned, isAssigned ? false : true).get();
     }
 
     public void closeAll() throws Exception {

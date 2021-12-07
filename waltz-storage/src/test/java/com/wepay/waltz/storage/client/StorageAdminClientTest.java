@@ -24,10 +24,14 @@ import org.junit.Test;
 import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -111,9 +115,9 @@ public final class StorageAdminClientTest {
             int adminPort = waltzStorage.adminPort;
             StorageAdminClient adminClient = new StorageAdminClient(host, adminPort, sslCtx, key, NUM_PARTITIONS);
             adminClient.open();
-            for (int i = 0; i < NUM_PARTITIONS; i++) {
-                adminClient.setPartitionAssignment(i, true, false).get();
-            }
+            List<Integer> partitionIds = IntStream.range(0, NUM_PARTITIONS).boxed().collect(Collectors.toList());
+            adminClient.setPartitionAssignment(partitionIds, true, false).get();
+
 
             ArrayList<Record> records = ClientUtil.makeRecords(0, 10);
             int port = waltzStorage.port;
@@ -128,7 +132,7 @@ public final class StorageAdminClientTest {
             assertEquals(record.header, returnedRecord.header);
             assertArrayEquals(record.data, returnedRecord.data);
             assertEquals(record.checksum, returnedRecord.checksum);
-            adminClient.setPartitionAvailable(0, false).get();
+            adminClient.setPartitionAvailable(Arrays.asList(0), false).get();
             try {
                 client.getRecord(SESSION_ID, 0, records.get(0).transactionId).get();
                 fail();
@@ -155,9 +159,8 @@ public final class StorageAdminClientTest {
             int adminPort = waltzStorage.adminPort;
             StorageAdminClient adminClient = new StorageAdminClient(host, adminPort, sslCtx, key, NUM_PARTITIONS);
             adminClient.open();
-            for (int i = 0; i < NUM_PARTITIONS; i++) {
-                adminClient.setPartitionAssignment(i, true, false).get();
-            }
+            List<Integer> partitionIds = IntStream.range(0, NUM_PARTITIONS).boxed().collect(Collectors.toList());
+            adminClient.setPartitionAssignment(partitionIds, true, false).get();
 
             ArrayList<Record> records = ClientUtil.makeRecords(0, 10);
             ArrayList<Record> records2 = ClientUtil.makeRecords(10, 20);
@@ -166,7 +169,7 @@ public final class StorageAdminClientTest {
             client.open();
             client.setLowWaterMark(SESSION_ID, 0, -1L).get();
             client.appendRecords(SESSION_ID, 0, records).get();
-            adminClient.setPartitionAvailable(0, false).get();
+            adminClient.setPartitionAvailable(Arrays.asList(0), false).get();
             try {
                 client.appendRecords(SESSION_ID, 0, records2).get();
                 fail();
@@ -195,9 +198,8 @@ public final class StorageAdminClientTest {
             int adminPort = waltzStorage.adminPort;
             StorageAdminClient adminClient = new StorageAdminClient(host, adminPort, sslCtx, key, NUM_PARTITIONS);
             adminClient.open();
-            for (int i = 0; i < NUM_PARTITIONS; i++) {
-                adminClient.setPartitionAssignment(i, true, false).get();
-            }
+            List<Integer> partitionIds = IntStream.range(0, NUM_PARTITIONS).boxed().collect(Collectors.toList());
+            adminClient.setPartitionAssignment(partitionIds, true, false).get();
 
             // Write records.
             ArrayList<Record> records = ClientUtil.makeRecords(0, 10);
@@ -239,9 +241,8 @@ public final class StorageAdminClientTest {
             int adminPort = waltzStorage.adminPort;
             StorageAdminClient adminClient = new StorageAdminClient(host, adminPort, sslCtx, key, NUM_PARTITIONS);
             adminClient.open();
-            for (int i = 0; i < NUM_PARTITIONS; i++) {
-                adminClient.setPartitionAssignment(i, true, false).get();
-            }
+            List<Integer> partitionIds = IntStream.range(0, NUM_PARTITIONS).boxed().collect(Collectors.toList());
+            adminClient.setPartitionAssignment(partitionIds, true, false).get();
 
             // Write records.
             ArrayList<Record> records = ClientUtil.makeRecords(0, 10);

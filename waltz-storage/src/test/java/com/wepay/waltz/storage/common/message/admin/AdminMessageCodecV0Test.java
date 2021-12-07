@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class AdminMessageCodecV0Test {
     private final AdminMessageCodecV0 codec = new AdminMessageCodecV0();
@@ -26,11 +27,11 @@ public class AdminMessageCodecV0Test {
 
     @Test
     public void testSetPartitionAvailableRequest() {
-        PartitionAvailableRequest partitionAvailableRequest1 = new PartitionAvailableRequest(2, 3, true);
+        PartitionAvailableRequest partitionAvailableRequest1 = new PartitionAvailableRequest(2, Arrays.asList(3, 4), true);
         PartitionAvailableRequest partitionAvailableRequest2 = encodeThenDecode(partitionAvailableRequest1);
         assertEquals(AdminMessageType.PARTITION_AVAILABLE_REQUEST, partitionAvailableRequest1.type());
         assertEquals(partitionAvailableRequest1.type(), partitionAvailableRequest2.type());
-        assertEquals(partitionAvailableRequest1.partitionId, partitionAvailableRequest2.partitionId);
+        assertTrue(partitionAvailableRequest1.partitionsIds.containsAll(partitionAvailableRequest2.partitionsIds));
         assertEquals(partitionAvailableRequest1.seqNum, partitionAvailableRequest2.seqNum);
         assertEquals(partitionAvailableRequest1.toggled, partitionAvailableRequest2.toggled);
     }
@@ -38,10 +39,10 @@ public class AdminMessageCodecV0Test {
     @Test
     public void testPartitionAssignmentRequest() {
         PartitionAssignmentRequest partitionAssignmentRequest1 = new PartitionAssignmentRequest(
-                rand.nextLong(), rand.nextInt(), rand.nextBoolean(), rand.nextBoolean());
+                rand.nextLong(), Arrays.asList(rand.nextInt()), rand.nextBoolean(), rand.nextBoolean());
         PartitionAssignmentRequest partitionAssignmentRequest2 = encodeThenDecode(partitionAssignmentRequest1);
         assertEquals(AdminMessageType.PARTITION_ASSIGNMENT_REQUEST, partitionAssignmentRequest1.type());
-        assertEquals(partitionAssignmentRequest1.partitionId, partitionAssignmentRequest2.partitionId);
+        assertTrue(partitionAssignmentRequest1.partitionIds.containsAll(partitionAssignmentRequest2.partitionIds));
         assertEquals(partitionAssignmentRequest1.seqNum, partitionAssignmentRequest2.seqNum);
         assertEquals(partitionAssignmentRequest1.toggled, partitionAssignmentRequest2.toggled);
         assertEquals(partitionAssignmentRequest1.deleteStorageFiles, partitionAssignmentRequest2.deleteStorageFiles);
