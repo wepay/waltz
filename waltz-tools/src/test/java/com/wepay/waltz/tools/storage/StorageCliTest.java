@@ -188,7 +188,6 @@ public final class StorageCliTest {
         int numPartitions = 5;
         IntegrationTestHelper helper = getIntegrationTestHelper(numPartitions);
         int partitionId1 = new Random().nextInt(helper.getNumPartitions());
-        // ensure partitionId2 is different from partitionId1
         int partitionId2 = (partitionId1 + 1) % helper.getNumPartitions();
 
 
@@ -419,8 +418,7 @@ public final class StorageCliTest {
         int numPartitions = 5;
         IntegrationTestHelper helper = getIntegrationTestHelper(numPartitions);
         int partitionId1 = new Random().nextInt(helper.getNumPartitions());
-        // ensure partitionId2 is different from partitionId1
-        int partitionId2 = (partitionId1 + 1 + new Random().nextInt(helper.getNumPartitions() - 2)) % helper.getNumPartitions();
+        int partitionId2 = (partitionId1 + 1) % helper.getNumPartitions();
 
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(), helper.getSslSetup());
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
