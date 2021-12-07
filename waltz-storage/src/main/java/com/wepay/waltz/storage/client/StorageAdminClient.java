@@ -24,6 +24,7 @@ import com.wepay.waltz.storage.exception.StorageRpcException;
 import io.netty.handler.ssl.SslContext;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -47,23 +48,23 @@ public class StorageAdminClient extends StorageBaseClient {
 
     /**
      * Sets a partition's available flag.
-     * @param partitionId the partition id
+     * @param partitionIds the list of partition ids
      * @param isAvailable whether storage clients are allowed to read and write the partition
      * @return Future of Boolean
      */
-    public CompletableFuture<Object> setPartitionAvailable(int partitionId, boolean isAvailable) {
-        return call(new PartitionAvailableRequest(seqNum.getAndIncrement(), partitionId, isAvailable));
+    public CompletableFuture<Object> setPartitionAvailable(List<Integer> partitionIds, boolean isAvailable) {
+        return call(new PartitionAvailableRequest(seqNum.getAndIncrement(), partitionIds, isAvailable));
     }
 
     /**
      * Assign/unassign ownership of a partition for a storage client
-     * @param partitionId the partition id
+     * @param partitionIds the list of partition ids
      * @param isAssigned whether the storage node has ownership of the partition
      * @param deleteStorageFiles whether to delete the storage files within the partition
      * @return Future of Boolean
      */
-    public CompletableFuture<Object> setPartitionAssignment(int partitionId, boolean isAssigned, boolean deleteStorageFiles) {
-        return call(new PartitionAssignmentRequest(seqNum.getAndIncrement(), partitionId, isAssigned, deleteStorageFiles));
+    public CompletableFuture<Object> setPartitionAssignment(List<Integer> partitionIds, boolean isAssigned, boolean deleteStorageFiles) {
+        return call(new PartitionAssignmentRequest(seqNum.getAndIncrement(), partitionIds, isAssigned, deleteStorageFiles));
     }
 
     /**

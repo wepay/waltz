@@ -11,8 +11,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Coordinates {@link ControlFile} and {@link Partition} object creation and manages a storage node's directory
@@ -127,24 +129,26 @@ public class StorageManager {
         }
     }
 
-    public void setPartitionAssignment(int partitionId, boolean isAssigned, boolean deleteStorageFiles) throws ConcurrentUpdateException, IOException, StorageException {
+    public void setPartitionAssignment(List<Integer> partitionIds, boolean isAssigned, boolean deleteStorageFiles) throws ConcurrentUpdateException, IOException, StorageException {
         synchronized (this) {
             if (running) {
-                PartitionInfo partitionInfo = controlFile.getPartitionInfo(partitionId);
-                if (isAssigned) {
-                    createPartition(partitionId);
-                    partitionInfo.setFlag(PartitionInfo.Flags.PARTITION_IS_ASSIGNED, true);
-                } else {
-                    partitionInfo.reset();
+                for (int partitionId : partitionIds) {
+                    PartitionInfo partitionInfo = controlFile.getPartitionInfo(partitionId);
+                    if (isAssigned) {
+                        createPartition(partitionId);
+                        partitionInfo.setFlag(PartitionInfo.Flags.PARTITION_IS_ASSIGNED, true);
+                    } else {
+                        partitionInfo.reset();
 
-                    Partition partition = getPartition(partitionId);
-                    partition.close();
+                        Partition partition = getPartition(partitionId);
+                        partition.close();
 
-                    if (deleteStorageFiles) {
-                        partition.deleteSegments();
+                        if (deleteStorageFiles) {
+                            partition.deleteSegments();
+                        }
+
+                        partitions.remove(partitionId);
                     }
-
-                    partitions.remove(partitionId);
                 }
             } else {
                 throw new StorageException("Control file is already closed.");
@@ -152,11 +156,13 @@ public class StorageManager {
         }
     }
 
-    public void setPartitionAvailable(int partitionId, boolean isAvailable) throws ConcurrentUpdateException, IOException, StorageException {
+    public void setPartitionAvailable(List<Integer> partitionIds, boolean isAvailable) throws ConcurrentUpdateException, IOException, StorageException {
         synchronized (this) {
             if (running) {
-                PartitionInfo partitionInfo = controlFile.getPartitionInfo(partitionId);
-                partitionInfo.setFlag(PartitionInfo.Flags.PARTITION_IS_AVAILABLE, isAvailable);
+                List<PartitionInfo> partitionsInfo = partitionIds.stream().map(controlFile::getPartitionInfo).collect(Collectors.toList());
+                for (PartitionInfo partitionInfo : partitionsInfo) {
+                    partitionInfo.setFlag(PartitionInfo.Flags.PARTITION_IS_AVAILABLE, isAvailable);
+                }
             } else {
                 throw new StorageException("Control file is already closed.");
             }

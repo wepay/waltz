@@ -39,6 +39,8 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -183,9 +185,12 @@ public final class StorageCliTest {
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     @Test
     public void testAddAndRemovePartition() throws Exception {
-        int numPartitions = 3;
+        int numPartitions = 5;
         IntegrationTestHelper helper = getIntegrationTestHelper(numPartitions);
-        int partitionId = new Random().nextInt(helper.getNumPartitions());
+        int partitionId1 = new Random().nextInt(helper.getNumPartitions());
+        // ensure partitionId2 is different from partitionId1
+        int partitionId2 = (partitionId1 + 1) % helper.getNumPartitions();
+
 
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(), helper.getSslSetup());
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
@@ -207,9 +212,18 @@ public final class StorageCliTest {
         PartitionInfoSnapshot info = storage
                 .getPartitionInfos()
                 .stream()
-                .filter(pis -> pis.partitionId == partitionId)
+                .filter(pis -> pis.partitionId == partitionId1)
                 .findFirst()
                 .get();
+        assertFalse(info.isAssigned);
+
+        // default partition assignment is set to True
+        info = storage
+            .getPartitionInfos()
+            .stream()
+            .filter(pis -> pis.partitionId == partitionId2)
+            .findFirst()
+            .get();
         assertFalse(info.isAssigned);
 
         try {
@@ -217,7 +231,7 @@ public final class StorageCliTest {
             String[] args1 = {
                     "add-partition",
                     "--storage", "badhost.local:" + adminPort,
-                    "--partition", String.valueOf(partitionId),
+                    "--partition", String.format("%d, %d", partitionId1, partitionId2),
                     "--cli-config-path", configFilePath
             };
 
@@ -225,16 +239,24 @@ public final class StorageCliTest {
             info = storage
                     .getPartitionInfos()
                     .stream()
-                    .filter(pis -> pis.partitionId == partitionId)
+                    .filter(pis -> pis.partitionId == partitionId1)
                     .findFirst()
                     .get();
+            assertFalse(info.isAssigned);
+
+            info = storage
+                .getPartitionInfos()
+                .stream()
+                .filter(pis -> pis.partitionId == partitionId2)
+                .findFirst()
+                .get();
             assertFalse(info.isAssigned);
 
             // add partition success
             String[] args2 = {
                     "add-partition",
                     "--storage", adminConnectString,
-                    "--partition", String.valueOf(partitionId),
+                    "--partition", String.format("%d, %d", partitionId1, partitionId2),
                     "--cli-config-path", configFilePath
             };
 
@@ -242,16 +264,24 @@ public final class StorageCliTest {
             info = storage
                     .getPartitionInfos()
                     .stream()
-                    .filter(pis -> pis.partitionId == partitionId)
+                    .filter(pis -> pis.partitionId == partitionId1)
                     .findFirst()
                     .get();
+            assertTrue(info.isAssigned);
+
+            info = storage
+                .getPartitionInfos()
+                .stream()
+                .filter(pis -> pis.partitionId == partitionId2)
+                .findFirst()
+                .get();
             assertTrue(info.isAssigned);
 
             // remove partition failure
             String[] args3 = {
                     "remove-partition",
                     "--storage", "badhost.local:" + adminPort,
-                    "--partition", String.valueOf(partitionId),
+                    "--partition", String.format("%d, %d", partitionId1, partitionId2),
                     "--cli-config-path", configFilePath
             };
 
@@ -259,16 +289,24 @@ public final class StorageCliTest {
             info = storage
                     .getPartitionInfos()
                     .stream()
-                    .filter(pis -> pis.partitionId == partitionId)
+                    .filter(pis -> pis.partitionId == partitionId1)
                     .findFirst()
                     .get();
+            assertTrue(info.isAssigned);
+
+            info = storage
+                .getPartitionInfos()
+                .stream()
+                .filter(pis -> pis.partitionId == partitionId2)
+                .findFirst()
+                .get();
             assertTrue(info.isAssigned);
 
             // remove partition success
             String[] args4 = {
                     "remove-partition",
                     "--storage", adminConnectString,
-                    "--partition", String.valueOf(partitionId),
+                    "--partition", String.format("%d, %d", partitionId1, partitionId2),
                     "--cli-config-path", configFilePath
             };
 
@@ -276,9 +314,17 @@ public final class StorageCliTest {
             info = storage
                     .getPartitionInfos()
                     .stream()
-                    .filter(pis -> pis.partitionId == partitionId)
+                    .filter(pis -> pis.partitionId == partitionId1)
                     .findFirst()
                     .get();
+            assertFalse(info.isAssigned);
+
+            info = storage
+                .getPartitionInfos()
+                .stream()
+                .filter(pis -> pis.partitionId == partitionId2)
+                .findFirst()
+                .get();
             assertFalse(info.isAssigned);
         } finally {
             helper.closeAll();
@@ -370,9 +416,11 @@ public final class StorageCliTest {
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     @Test
     public void testAvailability() throws Exception {
-        int numPartitions = 3;
+        int numPartitions = 5;
         IntegrationTestHelper helper = getIntegrationTestHelper(numPartitions);
-        int partitionId = new Random().nextInt(helper.getNumPartitions());
+        int partitionId1 = new Random().nextInt(helper.getNumPartitions());
+        // ensure partitionId2 is different from partitionId1
+        int partitionId2 = (partitionId1 + 1 + new Random().nextInt(helper.getNumPartitions() - 2)) % helper.getNumPartitions();
 
         Properties cfgProperties = createProperties(helper.getZkConnectString(), helper.getZnodePath(), helper.getSslSetup());
         String configFilePath = IntegrationTestHelper.createYamlConfigFile(DIR_NAME, CONFIG_FILE_NAME, cfgProperties);
@@ -389,7 +437,7 @@ public final class StorageCliTest {
             String[] args0 = {
                     "availability",
                     "--storage", adminConnectString,
-                    "--partition", String.valueOf(partitionId),
+                    "--partition", String.format("%d, %d", partitionId1, partitionId2),
                     "--online", String.valueOf(true),
                     "--cli-config-path", configFilePath
             };
@@ -399,30 +447,48 @@ public final class StorageCliTest {
             PartitionInfoSnapshot partitionInfoSnapshot0 = storage
                     .getPartitionInfos()
                     .stream()
-                    .filter(pis -> pis.partitionId == partitionId)
+                    .filter(pis -> pis.partitionId == partitionId1)
                     .findFirst()
                     .get();
 
             assertTrue(partitionInfoSnapshot0.isAvailable);
 
+            PartitionInfoSnapshot partitionInfoSnapshot1 = storage
+                .getPartitionInfos()
+                .stream()
+                .filter(pis -> pis.partitionId == partitionId2)
+                .findFirst()
+                .get();
+
+            assertTrue(partitionInfoSnapshot1.isAvailable);
+
             String[] args1 = {
                     "availability",
                     "--storage", adminConnectString,
-                    "--partition", String.valueOf(partitionId),
+                    "--partition", String.format("%d, %d", partitionId1, partitionId2),
                     "--online", String.valueOf(false),
                     "--cli-config-path", configFilePath
             };
 
             StorageCli.testMain(args1);
 
-            PartitionInfoSnapshot partitionInfoSnapshot1 = storage
+            PartitionInfoSnapshot partitionInfoSnapshot2 = storage
                     .getPartitionInfos()
                     .stream()
-                    .filter(pis -> pis.partitionId == partitionId)
+                    .filter(pis -> pis.partitionId == partitionId1)
                     .findFirst()
                     .get();
 
-            assertTrue(!partitionInfoSnapshot1.isAvailable);
+            assertTrue(!partitionInfoSnapshot2.isAvailable);
+
+            PartitionInfoSnapshot partitionInfoSnapshot3 = storage
+                .getPartitionInfos()
+                .stream()
+                .filter(pis -> pis.partitionId == partitionId2)
+                .findFirst()
+                .get();
+
+            assertTrue(!partitionInfoSnapshot3.isAvailable);
         } finally {
             helper.closeAll();
         }
@@ -468,9 +534,8 @@ public final class StorageCliTest {
                 int adminPort = waltzStorage.adminPort;
                 StorageAdminClient adminClient = helper.getStorageAdminClientWithAdminPort(adminPort);
                 adminClient.open();
-                for (int i = 0; i < numPartitions; i++) {
-                    adminClient.setPartitionAssignment(i, true, false).get();
-                }
+                List<Integer> partitionIds = IntStream.range(0, numPartitions).boxed().collect(Collectors.toList());
+                adminClient.setPartitionAssignment(partitionIds, true, false).get();
                 adminClient.close();
             }
 
@@ -751,9 +816,8 @@ public final class StorageCliTest {
             // Create partitions on each storage node
             StorageAdminClient adminClient = helper.getStorageAdminClientWithAdminPort(adminPort);
             adminClient.open();
-            for (int i = 0; i < numPartitions; i++) {
-                adminClient.setPartitionAssignment(i, true, false).get();
-            }
+            List<Integer> partitionIds = IntStream.range(0, numPartitions).boxed().collect(Collectors.toList());
+            adminClient.setPartitionAssignment(partitionIds, true, false).get();
             adminClient.close();
 
             // successful path

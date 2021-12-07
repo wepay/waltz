@@ -51,12 +51,11 @@ public final class CliUtils {
 
         for (String range : ranges) {
             if (range.contains("-")) {
-                int min = Integer.parseInt(range.split("-")[0]);
-                int max = Integer.parseInt(range.split("-")[1]);
+                int min = Integer.parseInt(range.split("-")[0].trim());
+                int max = Integer.parseInt(range.split("-")[1].trim());
                 IntStream.rangeClosed(min, max).forEach(partitions::add);
-
             } else {
-                partitions.add(Integer.parseInt(range));
+                partitions.add(Integer.parseInt(range.trim()));
             }
         }
 

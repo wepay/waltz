@@ -26,10 +26,14 @@ import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -119,7 +123,7 @@ public final class StorageClientTest {
             StorageAdminClient adminClient = new StorageAdminClient(host, adminPort, sslCtx, key, NUM_PARTITIONS);
             adminClient.open();
             for (int i = 0; i < NUM_PARTITIONS; i++) {
-                adminClient.setPartitionAssignment(i, true, false).get();
+                adminClient.setPartitionAssignment(Arrays.asList(i), true, false).get();
             }
 
             int port = waltzStorage.port;
@@ -233,9 +237,9 @@ public final class StorageClientTest {
             int adminPort = waltzStorage.adminPort;
             StorageAdminClient adminClient = new StorageAdminClient(host, adminPort, sslCtx, key, NUM_PARTITIONS);
             adminClient.open();
-            for (int i = 0; i < NUM_PARTITIONS; i++) {
-                adminClient.setPartitionAssignment(i, true, false).get();
-            }
+
+            List<Integer> partitionIds = IntStream.range(0, NUM_PARTITIONS).boxed().collect(Collectors.toList());
+            adminClient.setPartitionAssignment(partitionIds, true, false).get();
 
             int port = waltzStorage.port;
             StorageClient client = new StorageClient(host, port, sslCtx, key, NUM_PARTITIONS);
@@ -276,9 +280,9 @@ public final class StorageClientTest {
             int adminPort = waltzStorage.adminPort;
             StorageAdminClient adminClient = new StorageAdminClient(host, adminPort, sslCtx, key, NUM_PARTITIONS);
             adminClient.open();
-            for (int i = 0; i < NUM_PARTITIONS; i++) {
-                adminClient.setPartitionAssignment(i, true, false).get();
-            }
+
+            List<Integer> partitionIds = IntStream.range(0, NUM_PARTITIONS).boxed().collect(Collectors.toList());
+            adminClient.setPartitionAssignment(partitionIds, true, false).get();
 
             int port = waltzStorage.port;
             StorageClient client = new StorageClient(host, port, sslCtx, key, NUM_PARTITIONS);
@@ -327,9 +331,8 @@ public final class StorageClientTest {
             int adminPort = waltzStorage.adminPort;
             StorageAdminClient adminClient = new StorageAdminClient(host, adminPort, sslCtx, key, NUM_PARTITIONS);
             adminClient.open();
-            for (int i = 0; i < NUM_PARTITIONS; i++) {
-                adminClient.setPartitionAssignment(i, true, false).get();
-            }
+            List<Integer> partitionIds = IntStream.range(0, NUM_PARTITIONS).boxed().collect(Collectors.toList());
+            adminClient.setPartitionAssignment(partitionIds, true, false).get();
 
             int port = waltzStorage.port;
             StorageClient client = new StorageClient(host, port, sslCtx, key, NUM_PARTITIONS);
@@ -387,9 +390,8 @@ public final class StorageClientTest {
             int adminPort = waltzStorage.adminPort;
             StorageAdminClient adminClient = new StorageAdminClient(host, adminPort, sslCtx, key, NUM_PARTITIONS);
             adminClient.open();
-            for (int i = 0; i < NUM_PARTITIONS; i++) {
-                adminClient.setPartitionAssignment(i, true, false).get();
-            }
+            List<Integer> partitionIds = IntStream.range(0, NUM_PARTITIONS).boxed().collect(Collectors.toList());
+            adminClient.setPartitionAssignment(partitionIds, true, false).get();
 
             int port = waltzStorage.port;
             StorageClient client = new StorageClient(host, port, sslCtx, key, NUM_PARTITIONS);
@@ -444,9 +446,8 @@ public final class StorageClientTest {
             int adminPort = waltzStorage.adminPort;
             StorageAdminClient adminClient = new StorageAdminClient(host, adminPort, sslCtx, key, NUM_PARTITIONS);
             adminClient.open();
-            for (int i = 0; i < NUM_PARTITIONS; i++) {
-                adminClient.setPartitionAssignment(i, true, false).get();
-            }
+            List<Integer> partitionIds = IntStream.range(0, NUM_PARTITIONS).boxed().collect(Collectors.toList());
+            adminClient.setPartitionAssignment(partitionIds, true, false).get();
 
             int port = waltzStorage.port;
             StorageClient client = new StorageClient(host, port, sslCtx, key, NUM_PARTITIONS);

@@ -22,8 +22,11 @@ import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.wepay.waltz.demo.DemoConst.WALTZ_REPLICA1_ADMIN_PORT;
 
@@ -113,9 +116,10 @@ public final class DemoServers extends DemoAppBase {
 
             StorageAdminClient storageAdminClient = new StorageAdminClient(host, port + 1, ClientSSL.createInsecureContext(), storeParams.key, storeParams.numPartitions);
             storageAdminClient.open();
-            for (int partitionId = 0; partitionId < storeParams.numPartitions; partitionId++) {
-                storageAdminClient.setPartitionAssignment(partitionId, true, false);
-            }
+
+            List<Integer> partitionIds = IntStream.range(0, storeParams.numPartitions).boxed().collect(Collectors.toList());
+            storageAdminClient.setPartitionAssignment(partitionIds, true, false);
+
             storageAdminClient.close();
             i++;
         }

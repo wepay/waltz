@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
@@ -72,9 +73,9 @@ public class StorageManagerTest {
 
         try {
             manager.open(clusterKey, NUM_PARTITION);
-            manager.setPartitionAssignment(partitionId, true, false);
+            manager.setPartitionAssignment(Arrays.asList(partitionId), true, false);
 
-            manager.setPartitionAssignment(partitionId, false, false);
+            manager.setPartitionAssignment(Arrays.asList(partitionId), false, false);
 
             assertTrue(segPath.toFile().exists());
             assertTrue(idxPath.toFile().exists());
@@ -96,9 +97,9 @@ public class StorageManagerTest {
 
         try {
             manager.open(clusterKey, NUM_PARTITION);
-            manager.setPartitionAssignment(partitionId, true, false);
+            manager.setPartitionAssignment(Arrays.asList(partitionId), true, false);
 
-            manager.setPartitionAssignment(partitionId, false, true);
+            manager.setPartitionAssignment(Arrays.asList(partitionId), false, true);
 
             assertFalse(segPath.toFile().exists());
             assertFalse(idxPath.toFile().exists());

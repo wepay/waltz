@@ -75,7 +75,7 @@ public class AdminServerHandler extends MessageHandler {
 
             case AdminMessageType.PARTITION_AVAILABLE_REQUEST:
                 try {
-                    storageManager.setPartitionAvailable(((PartitionAvailableRequest) msg).partitionId, ((PartitionAvailableRequest) msg).toggled);
+                    storageManager.setPartitionAvailable(((PartitionAvailableRequest) msg).partitionsIds, ((PartitionAvailableRequest) msg).toggled);
                     success(message);
 
                 } catch (ConcurrentUpdateException | IOException | StorageException ex) {
@@ -85,7 +85,7 @@ public class AdminServerHandler extends MessageHandler {
 
             case AdminMessageType.PARTITION_ASSIGNMENT_REQUEST:
                 try {
-                    storageManager.setPartitionAssignment(((PartitionAssignmentRequest) msg).partitionId, ((PartitionAssignmentRequest) msg).toggled, ((PartitionAssignmentRequest) msg).deleteStorageFiles);
+                    storageManager.setPartitionAssignment(((PartitionAssignmentRequest) msg).partitionIds, ((PartitionAssignmentRequest) msg).toggled, ((PartitionAssignmentRequest) msg).deleteStorageFiles);
                     success(message);
 
                 } catch (ConcurrentUpdateException | IOException | StorageException ex) {
