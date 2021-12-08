@@ -441,8 +441,9 @@ public class Partition {
             if (fetchSize == 0) {
                 // The client is up to date. Send the response immediately. No need to enqueue a feed context.
                 if (!client.sendMessage(response, true)) {
-                    logger.info(String.format("Unable to send mount response message. Channel ctx is null. ClientId: %s, SeqNum: %d, RequestId: %s",
-                        client.clientId(), request.seqNum, request.reqId));
+                    logger.info(String.format("Unable to send mount response message. Channel ctx is null. "
+                            + "ClientId: %s, SeqNum: %d, PartitionId: %d, RequestId: %s",
+                        client.clientId(), request.seqNum, partitionId, request.reqId));
                 }
             } else {
                 // Must bring the client up to date before mounting the partition
