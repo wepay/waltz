@@ -279,13 +279,16 @@ public class Partition {
     /**
      * Removes the client from the list of clients that are part of this partition.
      * @param client The client that has to be removed from this partition.
+     * @return True if the partition is removed, otherwise returns False.
      */
-    public void removePartitionClient(PartitionClient client) {
+    public boolean removePartitionClient(PartitionClient client) {
         synchronized (partitionClientSeqNums) {
             Long currentSeqNum = partitionClientSeqNums.get(client.clientId());
             if (currentSeqNum != null && currentSeqNum.equals(client.seqNum())) {
                 partitionClientSeqNums.remove(client.clientId());
+                return true;
             }
+            return false;
         }
     }
 
