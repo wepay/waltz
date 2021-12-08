@@ -235,8 +235,15 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
         @Override
         public void onChannelInactive() {
             synchronized (partitions) {
+                List<Integer> partitionClientsNotRemoved = new ArrayList<>();
                 for (Partition partition : partitions.values()) {
-                    partition.removePartitionClient(handler);
+                    if (!partition.removePartitionClient(handler)) {
+                        partitionClientsNotRemoved.add(partition.partitionId);
+                    }
+                }
+                if (!partitionClientsNotRemoved.isEmpty()) {
+                    LOGGER.info(String.format("WaltzServerHandler ClientId: %d, SeqNum: %d, partitionClientsNotRemoved: %s",
+                        handler.clientId, handler.seqNum, partitionClientsNotRemoved));
                 }
             }
         }
