@@ -22,7 +22,7 @@ project.ext {
     assertjVersion = '3.8.0'
     zkToolsVersion = '0.7.3'
     yamlVersion = '1.20'
-    riffVersion = '2.5.0'
+    riffVersion = '2.5.1'
     jacksonVersion = '2.9.6'
     jettyVersion = '9.4.12.v20180830'
     mainClass = 'Main'
