@@ -241,7 +241,7 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
                         partitionClientsNotRemoved.add(partition.partitionId);
                     }
                 }
-                if (!partitionClientsNotRemoved.isEmpty()) {
+                if (!partitionClientsNotRemoved.isEmpty() && handler.clientId != null && handler.clientId != -1) {
                     LOGGER.info(String.format("WaltzServerHandler ClientId: %d, SeqNum: %d, partitionClientsNotRemoved: %s",
                         handler.clientId, handler.seqNum, partitionClientsNotRemoved));
                 }
