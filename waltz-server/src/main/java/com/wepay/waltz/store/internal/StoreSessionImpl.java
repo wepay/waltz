@@ -84,8 +84,8 @@ public class StoreSessionImpl implements StoreSession {
      * @throws StoreException thrown is fail to read the store metadata.
      */
     public void open() throws RecoveryFailedException, StoreException {
-        if (quorum < 1) {
-            throw new StoreException("not enough replicas");
+        if (numReplicas < 1) {
+            throw new StoreException(String.format("Not enough replicas, numReplicas: %d", numReplicas));
         }
 
         try {
