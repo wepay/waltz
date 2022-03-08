@@ -285,7 +285,7 @@ public final class ClusterCli extends SubcommandCli {
                 ZNode partitionRoot = new ZNode(storeRoot, StoreMetadata.PARTITION_ZNODE_NAME);
 
                 CompletableFuture<Void> generationValidationFuture =
-                    buildServersZKPartitionMetadataCorrectnessValidation(
+                    buildServersZKPartitionGenerationCorrectnessValidation(
                         rpcClient, clusterManager, partitionRoot, zkClient, partitionsValidationResultList
                     );
 
@@ -820,7 +820,6 @@ public final class ClusterCli extends SubcommandCli {
         }
 
         /**
-         *
          * Validate for all servers in the cluster the consistency of partition assignments on the actual servers
          * versus on Zookeeper metadata.
          *
@@ -847,7 +846,6 @@ public final class ClusterCli extends SubcommandCli {
         }
 
         /**
-         *
          * Validate for all servers in the cluster the validity of partition
          * generation on the actual servers versus on Zookeeper store replica metadata.
          * Partition generation on a server owning a partition should be >= partition generation stored on ZooKeeper under store replica
@@ -862,18 +860,18 @@ public final class ClusterCli extends SubcommandCli {
          * @throws ClusterManagerException Thrown if Zookeeper is missing some ZNodes or ZNode values
          * @throws InterruptedException If thread interrupted while waiting for channel with Waltz servers to be ready
          */
-        private CompletableFuture<Void> buildServersZKPartitionMetadataCorrectnessValidation(InternalRpcClient rpcClient,
-                                                                                             ClusterManager clusterManager,
-                                                                                             ZNode partitionRoot,
-                                                                                             ZooKeeperClient zkClient,
-                                                                                             List<PartitionValidationResults> partitionGenerationValidationResultsList)
+        private CompletableFuture<Void> buildServersZKPartitionGenerationCorrectnessValidation(InternalRpcClient rpcClient,
+                                                                                               ClusterManager clusterManager,
+                                                                                               ZNode partitionRoot,
+                                                                                               ZooKeeperClient zkClient,
+                                                                                               List<PartitionValidationResults> partitionGenerationValidationResultsList)
                 throws ClusterManagerException, InterruptedException {
             Set<CompletableFuture> futures = new HashSet<>();
 
             for (ServerDescriptor serverDescriptor : clusterManager.serverDescriptors()) {
                 List<PartitionInfo> zookeeperAssignments =
                     clusterManager.partitionAssignment().partitionsFor(serverDescriptor.serverId);
-                CompletableFuture<Void> future = buildServersZKPartitionMetadataValidation(rpcClient, serverDescriptor,
+                CompletableFuture<Void> future = buildServersZKPartitionGenerationValidation(rpcClient, serverDescriptor,
                     partitionRoot, zkClient, partitionGenerationValidationResultsList).exceptionally(e -> {
                     for (PartitionInfo partitionInfo : zookeeperAssignments) {
                         PartitionValidationResults partitionValidationResults = partitionGenerationValidationResultsList.get(partitionInfo.partitionId);
@@ -906,11 +904,11 @@ public final class ClusterCli extends SubcommandCli {
          * @throws InterruptedException If thread interrupted while waiting for channel with Waltz server to be ready
          * @throws ClusterManagerException Thrown if Zookeeper is missing some ZNodes or ZNode values
          */
-        private CompletableFuture<Void> buildServersZKPartitionMetadataValidation(InternalRpcClient rpcClient,
-                                                                                  ServerDescriptor serverDescriptor,
-                                                                                  ZNode partitionRoot,
-                                                                                  ZooKeeperClient zkClient,
-                                                                                  List<PartitionValidationResults> partitionGenerationValidationResultsList)
+        private CompletableFuture<Void> buildServersZKPartitionGenerationValidation(InternalRpcClient rpcClient,
+                                                                                    ServerDescriptor serverDescriptor,
+                                                                                    ZNode partitionRoot,
+                                                                                    ZooKeeperClient zkClient,
+                                                                                    List<PartitionValidationResults> partitionGenerationValidationResultsList)
                 throws InterruptedException {
             CompletableFuture<List<PartitionInfo>> futureResponse =
                 (CompletableFuture<List<PartitionInfo>>) rpcClient.getServerPartitionInfo(serverDescriptor.endpoint);
