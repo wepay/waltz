@@ -281,9 +281,15 @@ public final class ClusterCli extends SubcommandCli {
                 buildStoragePartitionValidationResult(numPartitions, storageConnections, zkPartitionToStorageNodeMap,
                     partitionToStorageStatusMap, partitionsValidationResultList);
 
-                // Step5: Validate recovery is completed and replica states updated in ZK
+                // Step5: Validate ZK store and server generation consistency
                 ZNode partitionRoot = new ZNode(storeRoot, StoreMetadata.PARTITION_ZNODE_NAME);
 
+                CompletableFuture<Void> generationValidationFuture =
+                    buildServersZKPartitionMetadataCorrectnessValidation(
+                        rpcClient, clusterManager, partitionRoot, zkClient, partitionsValidationResultList
+                    );
+
+                // Step6: Validate recovery is completed and replica states updated in ZK
                 buildStorageRecoveryCompleteValidationResult(numPartitions, partitionRoot,
                     zkPartitionToStorageNodeMap, zkClient, partitionsValidationResultList);
 
@@ -293,6 +299,9 @@ public final class ClusterCli extends SubcommandCli {
                     partitionsValidationResultList);
                 updateRemainingValidationResults(connectivityValidationFuture,
                     ValidationResult.ValidationType.SERVER_STORAGE_CONNECTIVITY,
+                    partitionsValidationResultList);
+                updateRemainingValidationResults(generationValidationFuture,
+                    ValidationResult.ValidationType.PARTITION_GENERATION_ZK_SERVER_CONSISTENCY,
                     partitionsValidationResultList);
 
                 // Verify all results or just one partition if "partition" option is present
@@ -838,6 +847,103 @@ public final class ClusterCli extends SubcommandCli {
         }
 
         /**
+         *
+         * Validate for all servers in the cluster the validity of partition
+         * generation on the actual servers versus on Zookeeper store replica metadata.
+         * Partition generation on a server owning a partition should be >= partition generation stored on ZooKeeper under store replica
+         *
+         * @param rpcClient Client used to connect to Waltz servers to fetch partition information
+         * @param clusterManager Contains zkclient used to fetch partition information from Zookeeper
+         * @param partitionRoot ZNode used to fetch replica states for each partition.
+         * @param zkClient ZooKeeper Client used to fetch partition metadata.
+         * @param partitionGenerationValidationResultsList List indexed by partition in which validation outputs are inserted
+         * @return Completable future that complete once the partitionGenerationValidationResultsList is filled with validation data
+         * from all partitions
+         * @throws ClusterManagerException Thrown if Zookeeper is missing some ZNodes or ZNode values
+         * @throws InterruptedException If thread interrupted while waiting for channel with Waltz servers to be ready
+         */
+        private CompletableFuture<Void> buildServersZKPartitionMetadataCorrectnessValidation(InternalRpcClient rpcClient,
+                                                                                             ClusterManager clusterManager,
+                                                                                             ZNode partitionRoot,
+                                                                                             ZooKeeperClient zkClient,
+                                                                                             List<PartitionValidationResults> partitionGenerationValidationResultsList)
+                throws ClusterManagerException, InterruptedException {
+            Set<CompletableFuture> futures = new HashSet<>();
+
+            for (ServerDescriptor serverDescriptor : clusterManager.serverDescriptors()) {
+                List<PartitionInfo> zookeeperAssignments =
+                    clusterManager.partitionAssignment().partitionsFor(serverDescriptor.serverId);
+                CompletableFuture<Void> future = buildServersZKPartitionMetadataValidation(rpcClient, serverDescriptor,
+                    partitionRoot, zkClient, partitionGenerationValidationResultsList).exceptionally(e -> {
+                    for (PartitionInfo partitionInfo : zookeeperAssignments) {
+                        PartitionValidationResults partitionValidationResults = partitionGenerationValidationResultsList.get(partitionInfo.partitionId);
+                        ValidationResult validationResult = new ValidationResult(
+                            ValidationResult.ValidationType.PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY,
+                            ValidationResult.Status.FAILURE,
+                            e.getMessage());
+                        partitionValidationResults.validationResultsMap.put(validationResult.type,
+                            validationResult);
+                    }
+                    return null;
+                });
+                futures.add(future);
+            }
+            return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
+        }
+
+        /**
+         * Validate for a single server in the cluster that all partitions belonging to this server have valid generation
+         * number counterpart stored on Zookeeper replica node. This means generation value metadata on Zookeeper replica
+         * node cannot be higher than partition generation value stored on server.
+         *
+         * @param rpcClient Client used to connect to Waltz server to fetch partition assignments
+         * @param serverDescriptor Actual server to run the validation for
+         * @param partitionRoot partitionRoot ZNode used to fetch replica states for each partition.
+         * @param zkClient ZooKeeper Client used to fetch partition metadata.
+         * @param partitionGenerationValidationResultsList List indexed by partition in which validation outputs are inserted
+         * @return Completable future that complete once the partitionGenerationValidationResultsList is filled with validation data
+         *          from all partitions from that server
+         * @throws InterruptedException If thread interrupted while waiting for channel with Waltz server to be ready
+         * @throws ClusterManagerException Thrown if Zookeeper is missing some ZNodes or ZNode values
+         */
+        private CompletableFuture<Void> buildServersZKPartitionMetadataValidation(InternalRpcClient rpcClient,
+                                                                                  ServerDescriptor serverDescriptor,
+                                                                                  ZNode partitionRoot,
+                                                                                  ZooKeeperClient zkClient,
+                                                                                  List<PartitionValidationResults> partitionGenerationValidationResultsList)
+                throws InterruptedException {
+            CompletableFuture<List<PartitionInfo>> futureResponse =
+                (CompletableFuture<List<PartitionInfo>>) rpcClient.getServerPartitionInfo(serverDescriptor.endpoint);
+
+            return futureResponse
+                .thenAccept(serverPartitionInfo -> {
+                    serverPartitionInfo.forEach(partitionInfo -> {
+                        ValidationResult.Status status = ValidationResult.Status.SUCCESS;
+                        String error = "";
+                        PartitionValidationResults partitionValidationResults = partitionGenerationValidationResultsList.get(partitionInfo.partitionId);
+
+                        ZNode zNode = new ZNode(partitionRoot, Integer.toString(partitionInfo.partitionId));
+                        try {
+                            PartitionMetadata partitionMetadata = zkClient.getData(zNode, PartitionMetadataSerializer.INSTANCE).value;
+                            if (partitionMetadata.generation > partitionInfo.generation) {
+                                status = ValidationResult.Status.FAILURE;
+                                error = String.format("Store generation in ZooKeeper is ahead of server. Server partition generation: %s, "
+                                    + "Zookeeper partition generation: %s", partitionInfo.generation, partitionMetadata.generation);
+                            }
+                        } catch (KeeperException | ZooKeeperClientException e) {
+                            status = ValidationResult.Status.FAILURE;
+                            error = String.format("Cannot obtain replica states, exception caught: %s", e);
+                        }
+
+                        ValidationResult validationResult = new ValidationResult(ValidationResult.ValidationType.PARTITION_GENERATION_ZK_SERVER_CONSISTENCY,
+                            status, error);
+                        partitionValidationResults.validationResultsMap.put(validationResult.type,
+                            validationResult);
+                    });
+                });
+            }
+
+        /**
          * Status of the partition assignment for a server
          */
         enum AssignmentMatch {
@@ -954,6 +1060,7 @@ public final class ClusterCli extends SubcommandCli {
                 SERVER_STORAGE_CONNECTIVITY,
                 PARTITION_ASSIGNMENT_ZK_STORAGE_CONSISTENCY,
                 PARTITION_QUORUM_STATUS,
+                PARTITION_GENERATION_ZK_SERVER_CONSISTENCY,
                 REPLICA_RECOVERY_STATUS
             }
 

@@ -2,6 +2,7 @@ package com.wepay.waltz.client.internal.mock;
 
 import com.wepay.waltz.client.internal.RpcClient;
 import com.wepay.zktools.clustermgr.Endpoint;
+import com.wepay.zktools.clustermgr.PartitionInfo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +49,11 @@ class MockRpcClient implements RpcClient {
 
     @Override
     public Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) {
+        return CompletableFuture.completedFuture(new ArrayList<>());
+    }
+
+    @Override
+    public Future<List<PartitionInfo>> getServerPartitionInfo(Endpoint serverEndpoint) {
         return CompletableFuture.completedFuture(new ArrayList<>());
     }
 

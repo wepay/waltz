@@ -161,6 +161,14 @@ public class Partition {
     }
 
     /**
+     * Returns current generation value in the {@code StorePartition}.
+     * @return generation The generation value of the partition.
+     */
+    public int generation() {
+        return storePartition.generation();
+    }
+
+    /**
      * Returns True if the {@code StorePartition} is healthy, otherwise returns False.
      * @return True if the {@code StorePartition} is healthy, otherwise returns False.
      */

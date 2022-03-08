@@ -17,8 +17,10 @@ import com.wepay.waltz.common.message.MountRequest;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.common.message.TransactionDataRequest;
 import com.wepay.waltz.common.message.ServerPartitionsAssignmentRequest;
+import com.wepay.waltz.common.message.ServerPartitionsInfoRequest;
 import com.wepay.waltz.exception.NetworkClientClosedException;
 import com.wepay.zktools.clustermgr.Endpoint;
+import com.wepay.zktools.clustermgr.PartitionInfo;
 import com.wepay.zktools.util.Uninterruptibly;
 import io.netty.handler.ssl.SslContext;
 import org.slf4j.Logger;
@@ -237,6 +239,24 @@ public class WaltzNetworkClient extends NetworkClient {
             sendRequestOnChannelActive(new ServerPartitionsAssignmentRequest(dummyReqId));
 
         return responseFuture.thenApply(response -> (List<Integer>) response);
+    }
+
+    /**
+     * Requests the list of partitions assigned to this server and their corresponding generation.
+     * The current thread waits for channel readiness before sending the request to the server. If this client
+     * is shutdown before that, an exceptionally completed CompletableFuture is returned.
+     *
+     * @return a CompletableFuture which will complete with the list of PartitionInfo objects
+     * (partitions assigned to this server and their corresponding generation), or with an exception, if any.
+     * @throws InterruptedException If thread interrupted while waiting for the channel to be ready
+     */
+    @SuppressWarnings("unchecked")
+    public CompletableFuture<List<PartitionInfo>> getServerPartitionInfo() throws InterruptedException {
+        ReqId dummyReqId = new ReqId(clientId, 0, 0, 0);
+        CompletableFuture<Object> responseFuture =
+            sendRequestOnChannelActive(new ServerPartitionsInfoRequest(dummyReqId));
+
+        return responseFuture.thenApply(response -> (List<PartitionInfo>) response);
     }
 
     /**
@@ -531,6 +551,19 @@ public class WaltzNetworkClient extends NetworkClient {
                 (keyMessageType, valueFuture) -> {
                     if (!valueFuture.isDone()) {
                         valueFuture.complete(result);
+                    }
+                    return CompletableFuture.completedFuture(Optional.empty());
+                }
+            );
+        }
+
+        @Override
+        public void onServerPartitionsInfoResponseReceived(List<PartitionInfo> partitionInfo) {
+            outputFuturesPerMessageType.computeIfPresent(
+                MessageType.SERVER_PARTITIONS_INFO_REQUEST,
+                (keyMessageType, valueFuture) -> {
+                    if (!valueFuture.isDone()) {
+                        valueFuture.complete(partitionInfo);
                     }
                     return CompletableFuture.completedFuture(Optional.empty());
                 }

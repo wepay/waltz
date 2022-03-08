@@ -1,6 +1,7 @@
 package com.wepay.waltz.client.internal;
 
 import com.wepay.zktools.clustermgr.Endpoint;
+import com.wepay.zktools.clustermgr.PartitionInfo;
 
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,8 @@ public interface RpcClient {
     Future<Map<Endpoint, Map<String, Boolean>>> checkServerConnections(Set<Endpoint> serverEndpoints) throws InterruptedException;
 
     Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException;
+
+    Future<List<PartitionInfo>> getServerPartitionInfo(Endpoint serverEndpoint) throws InterruptedException;
 
     Future<Boolean> addPreferredPartition(Endpoint serverEndpoint, List<Integer> partitionIds) throws InterruptedException;
 

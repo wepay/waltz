@@ -159,6 +159,7 @@ public class ClusterCliTest {
             };
             ClusterCli.testMain(args1);
 
+            System.out.println(outContent.toString("UTF-8"));
             // Check that the server partition assignment on ZooKeeper matches with that on the server node.
             assertFalse(outContent.toString("UTF-8")
                 .contains("Validation PARTITION_ASSIGNMENT_ZK_SERVER_CONSISTENCY failed"));
@@ -166,6 +167,10 @@ public class ClusterCliTest {
             // Check that server to storage connectivity didn't fail.
             assertFalse(outContent.toString("UTF-8")
                 .contains("Validation SERVER_STORAGE_CONNECTIVITY failed"));
+
+            // Check that server generation value aligns with generation value stored in Zookeeper.
+            assertFalse(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_GENERATION_ZK_SERVER_CONSISTENCY failed"));
 
             // Check that the storage partition assignment on ZooKeeper match with that on the storage nodes only for
             // Partition 1.
@@ -283,6 +288,10 @@ public class ClusterCliTest {
             // Check that server to storage connectivity didn't fail.
             assertFalse(outContent.toString("UTF-8")
                 .contains("Validation SERVER_STORAGE_CONNECTIVITY failed for partition " + partitionId));
+
+            // Check that server generation value aligns with generation value stored in Zookeeper.
+            assertFalse(outContent.toString("UTF-8")
+                .contains("Validation PARTITION_GENERATION_ZK_SERVER_CONSISTENCY failed for partition " + partitionId));
 
             // Check that REPLICA_RECOVERY_STATUS verification didn't fail
             assertFalse(outContent.toString("UTF-8")

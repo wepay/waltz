@@ -3,6 +3,7 @@ package com.wepay.waltz.client.internal.network;
 import com.wepay.riff.network.MessageHandlerCallbacks;
 import com.wepay.waltz.common.message.LockFailure;
 import com.wepay.waltz.common.message.ReqId;
+import com.wepay.zktools.clustermgr.PartitionInfo;
 
 import java.util.List;
 import java.util.Map;
@@ -111,4 +112,10 @@ public interface WaltzClientHandlerCallbacks extends MessageHandlerCallbacks {
      * @param result true if preferred partition removal was successful, otherwise false.
      */
     void onRemovePreferredPartitionResponseReceived(Boolean result);
+
+    /**
+     * Handles the received partition info response message.
+     * @param partitionInfo List of PartitionInfo object -- all the partitions this server is assigned along with partition generation.
+     */
+    void onServerPartitionsInfoResponseReceived(List<PartitionInfo> partitionInfo);
 }

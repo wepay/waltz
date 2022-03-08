@@ -6,6 +6,7 @@ import com.wepay.waltz.client.internal.mock.MockServerPartition;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.test.util.StringSerializer;
 import com.wepay.zktools.clustermgr.Endpoint;
+import com.wepay.zktools.clustermgr.PartitionInfo;
 import com.wepay.zktools.util.Uninterruptibly;
 import org.junit.Test;
 
@@ -491,6 +492,11 @@ public class AbstractClientCallbacksForJDBCTest {
 
             @Override
             public Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) {
+                return CompletableFuture.completedFuture(new ArrayList<>());
+            }
+
+            @Override
+            public Future<List<PartitionInfo>> getServerPartitionInfo(Endpoint serverEndpoint) {
                 return CompletableFuture.completedFuture(new ArrayList<>());
             }
 

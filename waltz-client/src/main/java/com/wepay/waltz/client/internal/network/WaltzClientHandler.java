@@ -16,6 +16,7 @@ import com.wepay.waltz.common.message.MessageCodecV0;
 import com.wepay.waltz.common.message.MessageCodecV1;
 import com.wepay.waltz.common.message.MessageCodecV2;
 import com.wepay.waltz.common.message.MessageCodecV3;
+import com.wepay.waltz.common.message.MessageCodecV4;
 import com.wepay.waltz.common.message.MessageType;
 import com.wepay.waltz.common.message.MountRequest;
 import com.wepay.waltz.common.message.MountResponse;
@@ -23,6 +24,7 @@ import com.wepay.waltz.common.message.RemovePreferredPartitionResponse;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.common.message.TransactionDataResponse;
 import com.wepay.waltz.common.message.ServerPartitionsAssignmentResponse;
+import com.wepay.waltz.common.message.ServerPartitionsInfoResponse;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
@@ -42,6 +44,7 @@ public class WaltzClientHandler extends MessageHandler {
         CODECS.put(MessageCodecV1.VERSION, MessageCodecV1.INSTANCE);
         CODECS.put(MessageCodecV2.VERSION, MessageCodecV2.INSTANCE);
         CODECS.put(MessageCodecV3.VERSION, MessageCodecV3.INSTANCE);
+        CODECS.put(MessageCodecV4.VERSION, MessageCodecV4.INSTANCE);
     }
 
     private static final String HELLO_MESSAGE = "Waltz Client";
@@ -155,6 +158,12 @@ public class WaltzClientHandler extends MessageHandler {
                 RemovePreferredPartitionResponse removePreferredPartitionResponse =
                     (RemovePreferredPartitionResponse) msg;
                 handlerCallbacks.onRemovePreferredPartitionResponseReceived(removePreferredPartitionResponse.result);
+                break;
+
+            case MessageType.SERVER_PARTITIONS_INFO_RESPONSE:
+                ServerPartitionsInfoResponse serverPartitionsInfoResponse =
+                    (ServerPartitionsInfoResponse) msg;
+                handlerCallbacks.onServerPartitionsInfoResponseReceived(serverPartitionsInfoResponse.serverPartitionInfo);
                 break;
 
             default:

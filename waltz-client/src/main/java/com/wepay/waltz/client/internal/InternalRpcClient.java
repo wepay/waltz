@@ -3,6 +3,7 @@ package com.wepay.waltz.client.internal;
 import com.wepay.waltz.client.WaltzClientCallbacks;
 import com.wepay.waltz.client.internal.network.WaltzNetworkClient;
 import com.wepay.zktools.clustermgr.Endpoint;
+import com.wepay.zktools.clustermgr.PartitionInfo;
 import io.netty.handler.ssl.SslContext;
 
 import java.util.HashMap;
@@ -109,6 +110,19 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
     public Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException {
         WaltzNetworkClient networkClient = getNetworkClient(serverEndpoint);
         return networkClient.getServerPartitionAssignments();
+    }
+
+    /**
+     * Gets PartitionInfo (partitionId, generation) of partitions assigned to the server with serverEndpoint
+     *
+     * @param serverEndpoint Server from which to fetch the assigned partitions
+     * @return Future which will contain the list of PartitionInfo objects when complete
+     * @throws InterruptedException if thrown by the {@code WaltzNetworkClient}
+     */
+    @Override
+    public Future<List<PartitionInfo>> getServerPartitionInfo(Endpoint serverEndpoint) throws InterruptedException {
+        WaltzNetworkClient networkClient = getNetworkClient(serverEndpoint);
+        return networkClient.getServerPartitionInfo();
     }
 
     /**
