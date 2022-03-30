@@ -80,6 +80,7 @@ public class StoreSessionManager {
                     currentSession = null;
                 }
             }
+            healthy = false;
             backoffTimer.close();
         }
     }
@@ -138,6 +139,7 @@ public class StoreSessionManager {
 
                 createSession(generation.get());
             }
+            healthy = false;
             throw new StoreSessionManagerException();
         }
     }
@@ -204,19 +206,14 @@ public class StoreSessionManager {
                     }
                 }
 
-           } catch (GenerationMismatchException ex) {
-                if (session != null) {
-                    session.close();
-                }
-                throw ex;
-            } catch (RecoveryFailedException ex) {
+           } catch (GenerationMismatchException | RecoveryFailedException ex) {
                 healthy = false;
                 if (session != null) {
                     session.close();
                 }
                 throw ex;
-
             } catch (Exception ex) {
+                healthy = false;
                 if (session != null) {
                     session.close();
                 }
@@ -230,6 +227,7 @@ public class StoreSessionManager {
                 currentSession = session;
             } else {
                 if (session != null) {
+                    healthy = false;
                     session.close();
                 }
             }
