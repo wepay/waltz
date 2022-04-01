@@ -109,8 +109,8 @@ public class StoreSessionManager {
     }
 
     /**
-     * Returns true if the store session manager is healthy, i.e., there is no recovery error currently.
-     * Returns false vice versa , i.e., no session is running
+     * Returns true if the store session manager is healthy, i.e., when a session is open and running,
+     * while there is no recovery or generation mismatch error. False otherwise.
      * @return
      */
     public boolean isHealthy() {
