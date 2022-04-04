@@ -228,7 +228,6 @@ public class StoreSessionManager {
                 currentSession = session;
             } else {
                 if (session != null) {
-                    healthy = false;
                     session.close();
                 }
             }
