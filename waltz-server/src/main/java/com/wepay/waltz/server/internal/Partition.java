@@ -126,8 +126,6 @@ public class Partition {
      * stopped successfully..
      */
     public CompletableFuture<Boolean> closeAsync() {
-        // Un-register metrics
-        unregisterMetrics();
 
         if (running.compareAndSet(true, false)) {
             storePartition.close();
@@ -138,7 +136,10 @@ public class Partition {
 
             feedSync.close();
 
-            CompletableFuture.allOf(f1, f2, f3).whenComplete((v, t) -> closeFuture.complete(Boolean.TRUE));
+            CompletableFuture.allOf(f1, f2, f3)
+                    // Un-register metrics
+                    .whenComplete((v, t) -> unregisterMetrics())
+                    .whenComplete((v, t) -> closeFuture.complete(Boolean.TRUE));
         }
         return closeFuture;
     }
