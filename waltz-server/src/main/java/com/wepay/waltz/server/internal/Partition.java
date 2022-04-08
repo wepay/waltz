@@ -137,9 +137,11 @@ public class Partition {
             feedSync.close();
 
             CompletableFuture.allOf(f1, f2, f3)
-                    // Un-register metrics
-                    .whenComplete((v, t) -> unregisterMetrics())
-                    .whenComplete((v, t) -> closeFuture.complete(Boolean.TRUE));
+                    .whenComplete((v, t) -> {
+                        // Un-register metrics
+                        unregisterMetrics();
+                        closeFuture.complete(Boolean.TRUE);
+                    });
         }
         return closeFuture;
     }
