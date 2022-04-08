@@ -80,6 +80,7 @@ public class StoreSessionManager {
                     currentSession = null;
                 }
             }
+            healthy = false;
             backoffTimer.close();
         }
     }
@@ -108,7 +109,8 @@ public class StoreSessionManager {
     }
 
     /**
-     * Returns true if the store session manager is healthy, i.e., there is no recovery error currently.
+     * Returns true if the store session manager is healthy, i.e., when a session is open and running,
+     * while there is no recovery or generation mismatch error. False otherwise.
      * @return
      */
     public boolean isHealthy() {
@@ -138,6 +140,7 @@ public class StoreSessionManager {
 
                 createSession(generation.get());
             }
+            healthy = false;
             throw new StoreSessionManagerException();
         }
     }
@@ -204,19 +207,14 @@ public class StoreSessionManager {
                     }
                 }
 
-           } catch (GenerationMismatchException ex) {
-                if (session != null) {
-                    session.close();
-                }
-                throw ex;
-            } catch (RecoveryFailedException ex) {
+           } catch (GenerationMismatchException | RecoveryFailedException ex) {
                 healthy = false;
                 if (session != null) {
                     session.close();
                 }
                 throw ex;
-
             } catch (Exception ex) {
+                healthy = false;
                 if (session != null) {
                     session.close();
                 }
