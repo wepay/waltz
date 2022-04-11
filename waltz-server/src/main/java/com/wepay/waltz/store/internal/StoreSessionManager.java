@@ -140,7 +140,6 @@ public class StoreSessionManager {
 
                 createSession(generation.get());
             }
-            healthy = false;
             throw new StoreSessionManagerException();
         }
     }
