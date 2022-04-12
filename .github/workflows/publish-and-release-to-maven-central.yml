@@ -1,0 +1,138 @@
+name: Publish package to the Maven Central Repository
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  build:
+    if: "contains(github.event.head_commit.message, 'EXECUTE PUBLISH JOB')"
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      #Run JDK configuration
+      - name: Set up JDK 8
+        uses: actions/setup-java@v2
+        with:
+          java-version: '8'
+          distribution: 'adopt'
+
+      #Gradle cache configuration
+      - name: Cache Gradle packages
+        uses: actions/cache@v2
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle
+
+      #Authorizing gradlew files
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      #Build project
+      - name: Build with Gradle
+        run: ./gradlew build
+
+  publish:
+    needs: build
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      #Run JDK configuration
+      - name: Set up JDK 8
+        uses: actions/setup-java@v2
+        with:
+          java-version: '8'
+          distribution: 'adopt'
+
+      #Gradle cache configuration
+      - name: Cache Gradle packages
+        uses: actions/cache@v2
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle
+
+      #Authorize gradlew files
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      #Decode the secret key
+      - name: Decode
+        run: |
+          trap 'rm ~/.gradle/private.pgp' EXIT
+          echo "$SIGNING_SECRET_KEY_RING_FILE" > ~/.gradle/private.pgp
+          gpg --quiet --import --no-tty --batch --yes ~/.gradle/private.pgp
+          gpg --quiet --keyring secring.gpg --export-secret-keys --batch --pinentry-mode=loopback --passphrase  "$OSSRH_GPG_SECRET_KEY_PASSWORD" > ~/.gnupg/secring.gpg
+        env:
+          SIGNING_SECRET_KEY_RING_FILE: ${{ secrets.LEDGER_INFRA_SIGNING_SECRET_KEY_RING_FILE }}
+          OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.LEDGER_INFRA_OSSRH_GPG_SECRET_KEY_PASSWORD }}
+
+      #Modify gradle.build to accept env variables
+      - name: Modify gradle.build
+        run: |
+          sed -i 's/username findProperty('\''ossrhUsername'\'')?: '\'''\''/username findProperty("ossrhUsername")?: System.getenv("OSSRH_USERNAME")/g' "build.gradle"
+          sed -i 's/password findProperty('\''ossrhPassword'\'')?: '\'''\''/password findProperty("ossrhPassword")?: System.getenv("OSSRH_PASSWORD")/g' "build.gradle"
+          cat "build.gradle"
+      #Publish project
+      - name: Publish
+        run: ./gradlew publish -PmySecureRepositoryUsername="$OSSRH_USERNAME" -PmySecureRepositoryPassword="$OSSRH_PASSWORD" -Psigning.keyId="$SIGNING_KEY_ID" -Psigning.password="$OSSRH_GPG_SECRET_KEY_PASSWORD" -Psigning.secretKeyRingFile=$(echo ~/.gnupg/secring.gpg)
+        env:
+          OSSRH_USERNAME: ${{ secrets.LEDGER_INFRA_OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.LEDGER_INFRA_OSSRH_PASSWORD }}
+          SIGNING_KEY_ID: ${{ secrets.LEDGER_INFRA_SIGNING_KEY_ID }}
+          OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.LEDGER_INFRA_OSSRH_GPG_SECRET_KEY_PASSWORD }}
+
+
+  release:
+    needs: publish
+    if: "contains(github.event.head_commit.message, 'EXECUTE RELEASE JOB')"
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      #Run JDK configuration
+      - name: Set up JDK 8
+        uses: actions/setup-java@v2
+        with:
+          java-version: '8'
+          distribution: 'adopt'
+
+      #Gradle cache configuration
+      - name: Cache Gradle packages
+        uses: actions/cache@v2
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle
+
+      #Authorize gradlew files
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      #Modify gradle.build to inject nexus-staging plugin if not present
+      - name: Modify gradle.build
+        run: |
+          if ! grep -q "io.codearte.nexus-staging" "build.gradle"; then
+                  # Inject plugin
+                  sed -i '/plugins {/ a\
+                  id "io.codearte.nexus-staging" version "0.30.0"\n' "build.gradle"
+                  if ! grep -q "plugins {" "./build.gradle"; then
+                          echo "plugins {
+            id \"io.codearte.nexus-staging\" version \"0.30.0\"
+          }" >> ./build.gradle
+                  fi
+                  # Inject plugin code
+                  echo "nexusStaging {
+            serverUrl = \"https://oss.sonatype.org/service/local/\"
+            username = findProperty(\"ossrhUsername\") ?: System.getenv(\"OSSRH_USERNAME\")
+            password = findProperty(\"ossrhPassword\") ?: System.getenv(\"OSSRH_PASSWORD\")
+            packageGroup = \"com.wepay.waltz\"
+          }" >> "build.gradle"
+          fi
+          cat "build.gradle"
+      #Close and Release project in Sonatype
+      - name: Close and Release
+        run: ./gradlew closeAndReleaseRepository
+        env:
+          OSSRH_USERNAME: ${{ secrets.LEDGER_INFRA_OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.LEDGER_INFRA_OSSRH_PASSWORD }}
