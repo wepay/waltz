@@ -68,7 +68,7 @@ public class Partition {
     private final LinkedList<FeedContext> pausedFeedContexts;
     private final FeedCachePartition feedCachePartition;
     private final FeedSynchronizer feedSync = new FeedSynchronizer();
-    private final HashMap<Integer, Long> partitionClientSeqNums = new HashMap<>();
+    private final HashMap<Integer, PartitionClientConnectionOrder> partitionClientConnectionsOrder = new HashMap<>();
     private final TransactionFetcher transactionFetcher;
 
     private final AtomicBoolean running = new AtomicBoolean(true);
@@ -267,14 +267,18 @@ public class Partition {
     }
 
     /**
-     * Assigns a sequence number for the given client and stores this information in a map.
+     * Register PartitionClient in partitionClientConnectionsOrder map to validate that
+     * server communicates with client on the latest channel.
      * @param client The client that is interested in this partition.
+     * @param generation The generation of this partition that client is updated to.
      */
-    public void setPartitionClient(PartitionClient client) {
-        synchronized (partitionClientSeqNums) {
-            Long currentSeqNum = partitionClientSeqNums.get(client.clientId());
-            if (currentSeqNum == null || currentSeqNum < client.seqNum()) {
-                partitionClientSeqNums.put(client.clientId(), client.seqNum());
+    public void registerLatestPartitionClient(PartitionClient client, int generation) {
+        PartitionClientConnectionOrder partitionClientConnectionOrder = new PartitionClientConnectionOrder(client, generation);
+        logger.info("Partition id: " + this.partitionId);
+        synchronized (partitionClientConnectionsOrder) {
+            if (partitionClientConnectionOrder.compareClientOrder(partitionClientConnectionsOrder.get(client.clientId())) > 0) {
+                partitionClientConnectionsOrder.put(client.clientId(), partitionClientConnectionOrder);
+                logger.info("partitionClientConnectionsOrder added partitionClientConnectionOrder: " + partitionClientConnectionOrder);
             }
         }
     }
@@ -285,12 +289,15 @@ public class Partition {
      * @return True if the partition is removed, otherwise returns False.
      */
     public boolean removePartitionClient(PartitionClient client) {
-        synchronized (partitionClientSeqNums) {
-            Long currentSeqNum = partitionClientSeqNums.get(client.clientId());
-            if (currentSeqNum != null && currentSeqNum.equals(client.seqNum())) {
-                partitionClientSeqNums.remove(client.clientId());
+        synchronized (partitionClientConnectionsOrder) {
+            PartitionClientConnectionOrder partitionClientConnectionOrder = partitionClientConnectionsOrder.get(client.clientId());
+            logger.info("IsEqual: " + client.equals(partitionClientConnectionOrder.client) +  ", client: " + client.seqNum());
+            if (partitionClientConnectionOrder != null && client.equals(partitionClientConnectionOrder.client)) {
+                logger.info("partitionClientConnectionsOrder removed record for " + client.clientId() + ", partitionClientConnectionOrder: " + partitionClientConnectionOrder);
+                partitionClientConnectionsOrder.remove(client.clientId());
                 return true;
             }
+            logger.info("partitionClientConnectionsOrder didn't remove record for " + client.clientId() + " - seqNum: " + client.seqNum() + ", partitionClientConnectionOrder: " + partitionClientConnectionOrder);
             return false;
         }
     }
@@ -411,8 +418,8 @@ public class Partition {
     }
 
     private boolean isValid(PartitionClient client) {
-        synchronized (partitionClientSeqNums) {
-            Long currentSeqNum = partitionClientSeqNums.get(client.clientId());
+        synchronized (partitionClientConnectionsOrder) {
+            Long currentSeqNum = partitionClientConnectionsOrder.get(client.clientId()).seqNum();
             if (currentSeqNum == null) {
                 logger.info(String.format("CurrentSeqNum is null. PartitionClient not valid. ClientId: %s, PartitionId: %d, "
                         + "WaltzServerHandler SeqNum: %s",
@@ -801,4 +808,49 @@ public class Partition {
 
     }
 
+    private static class PartitionClientConnectionOrder {
+        final PartitionClient client;
+        final int generation;
+
+        PartitionClientConnectionOrder(PartitionClient client, int generation) {
+            this.client = client;
+            this.generation = generation;
+        }
+
+        public Long seqNum() {
+            return this.client.seqNum();
+        }
+
+        public Integer clientId() {
+            return this.client.clientId();
+        }
+
+        /**
+         * Compares PartitionClientConnectionOrder instances. Newest PartitionClientConnection has higher generation, if equal higher seqNumber
+         * @param anotherClient Another partition client's connection order
+         * @return 1 if this connection is more up-to-date, 0 if equal, -1 if another client's connection is more up-to-date
+         */
+        public int compareClientOrder(PartitionClientConnectionOrder anotherClient) {
+            // resolve null values if any
+            if (anotherClient == null || (anotherClient.seqNum() == null && this.seqNum() != null)) {
+                return 1;
+            } else if (anotherClient.seqNum() == null && this.seqNum() == null) {
+                return 0;
+            } else if (this.seqNum() == null) {
+                return -1;
+                // resolve gen_seq# order
+            } else if (this.generation > anotherClient.generation || (this.generation == anotherClient.generation && this.seqNum() > anotherClient.seqNum())) {
+                return 1;
+            } else if (this.generation == anotherClient.generation && this.seqNum().equals(anotherClient.seqNum())) {
+                return 0;
+            } else {
+                return -1;
+            }
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Generation: %s, SeqNum %s", generation, seqNum());
+        }
+    }
 }

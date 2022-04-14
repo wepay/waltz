@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 
@@ -182,7 +183,11 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
                             if (seqNum == null) {
                                 seqNum = ((MountRequest) msg).seqNum;
                             }
-                            partition.setPartitionClient(this);
+                            partition.registerLatestPartitionClient(this, ((MountRequest) msg).reqId.generation());
+                        }
+                        if (msg.type() == MessageType.FEED_REQUEST) {
+                            Thread.sleep(30000);
+                            this.shutdown();
                         }
 
                         partition.receiveMessage(msg, this);
@@ -234,6 +239,12 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
 
         @Override
         public void onChannelInactive() {
+            Random r = new Random();
+            try {
+                Thread.sleep(r.nextInt(3) * 1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             synchronized (partitions) {
                 List<Integer> partitionClientsNotRemoved = new ArrayList<>();
                 for (Partition partition : partitions.values()) {
