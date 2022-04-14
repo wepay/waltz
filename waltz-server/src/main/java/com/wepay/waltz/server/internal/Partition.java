@@ -274,11 +274,9 @@ public class Partition {
      */
     public void registerLatestPartitionClient(PartitionClient client, int generation) {
         PartitionClientConnectionOrder partitionClientConnectionOrder = new PartitionClientConnectionOrder(client, generation);
-        logger.info("Partition id: " + this.partitionId);
         synchronized (partitionClientConnectionsOrder) {
             if (partitionClientConnectionOrder.compareClientOrder(partitionClientConnectionsOrder.get(client.clientId())) > 0) {
                 partitionClientConnectionsOrder.put(client.clientId(), partitionClientConnectionOrder);
-                logger.info("partitionClientConnectionsOrder added partitionClientConnectionOrder: " + partitionClientConnectionOrder);
             }
         }
     }
@@ -291,13 +289,10 @@ public class Partition {
     public boolean removePartitionClient(PartitionClient client) {
         synchronized (partitionClientConnectionsOrder) {
             PartitionClientConnectionOrder partitionClientConnectionOrder = partitionClientConnectionsOrder.get(client.clientId());
-            logger.info("IsEqual: " + client.equals(partitionClientConnectionOrder.client) +  ", client: " + client.seqNum());
             if (partitionClientConnectionOrder != null && client.equals(partitionClientConnectionOrder.client)) {
-                logger.info("partitionClientConnectionsOrder removed record for " + client.clientId() + ", partitionClientConnectionOrder: " + partitionClientConnectionOrder);
                 partitionClientConnectionsOrder.remove(client.clientId());
                 return true;
             }
-            logger.info("partitionClientConnectionsOrder didn't remove record for " + client.clientId() + " - seqNum: " + client.seqNum() + ", partitionClientConnectionOrder: " + partitionClientConnectionOrder);
             return false;
         }
     }
