@@ -182,7 +182,7 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
                             if (seqNum == null) {
                                 seqNum = ((MountRequest) msg).seqNum;
                             }
-                            partition.setPartitionClient(this);
+                            partition.setPartitionClient(this, ((MountRequest) msg).reqId.generation());
                         }
 
                         partition.receiveMessage(msg, this);

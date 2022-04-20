@@ -68,7 +68,7 @@ public class Partition {
     private final LinkedList<FeedContext> pausedFeedContexts;
     private final FeedCachePartition feedCachePartition;
     private final FeedSynchronizer feedSync = new FeedSynchronizer();
-    private final HashMap<Integer, Long> partitionClientSeqNums = new HashMap<>();
+    private final HashMap<Integer, ClientConnectionInfo> partitionClientConnectionInfos = new HashMap<>();
     private final TransactionFetcher transactionFetcher;
 
     private final AtomicBoolean running = new AtomicBoolean(true);
@@ -267,14 +267,17 @@ public class Partition {
     }
 
     /**
-     * Assigns a sequence number for the given client and stores this information in a map.
+     * Registers PartitionClient and generation --ClientConnectionInfo-- in a map to validate that server
+     * communicates with client on an up-to-date channel.
      * @param client The client that is interested in this partition.
+     * @param generation The generation of this partition that client is updated to.
      */
-    public void setPartitionClient(PartitionClient client) {
-        synchronized (partitionClientSeqNums) {
-            Long currentSeqNum = partitionClientSeqNums.get(client.clientId());
-            if (currentSeqNum == null || currentSeqNum < client.seqNum()) {
-                partitionClientSeqNums.put(client.clientId(), client.seqNum());
+    public void setPartitionClient(PartitionClient client, int generation) {
+        synchronized (partitionClientConnectionInfos) {
+            ClientConnectionInfo clientConnectionInfo = partitionClientConnectionInfos.get(client.clientId());
+            if (clientConnectionInfo == null || generation > clientConnectionInfo.generation
+                || (generation == clientConnectionInfo.generation && client.seqNum() > clientConnectionInfo.client.seqNum())) {
+                partitionClientConnectionInfos.put(client.clientId(), new ClientConnectionInfo(client, generation));
             }
         }
     }
@@ -285,10 +288,10 @@ public class Partition {
      * @return True if the partition is removed, otherwise returns False.
      */
     public boolean removePartitionClient(PartitionClient client) {
-        synchronized (partitionClientSeqNums) {
-            Long currentSeqNum = partitionClientSeqNums.get(client.clientId());
-            if (currentSeqNum != null && currentSeqNum.equals(client.seqNum())) {
-                partitionClientSeqNums.remove(client.clientId());
+        synchronized (partitionClientConnectionInfos) {
+            ClientConnectionInfo clientConnectionInfo = partitionClientConnectionInfos.get(client.clientId());
+            if (clientConnectionInfo != null && client.equals(clientConnectionInfo.client)) {
+                partitionClientConnectionInfos.remove(client.clientId());
                 return true;
             }
             return false;
@@ -411,8 +414,8 @@ public class Partition {
     }
 
     private boolean isValid(PartitionClient client) {
-        synchronized (partitionClientSeqNums) {
-            Long currentSeqNum = partitionClientSeqNums.get(client.clientId());
+        synchronized (partitionClientConnectionInfos) {
+            Long currentSeqNum = partitionClientConnectionInfos.get(client.clientId()).client.seqNum();
             if (currentSeqNum == null) {
                 logger.info(String.format("CurrentSeqNum is null. PartitionClient not valid. ClientId: %s, PartitionId: %d, "
                         + "WaltzServerHandler SeqNum: %s",
@@ -801,4 +804,18 @@ public class Partition {
 
     }
 
+    private static class ClientConnectionInfo {
+        final PartitionClient client;
+        final int generation;
+
+        ClientConnectionInfo(PartitionClient client, int generation) {
+            this.client = client;
+            this.generation = generation;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Generation: %s, SeqNum: %s", generation, client.seqNum());
+        }
+    }
 }

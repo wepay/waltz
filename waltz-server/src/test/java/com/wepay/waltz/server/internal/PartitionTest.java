@@ -41,6 +41,7 @@ public class PartitionTest {
     private static final int HEADER = 0;
     private static final int TRANSACTION_CACHE_SIZE = 33554432; // 32MB
     private static final int FEED_CACHE_SIZE = 33554432; // 32MB
+    private static final int DEFAULT_GENERATION = 0;
 
     private final AtomicLong seqNumGenerator = new AtomicLong(0);
     private final Random rand = new Random();
@@ -94,7 +95,7 @@ public class PartitionTest {
             Message msg;
 
             MockPartitionClient partitionClient1 = new MockPartitionClient(seqNumGenerator.getAndIncrement(), clientId1);
-            partition.setPartitionClient(partitionClient1);
+            partition.setPartitionClient(partitionClient1, DEFAULT_GENERATION);
             partition.receiveMessage(
                 new MountRequest(reqId(clientId1), clientHighWaterMark, partitionClient1.seqNum()),
                 partitionClient1
@@ -112,7 +113,7 @@ public class PartitionTest {
 
             // Connect the second client
             MockPartitionClient partitionClient2 = new MockPartitionClient(seqNumGenerator.getAndIncrement(), clientId2);
-            partition.setPartitionClient(partitionClient2);
+            partition.setPartitionClient(partitionClient2, DEFAULT_GENERATION);
             partition.receiveMessage(
                 new MountRequest(reqId(clientId2), clientHighWaterMark, partitionClient2.seqNum),
                 partitionClient2
@@ -125,7 +126,7 @@ public class PartitionTest {
             assertEquals(MessageType.MOUNT_RESPONSE, msg.type());
             assertEquals(MountResponse.PartitionState.READY, ((MountResponse) msg).partitionState);
 
-            // The first client should not see any feed yet because the feed request if not sent yet
+            // The first client should not see any feed yet because the feed request is not sent yet
             msg = partitionClient1.nextMessage(1);
             assertNull(msg);
 
@@ -143,7 +144,7 @@ public class PartitionTest {
 
             // Connect the third client
             MockPartitionClient partitionClient3 = new MockPartitionClient(seqNumGenerator.getAndIncrement(), clientId3);
-            partition.setPartitionClient(partitionClient3);
+            partition.setPartitionClient(partitionClient3, DEFAULT_GENERATION);
             partition.receiveMessage(
                 new MountRequest(reqId(clientId1), clientHighWaterMark + 1, partitionClient3.seqNum()),
                 partitionClient3
@@ -170,7 +171,7 @@ public class PartitionTest {
             Message msg;
 
             MockPartitionClient partitionClient = new MockPartitionClient(seqNumGenerator.getAndIncrement(), clientId);
-            partition.setPartitionClient(partitionClient);
+            partition.setPartitionClient(partitionClient, DEFAULT_GENERATION);
             partition.receiveMessage(
                 new MountRequest(reqId(clientId), clientHighWaterMark, partitionClient.seqNum()),
                 partitionClient
@@ -229,7 +230,7 @@ public class PartitionTest {
             Message msg;
 
             MockPartitionClient partitionClient = new MockPartitionClient(seqNumGenerator.getAndIncrement(), clientId);
-            partition.setPartitionClient(partitionClient);
+            partition.setPartitionClient(partitionClient, DEFAULT_GENERATION);
             partition.receiveMessage(
                 new MountRequest(reqId(clientId), clientHighWaterMark, partitionClient.seqNum()),
                 partitionClient
@@ -278,7 +279,7 @@ public class PartitionTest {
             Message msg;
 
             MockPartitionClient partitionClient1 = new MockPartitionClient(seqNumGenerator.getAndIncrement(), clientId1);
-            partition.setPartitionClient(partitionClient1);
+            partition.setPartitionClient(partitionClient1, DEFAULT_GENERATION);
             partition.receiveMessage(
                 new MountRequest(reqId(clientId1), clientHighWaterMark, partitionClient1.seqNum()),
                 partitionClient1
@@ -327,7 +328,7 @@ public class PartitionTest {
 
             // Connect the second client to make sure that the first client is cleaned up.
             MockPartitionClient partitionClient2 = new MockPartitionClient(seqNumGenerator.getAndIncrement(), clientId2);
-            partition.setPartitionClient(partitionClient2);
+            partition.setPartitionClient(partitionClient2, DEFAULT_GENERATION);
 
             // clientHighWaterMark of -1 to force the partitionClient2 to start from the beginning of the feed.
             partition.receiveMessage(
@@ -373,7 +374,7 @@ public class PartitionTest {
             Message msg;
 
             MockPartitionClient partitionClient1 = new MockPartitionClient(seqNumGenerator.getAndIncrement(), clientId1);
-            partition.setPartitionClient(partitionClient1);
+            partition.setPartitionClient(partitionClient1, DEFAULT_GENERATION);
             partition.receiveMessage(
                 new MountRequest(reqId(clientId1), -1L, partitionClient1.seqNum()),
                 partitionClient1
@@ -381,7 +382,7 @@ public class PartitionTest {
 
             // Connect the second client to make sure that the first client is paused.
             MockPartitionClient partitionClient2 = new MockPartitionClient(seqNumGenerator.getAndIncrement(), clientId2);
-            partition.setPartitionClient(partitionClient2);
+            partition.setPartitionClient(partitionClient2, DEFAULT_GENERATION);
             partition.receiveMessage(
                 new MountRequest(reqId(clientId2), -1L, partitionClient2.seqNum()),
                 partitionClient2
@@ -514,7 +515,7 @@ public class PartitionTest {
             Message msg;
 
             MockPartitionClient partitionClient = new MockPartitionClient(seqNumGenerator.getAndIncrement(), clientId);
-            partition.setPartitionClient(partitionClient);
+            partition.setPartitionClient(partitionClient, DEFAULT_GENERATION);
             partition.receiveMessage(
                 new MountRequest(reqId(clientId), clientHighWaterMark, partitionClient.seqNum()),
                 partitionClient
@@ -557,6 +558,61 @@ public class PartitionTest {
             assertEquals(0, partition.getTotalRealtimeFeedContextRemoved());
             assertEquals(1, partition.getTotalCatchupFeedContextAdded());
             assertEquals(1, partition.getTotalCatchupFeedContextRemoved());
+
+        } finally {
+            if (!partition.isClosed()) {
+                partition.close();
+            }
+        }
+    }
+
+    @Test
+    public void testNewerClientReplacesOldClient() throws Exception {
+        Partition partition = new Partition(PARTITION_ID, storePartition, feedCachePartition, fetcher, config);
+        partition.open();
+        try {
+            int clientId = 0;
+            long partitionClientSeqNum1 = 0;
+            long partitionClientSeqNum2 = 1;
+            long partitionClientSeqNum3 = 0;
+            int partitionClientGenNum1 = 0;
+            int partitionClientGenNum2 = 0;
+            int partitionClientGenNum3 = 1;
+            long clientHighWaterMark = -1L;
+            Message msg;
+
+            MockPartitionClient partitionClient1 = new MockPartitionClient(partitionClientSeqNum1, clientId);
+            partition.setPartitionClient(partitionClient1, partitionClientGenNum1);
+            partition.receiveMessage(
+                new MountRequest(reqId(clientId), clientHighWaterMark, partitionClient1.seqNum()),
+                partitionClient1
+            );
+
+            msg = partitionClient1.nextMessage(TIMEOUT);
+            assertNotNull(msg);
+            assertEquals(MessageType.MOUNT_RESPONSE, msg.type());
+
+            MockPartitionClient partitionClient2 = new MockPartitionClient(partitionClientSeqNum2, clientId);
+            partition.setPartitionClient(partitionClient2, partitionClientGenNum2);
+            partition.receiveMessage(
+                new MountRequest(reqId(clientId), clientHighWaterMark, partitionClient2.seqNum()),
+                partitionClient2
+            );
+
+            msg = partitionClient2.nextMessage(TIMEOUT);
+            assertNotNull(msg);
+            assertEquals(MessageType.MOUNT_RESPONSE, msg.type());
+
+            MockPartitionClient partitionClient3 = new MockPartitionClient(partitionClientSeqNum3, clientId);
+            partition.setPartitionClient(partitionClient3, partitionClientGenNum3);
+            partition.receiveMessage(
+                new MountRequest(reqId(clientId), clientHighWaterMark, partitionClient3.seqNum()),
+                partitionClient3
+            );
+
+            msg = partitionClient3.nextMessage(TIMEOUT);
+            assertNotNull(msg);
+            assertEquals(MessageType.MOUNT_RESPONSE, msg.type());
 
         } finally {
             if (!partition.isClosed()) {
