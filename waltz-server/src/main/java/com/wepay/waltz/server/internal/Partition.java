@@ -815,7 +815,7 @@ public class Partition {
 
         @Override
         public String toString() {
-            return String.format("Generation: %s, SeqNum %s", generation, client.seqNum());
+            return String.format("Generation: %s, SeqNum: %s", generation, client.seqNum());
         }
     }
 }
