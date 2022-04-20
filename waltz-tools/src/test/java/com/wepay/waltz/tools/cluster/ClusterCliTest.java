@@ -167,6 +167,9 @@ public class ClusterCliTest {
             assertFalse(outContent.toString("UTF-8")
                 .contains("Validation SERVER_STORAGE_CONNECTIVITY failed"));
 
+            assertFalse(outContent.toString("UTF-8")
+                .contains("Validation SERVER_PARTITION_HEALTH_CHECK failed"));
+
             // Check that the storage partition assignment on ZooKeeper match with that on the storage nodes only for
             // Partition 1.
             assertTrue(outContent.toString("UTF-8")
@@ -287,6 +290,10 @@ public class ClusterCliTest {
             // Check that REPLICA_RECOVERY_STATUS verification didn't fail
             assertFalse(outContent.toString("UTF-8")
                 .contains("Validation REPLICA_RECOVERY_STATUS failed for partition " + partitionId));
+
+            // Check that server partitions are healthy
+            assertFalse(outContent.toString("UTF-8")
+                .contains("Validation SERVER_PARTITION_HEALTH_CHECK failed for partition " + partitionId));
 
             // Close the server network connection
             WaltzServerRunner waltzServerRunner = helper.getWaltzServerRunner(helper.getServerPort(),

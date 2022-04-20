@@ -22,6 +22,8 @@ public interface RpcClient {
 
     Future<List<Integer>> getServerPartitionAssignments(Endpoint serverEndpoint) throws InterruptedException;
 
+    Future<Map<Integer, Boolean>> getServerPartitionHealthStats(Endpoint serverEndpoint) throws InterruptedException;
+
     Future<Boolean> addPreferredPartition(Endpoint serverEndpoint, List<Integer> partitionIds) throws InterruptedException;
 
     Future<Boolean> removePreferredPartition(Endpoint serverEndpoint, List<Integer> partitionIds) throws InterruptedException;

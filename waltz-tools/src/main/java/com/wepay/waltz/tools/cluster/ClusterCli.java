@@ -281,7 +281,16 @@ public final class ClusterCli extends SubcommandCli {
                 buildStoragePartitionValidationResult(numPartitions, storageConnections, zkPartitionToStorageNodeMap,
                     partitionToStorageStatusMap, partitionsValidationResultList);
 
-                // Step5: Validate recovery is completed and replica states updated in ZK
+                // Step5: Validate server partitions are healthy
+                rpcClient = new InternalRpcClient(sslContext, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS,
+                    new DummyTxnCallbacks());
+
+                CompletableFuture<Void> partitionHealthValidationFuture =
+                    buildServersPartitionHealthValidation(
+                        rpcClient, clusterManager, partitionsValidationResultList
+                    );
+
+                // Step6: Validate recovery is completed and replica states updated in ZK
                 ZNode partitionRoot = new ZNode(storeRoot, StoreMetadata.PARTITION_ZNODE_NAME);
 
                 buildStorageRecoveryCompleteValidationResult(numPartitions, partitionRoot,
@@ -293,6 +302,9 @@ public final class ClusterCli extends SubcommandCli {
                     partitionsValidationResultList);
                 updateRemainingValidationResults(connectivityValidationFuture,
                     ValidationResult.ValidationType.SERVER_STORAGE_CONNECTIVITY,
+                    partitionsValidationResultList);
+                updateRemainingValidationResults(partitionHealthValidationFuture,
+                    ValidationResult.ValidationType.SERVER_PARTITION_HEALTH_CHECK,
                     partitionsValidationResultList);
 
                 // Verify all results or just one partition if "partition" option is present
@@ -811,6 +823,60 @@ public final class ClusterCli extends SubcommandCli {
         }
 
         /**
+         * Validate for a single server in the cluster the health status of partitions assigned on the actual server.
+         *
+         * @param rpcClient Client used to connect to Waltz server to fetch health status of partitions
+         * @param serverDescriptor Actual server to run the validation for
+         * @param clusterManager Contains zkclient used to fetch partition assignments from Zookeeper
+         * @param partitionValidationResultsList List indexed by partition in which validation outputs are inserted
+         * @return Completable future that complete once the partitionValidationResultsList is filled with validation data
+         *          from all partitions from that server
+         * @throws InterruptedException If thread interrupted while waiting for channel with Waltz server to be ready
+         * @throws ClusterManagerException Thrown if Zookeeper is missing some ZNodes or ZNode values
+         */
+        private CompletableFuture<Void> buildPartitionHealthValidation(InternalRpcClient rpcClient,
+                                                                       ServerDescriptor serverDescriptor,
+                                                                       ClusterManager clusterManager,
+                                                                       List<PartitionValidationResults> partitionValidationResultsList)
+            throws InterruptedException, ClusterManagerException {
+            CompletableFuture<Map<Integer, Boolean>> futureResponse =
+                (CompletableFuture<Map<Integer, Boolean>>) rpcClient.getServerPartitionHealthStats(serverDescriptor.endpoint);
+            List<PartitionInfo> zookeeperAssignments =
+                clusterManager.partitionAssignment().partitionsFor(serverDescriptor.serverId);
+
+            return futureResponse
+                .thenAccept(partitionHealthStats -> {
+                    partitionHealthStats.forEach((partitionId, healthy) -> {
+                        ValidationResult.Status status = ValidationResult.Status.SUCCESS;
+                        String error = "";
+                        PartitionValidationResults partitionValidationResults = partitionValidationResultsList.get(partitionId);
+
+                        if (!healthy) {
+                            status = ValidationResult.Status.FAILURE;
+                            error = String.format("Partition %s belonging to server %s is not healthy",  partitionId, serverDescriptor.endpoint);
+                        }
+
+                        ValidationResult validationResult = new ValidationResult(ValidationResult.ValidationType.SERVER_PARTITION_HEALTH_CHECK,
+                            status, error);
+                        partitionValidationResults.validationResultsMap.put(validationResult.type,
+                            validationResult);
+                    });
+                }).exceptionally(e -> {
+                    // We weren't able to connect to the server. Set healthCheck test to fail for all partitions belonging to this server
+                    for (PartitionInfo partitionInfo : zookeeperAssignments) {
+                        PartitionValidationResults partitionValidationResults = partitionValidationResultsList.get(partitionInfo.partitionId);
+                        ValidationResult validationResult = new ValidationResult(
+                            ValidationResult.ValidationType.SERVER_PARTITION_HEALTH_CHECK,
+                            ValidationResult.Status.FAILURE,
+                            e.getMessage());
+                        partitionValidationResults.validationResultsMap.put(validationResult.type,
+                            validationResult);
+                    }
+                    return null;
+                });
+        }
+
+        /**
          *
          * Validate for all servers in the cluster the consistency of partition assignments on the actual servers
          * versus on Zookeeper metadata.
@@ -832,6 +898,31 @@ public final class ClusterCli extends SubcommandCli {
             for (ServerDescriptor serverDescriptor : clusterManager.serverDescriptors()) {
                 CompletableFuture<Void> future = buildServerZKPartitionAssignmentsValidation(rpcClient, serverDescriptor, clusterManager,
                          partitionValidationResultsList);
+                futures.add(future);
+            }
+            return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
+        }
+
+        /**
+         * Validate for all servers in the cluster health status of partitions
+         *
+         * @param rpcClient Client used to connect to Waltz servers to fetch partition health status
+         * @param clusterManager Contains zkclient used to fetch server endpoints
+         * @param partitionsValidationResultList List indexed by partition in which validation outputs are inserted
+         * @return Completable future that complete once the partitionValidationResultsList is filled with validation data
+         * from all partitions
+         * @throws ClusterManagerException Thrown if Zookeeper is missing some ZNodes or ZNode values
+         * @throws InterruptedException If thread interrupted while waiting for channel with Waltz servers to be ready
+         */
+        private CompletableFuture<Void> buildServersPartitionHealthValidation(InternalRpcClient rpcClient,
+                                                                              ClusterManager clusterManager,
+                                                                              List<PartitionValidationResults> partitionsValidationResultList)
+                                                                    throws ClusterManagerException, InterruptedException {
+            Set<CompletableFuture> futures = new HashSet<>();
+
+            for (ServerDescriptor serverDescriptor : clusterManager.serverDescriptors()) {
+                CompletableFuture<Void> future = buildPartitionHealthValidation(rpcClient, serverDescriptor, clusterManager,
+                        partitionsValidationResultList);
                 futures.add(future);
             }
             return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
@@ -954,7 +1045,8 @@ public final class ClusterCli extends SubcommandCli {
                 SERVER_STORAGE_CONNECTIVITY,
                 PARTITION_ASSIGNMENT_ZK_STORAGE_CONSISTENCY,
                 PARTITION_QUORUM_STATUS,
-                REPLICA_RECOVERY_STATUS
+                REPLICA_RECOVERY_STATUS,
+                SERVER_PARTITION_HEALTH_CHECK
             }
 
             enum Status {
