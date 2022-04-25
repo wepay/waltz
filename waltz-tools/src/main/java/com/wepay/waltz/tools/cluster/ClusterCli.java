@@ -163,6 +163,18 @@ public final class ClusterCli extends SubcommandCli {
     private static final class Verify extends Cli {
         private static final String NAME = "verify";
         private static final String DESCRIPTION = "Validates if partition(s) is handled by some server";
+        private static final String PASSED =    "  ____                        _ \n"
+                                                + " |  _ \\ __ _ ___ ___  ___  __| |\n"
+                                                + " | |_) / _` / __/ __|/ _ \\/ _` |\n"
+                                                + " |  __/ (_| \\__ \\__ \\  __/ (_| |\n"
+                                                + " |_|   \\__,_|___/___/\\___|\\__,_|\n"
+                                                + "                                ";
+        private static final String FAILED =    "  _____     _ _          _ \n"
+                                                + " |  ___|_ _(_) | ___  __| |\n"
+                                                + " | |_ / _` | | |/ _ \\/ _` |\n"
+                                                + " |  _| (_| | | |  __/ (_| |\n"
+                                                + " |_|  \\__,_|_|_|\\___|\\__,_|\n"
+                                                + "                           ";
 
         private final PartitionAssignmentPolicy partitionAssignmentPolicy = new DynamicPartitionAssignmentPolicy();
         private final StringBuilder outputBuilder = new StringBuilder();
@@ -296,7 +308,11 @@ public final class ClusterCli extends SubcommandCli {
                     partitionsValidationResultList);
 
                 // Verify all results or just one partition if "partition" option is present
-                verifyValidation(partitionsValidationResultList, partitionId);
+                if (verifyValidation(partitionsValidationResultList, partitionId)) {
+                    outputBuilder.append(PASSED);
+                } else {
+                    outputBuilder.append(FAILED);
+                }
 
             } catch (RuntimeException e) {
                 throw new SubCommandFailedException(String.format("Failed to verify cluster. %n%s",
