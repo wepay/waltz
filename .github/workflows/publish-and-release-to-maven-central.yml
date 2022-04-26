@@ -74,6 +74,7 @@ jobs:
           sed -i 's/username findProperty('\''ossrhUsername'\'')?: '\'''\''/username findProperty("ossrhUsername")?: System.getenv("OSSRH_USERNAME")/g' "build.gradle"
           sed -i 's/password findProperty('\''ossrhPassword'\'')?: '\'''\''/password findProperty("ossrhPassword")?: System.getenv("OSSRH_PASSWORD")/g' "build.gradle"
           cat "build.gradle"
+
       #Publish project
       - name: Publish
         run: ./gradlew publish -PmySecureRepositoryUsername="$OSSRH_USERNAME" -PmySecureRepositoryPassword="$OSSRH_PASSWORD" -Psigning.keyId="$SIGNING_KEY_ID" -Psigning.password="$OSSRH_GPG_SECRET_KEY_PASSWORD" -Psigning.secretKeyRingFile=$(echo ~/.gnupg/secring.gpg)
@@ -112,24 +113,19 @@ jobs:
       #Modify gradle.build to inject nexus-staging plugin if not present
       - name: Modify gradle.build
         run: |
-          if ! grep -q "io.codearte.nexus-staging" "build.gradle"; then
-                  # Inject plugin
-                  sed -i '/plugins {/ a\
-                  id "io.codearte.nexus-staging" version "0.30.0"\n' "build.gradle"
-                  if ! grep -q "plugins {" "./build.gradle"; then
-                          echo "plugins {
-            id \"io.codearte.nexus-staging\" version \"0.30.0\"
-          }" >> ./build.gradle
-                  fi
-                  # Inject plugin code
-                  echo "nexusStaging {
-            serverUrl = \"https://oss.sonatype.org/service/local/\"
-            username = findProperty(\"ossrhUsername\") ?: System.getenv(\"OSSRH_USERNAME\")
-            password = findProperty(\"ossrhPassword\") ?: System.getenv(\"OSSRH_PASSWORD\")
-            packageGroup = \"com.wepay.waltz\"
-          }" >> "build.gradle"
+          if ! grep -q "gradle-nexus-staging-plugin" "build.gradle"; then
+              # Inject plugin
+              awk '/classpath / && !x {print "classpath \"io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.30.0\""; x=1} 1' "build.gradle" > tmp && mv tmp "build.gradle"
+              # Inject plugin code
+              echo "apply plugin: 'io.codearte.nexus-staging'
+              nexusStaging {
+                   serverUrl = \"https://oss.sonatype.org/service/local/\"
+                   username = findProperty(\"ossrhUsername\") ?: System.getenv(\"OSSRH_USERNAME\")
+                   password = findProperty(\"ossrhPassword\") ?: System.getenv(\"OSSRH_PASSWORD\")
+                   packageGroup = \"com.wepay\"
+              }" >> "build.gradle"
           fi
-          cat "build.gradle"
+
       #Close and Release project in Sonatype
       - name: Close and Release
         run: ./gradlew closeAndReleaseRepository
