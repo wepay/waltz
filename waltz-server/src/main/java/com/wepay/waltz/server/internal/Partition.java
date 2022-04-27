@@ -415,16 +415,16 @@ public class Partition {
 
     private boolean isValid(PartitionClient client) {
         synchronized (partitionClientConnectionInfos) {
-            Long currentSeqNum = partitionClientConnectionInfos.get(client.clientId()).client.seqNum();
-            if (currentSeqNum == null) {
-                logger.info(String.format("CurrentSeqNum is null. PartitionClient not valid. ClientId: %s, PartitionId: %d, "
-                        + "WaltzServerHandler SeqNum: %s",
+            ClientConnectionInfo currentClientConnectionInfo = partitionClientConnectionInfos.get(client.clientId());
+            if (currentClientConnectionInfo == null) {
+                logger.info(String.format("CurrentClientConnectionInfo is null. PartitionClient not valid. "
+                        + "ClientId: %s, PartitionId: %d, WaltzServerHandler SeqNum: %s",
                     client.clientId(), partitionId, client.seqNum()));
                 return false;
-            } else if (!currentSeqNum.equals(client.seqNum())) {
+            } else if (!currentClientConnectionInfo.client.seqNum().equals(client.seqNum())) {
                 logger.info(String.format("CurrentSeqNum is not equal to WaltzServerHandler seqNum. PartitionClient not valid. "
                         + "WaltzServerHandler seqNum %d, PartitionId: %d, CurrentSeqNum: %d",
-                    client.clientId(), partitionId, currentSeqNum));
+                    client.clientId(), partitionId, currentClientConnectionInfo.client.seqNum()));
                 return false;
             } else {
                 return true;
