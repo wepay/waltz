@@ -14,12 +14,15 @@ import com.wepay.waltz.common.message.MessageCodecV0;
 import com.wepay.waltz.common.message.MessageCodecV1;
 import com.wepay.waltz.common.message.MessageCodecV2;
 import com.wepay.waltz.common.message.MessageCodecV3;
+import com.wepay.waltz.common.message.MessageCodecV4;
 import com.wepay.waltz.common.message.MessageType;
 import com.wepay.waltz.common.message.MountRequest;
 import com.wepay.waltz.common.message.RemovePreferredPartitionRequest;
 import com.wepay.waltz.common.message.RemovePreferredPartitionResponse;
 import com.wepay.waltz.common.message.ServerPartitionsAssignmentRequest;
 import com.wepay.waltz.common.message.ServerPartitionsAssignmentResponse;
+import com.wepay.waltz.common.message.ServerPartitionsHealthStatRequest;
+import com.wepay.waltz.common.message.ServerPartitionsHealthStatResponse;
 import com.wepay.waltz.common.metadata.ReplicaId;
 import com.wepay.waltz.storage.client.StorageClient;
 import com.wepay.waltz.store.Store;
@@ -55,6 +58,7 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
         CODECS.put(MessageCodecV1.VERSION, MessageCodecV1.INSTANCE);
         CODECS.put(MessageCodecV2.VERSION, MessageCodecV2.INSTANCE);
         CODECS.put(MessageCodecV3.VERSION, MessageCodecV3.INSTANCE);
+        CODECS.put(MessageCodecV4.VERSION, MessageCodecV4.INSTANCE);
     }
 
     private static final String HELLO_MESSAGE = "Waltz Server";
@@ -146,6 +150,17 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
                 }
                 sendMessage(new ServerPartitionsAssignmentResponse(((ServerPartitionsAssignmentRequest) msg).reqId,
                         partitionsAssigned), true);
+                break;
+
+            case MessageType.SERVER_PARTITIONS_HEALTH_STAT_REQUEST:
+                Map<Integer, Boolean> partitionHealthStats;
+
+                synchronized (partitions) {
+                    partitionHealthStats = partitions.values().stream()
+                        .collect(Collectors.toMap(partition -> partition.partitionId, Partition::isHealthy));
+                }
+                sendMessage(new ServerPartitionsHealthStatResponse(((ServerPartitionsHealthStatRequest) msg).reqId,
+                    partitionHealthStats), true);
                 break;
 
             case MessageType.ADD_PREFERRED_PARTITION_REQUEST:

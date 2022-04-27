@@ -495,6 +495,11 @@ public class AbstractClientCallbacksForJDBCTest {
             }
 
             @Override
+            public Future<Map<Integer, Boolean>> getServerPartitionHealthStats(Endpoint serverEndpoint) throws InterruptedException {
+                return CompletableFuture.completedFuture(new HashMap<>());
+            }
+
+            @Override
             public CompletableFuture<Boolean> addPreferredPartition(Endpoint serverEndpoint, List<Integer> partitionIds) throws InterruptedException {
                 return CompletableFuture.completedFuture(true);
             }

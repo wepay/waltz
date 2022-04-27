@@ -17,6 +17,7 @@ import com.wepay.waltz.common.message.MountRequest;
 import com.wepay.waltz.common.message.ReqId;
 import com.wepay.waltz.common.message.TransactionDataRequest;
 import com.wepay.waltz.common.message.ServerPartitionsAssignmentRequest;
+import com.wepay.waltz.common.message.ServerPartitionsHealthStatRequest;
 import com.wepay.waltz.exception.NetworkClientClosedException;
 import com.wepay.zktools.clustermgr.Endpoint;
 import com.wepay.zktools.util.Uninterruptibly;
@@ -237,6 +238,24 @@ public class WaltzNetworkClient extends NetworkClient {
             sendRequestOnChannelActive(new ServerPartitionsAssignmentRequest(dummyReqId));
 
         return responseFuture.thenApply(response -> (List<Integer>) response);
+    }
+
+    /**
+     * Requests the map of partitions assigned to this server alongside their health status.
+     * The current thread waits for channel readiness before sending the request to the server. If this client
+     * is shutdown before that, an exceptionally completed CompletableFuture is returned.
+     *
+     * @return a CompletableFuture which will complete with the map of partitions assigned to this server
+     * alongside their health status, or with an exception, if any.
+     * @throws InterruptedException If thread interrupted while waiting for the channel to be ready
+     */
+    @SuppressWarnings("unchecked")
+    public CompletableFuture<Map<Integer, Boolean>> getServerPartitionHealthStats() throws InterruptedException {
+        ReqId dummyReqId = new ReqId(clientId, 0, 0, 0);
+        CompletableFuture<Object> responseFuture =
+            sendRequestOnChannelActive(new ServerPartitionsHealthStatRequest(dummyReqId));
+
+        return responseFuture.thenApply(response -> (Map<Integer, Boolean>) response);
     }
 
     /**
@@ -531,6 +550,19 @@ public class WaltzNetworkClient extends NetworkClient {
                 (keyMessageType, valueFuture) -> {
                     if (!valueFuture.isDone()) {
                         valueFuture.complete(result);
+                    }
+                    return CompletableFuture.completedFuture(Optional.empty());
+                }
+            );
+        }
+
+        @Override
+        public void onServerPartitionsHealthStatsReceived(Map<Integer, Boolean> partitions) {
+            outputFuturesPerMessageType.computeIfPresent(
+                MessageType.SERVER_PARTITIONS_HEALTH_STAT_REQUEST,
+                (keyMessageType, valueFuture) -> {
+                    if (!valueFuture.isDone()) {
+                        valueFuture.complete(partitions);
                     }
                     return CompletableFuture.completedFuture(Optional.empty());
                 }

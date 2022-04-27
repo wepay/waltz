@@ -111,4 +111,10 @@ public interface WaltzClientHandlerCallbacks extends MessageHandlerCallbacks {
      * @param result true if preferred partition removal was successful, otherwise false.
      */
     void onRemovePreferredPartitionResponseReceived(Boolean result);
+
+    /**
+     * Handles the received partition health check response message.
+     * @param partitions Map of all the partitions this server is assigned to and their health status.
+     */
+    void onServerPartitionsHealthStatsReceived(Map<Integer, Boolean> partitions);
 }

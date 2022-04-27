@@ -27,5 +27,7 @@ public final class MessageType {
     public static final int ADD_PREFERRED_PARTITION_RESPONSE = 18;
     public static final int REMOVE_PREFERRED_PARTITION_REQUEST = 19;
     public static final int REMOVE_PREFERRED_PARTITION_RESPONSE = 20;
+    public static final int SERVER_PARTITIONS_HEALTH_STAT_REQUEST = 21;
+    public static final int SERVER_PARTITIONS_HEALTH_STAT_RESPONSE = 22;
 
 }

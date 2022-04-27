@@ -112,6 +112,19 @@ public class InternalRpcClient extends InternalBaseClient implements RpcClient {
     }
 
     /**
+     * Gets the map of partitions assigned to the server with their health status
+     *
+     * @param serverEndpoint Server from which to fetch the assigned partitions
+     * @return Future which will contain the map of partitions and their health status when complete
+     * @throws InterruptedException if thrown by the {@code WaltzNetworkClient}
+     */
+    @Override
+    public Future<Map<Integer, Boolean>> getServerPartitionHealthStats(Endpoint serverEndpoint) throws InterruptedException {
+        WaltzNetworkClient networkClient = getNetworkClient(serverEndpoint);
+        return networkClient.getServerPartitionHealthStats();
+    }
+
+    /**
      * Adds given partition Ids as preferred partitions to the given Server Endpoint.
      * @param serverEndpoint Server Endpoint to add the partition to.
      * @param partitionIds The list of partition Ids.
