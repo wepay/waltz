@@ -73,7 +73,6 @@ jobs:
         run: |
           sed -i 's/username findProperty('\''ossrhUsername'\'')?: '\'''\''/username findProperty("ossrhUsername")?: System.getenv("OSSRH_USERNAME")/g' "build.gradle"
           sed -i 's/password findProperty('\''ossrhPassword'\'')?: '\'''\''/password findProperty("ossrhPassword")?: System.getenv("OSSRH_PASSWORD")/g' "build.gradle"
-          cat "build.gradle"
 
       #Publish project
       - name: Publish
