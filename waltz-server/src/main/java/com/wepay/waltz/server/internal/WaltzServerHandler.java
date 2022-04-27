@@ -159,7 +159,6 @@ public class WaltzServerHandler extends MessageHandler implements PartitionClien
                     partitionHealthStats = partitions.values().stream()
                         .collect(Collectors.toMap(partition -> partition.partitionId, Partition::isHealthy));
                 }
-                System.out.println(partitionHealthStats);
                 sendMessage(new ServerPartitionsHealthStatResponse(((ServerPartitionsHealthStatRequest) msg).reqId,
                     partitionHealthStats), true);
                 break;

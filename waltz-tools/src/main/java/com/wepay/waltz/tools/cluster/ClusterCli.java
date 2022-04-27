@@ -282,9 +282,6 @@ public final class ClusterCli extends SubcommandCli {
                     partitionToStorageStatusMap, partitionsValidationResultList);
 
                 // Step5: Validate server partitions are healthy
-                rpcClient = new InternalRpcClient(sslContext, WaltzClientConfig.DEFAULT_MAX_CONCURRENT_TRANSACTIONS,
-                    new DummyTxnCallbacks());
-
                 CompletableFuture<Void> partitionHealthValidationFuture =
                     buildServersPartitionHealthValidation(
                         rpcClient, clusterManager, partitionsValidationResultList
