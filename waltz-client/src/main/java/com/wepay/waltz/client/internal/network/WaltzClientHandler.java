@@ -164,6 +164,7 @@ public class WaltzClientHandler extends MessageHandler {
                 ServerPartitionsHealthStatResponse serverPartitionsHealthStatResponse =
                     (ServerPartitionsHealthStatResponse) msg;
                 handlerCallbacks.onServerPartitionsHealthStatsReceived(serverPartitionsHealthStatResponse.serverPartitionHealthStats);
+                break;
 
             default:
                 throw new IllegalArgumentException("message not handled: messageType=" + msg.type());
