@@ -17,6 +17,7 @@ import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.exception.ClientClosedException;
 import com.wepay.waltz.exception.DataChecksumException;
 import com.wepay.waltz.exception.PartitionInactiveException;
+import com.wepay.waltz.exception.WaitForMountedTimeoutException;
 import com.wepay.zktools.clustermgr.Endpoint;
 import org.slf4j.Logger;
 
@@ -39,6 +40,7 @@ public class Partition {
 
     private static final Long[] EMPTY_LONG_ARRAY = new Long[0];
     private static final int MAX_DATA_ATTEMPTS = 5;
+    private static final int ENSURE_MOUNTED_TIMEOUT = 10000;
 
     private enum PartitionState {
         ACTIVE, INACTIVE, CLOSED
@@ -269,17 +271,22 @@ public class Partition {
     public void ensureMounted() {
         if (!mounted) {
             synchronized (lock) {
+                final long due = System.currentTimeMillis() + ENSURE_MOUNTED_TIMEOUT;
                 while (state != PartitionState.CLOSED && !mounted) {
                     if (transactionMonitor.isStopped()) {
                         throw new PartitionInactiveException(partitionId);
                     } else if (clientHighWaterMarkAhead) {
                         throw new IllegalStateException(String.format("client is ahead of store for partition: %d", partitionId));
                     }
-
-                    try {
-                        lock.wait();
-                    } catch (InterruptedException ex) {
-                        Thread.interrupted();
+                    long remaining = due - System.currentTimeMillis();
+                    if (remaining > 0) {
+                        try {
+                            lock.wait(ENSURE_MOUNTED_TIMEOUT);
+                        } catch (InterruptedException ex) {
+                            Thread.interrupted();
+                        }
+                    } else {
+                        throw new WaitForMountedTimeoutException(partitionId, ENSURE_MOUNTED_TIMEOUT);
                     }
                 }
             }
