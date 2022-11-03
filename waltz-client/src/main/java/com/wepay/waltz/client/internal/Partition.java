@@ -17,7 +17,7 @@ import com.wepay.waltz.common.util.Utils;
 import com.wepay.waltz.exception.ClientClosedException;
 import com.wepay.waltz.exception.DataChecksumException;
 import com.wepay.waltz.exception.PartitionInactiveException;
-import com.wepay.waltz.exception.WaitForMountedTimeoutException;
+import com.wepay.waltz.exception.ClientTimeoutException;
 import com.wepay.zktools.clustermgr.Endpoint;
 import org.slf4j.Logger;
 
@@ -262,11 +262,12 @@ public class Partition {
     }
 
     /**
-     * Ensures that this partition is mounted.
-     * Waits until interrupted, or a PartitionInactiveException to occur, for the partition to be mounted.
+     * Ensures that this partition is mounted or closed.
+     * Waits for a maximum of {@link #ENSURE_MOUNTED_TIMEOUT} millis for the partition to be mounted.
      *
      * @throws PartitionInactiveException if this partition is not active.
      * @throws IllegalStateException if client's high watermark is ahead of server's high watermark.
+     * @throws ClientTimeoutException if wait time for partition to be mounted exceeds {@link #ENSURE_MOUNTED_TIMEOUT} millis
      */
     public void ensureMounted() {
         if (!mounted) {
@@ -281,12 +282,12 @@ public class Partition {
                     long remaining = due - System.currentTimeMillis();
                     if (remaining > 0) {
                         try {
-                            lock.wait(ENSURE_MOUNTED_TIMEOUT);
+                            lock.wait(remaining);
                         } catch (InterruptedException ex) {
                             Thread.interrupted();
                         }
                     } else {
-                        throw new WaitForMountedTimeoutException(partitionId, ENSURE_MOUNTED_TIMEOUT);
+                        throw new ClientTimeoutException(String.format("Partition ensure mounted timeout: partitionId=%d elapsed=%d ms", partitionId, ENSURE_MOUNTED_TIMEOUT));
                     }
                 }
             }
