@@ -12,7 +12,15 @@ import java.util.Comparator;
 public class FeedContext {
 
     public static final Comparator<FeedContext> HIGH_WATER_MARK_COMPARATOR =
-        (o1, o2) -> o1.highWaterMark < o2.highWaterMark ? -1 : o1.highWaterMark > o2.highWaterMark ? 1 : 0;
+        (o1, o2) -> {
+            int hwmCompare = Long.compare(o1.highWaterMark, o2.highWaterMark);
+
+            if (hwmCompare == 0) {
+                return Integer.compare(o1.reqId.seqNum(), o2.reqId.seqNum());
+            }
+
+            return hwmCompare;
+        };
 
     public final ReqId reqId;
     public final PartitionClient sender;
